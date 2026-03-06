@@ -1,0 +1,169 @@
+name: CI / release_build_gitops
+
+on:
+  push:
+    branches:
+      - master
+      # - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOCKER_BUILDKIT: "1"
+
+jobs:
+  release_build_gitops:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      # -------------------------
+      # 1) AUTO TAG (bump patch)
+      # -------------------------
+      - name: Compute next tag
+        id: nexttag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --prune
+
+          LAST_TAG="$(git tag -l "v*" --sort=-v:refname | head -n 1 || true)"
+          if [ -z "${LAST_TAG}" ]; then LAST_TAG="v0.0.0"; fi
+
+          VERSION="${LAST_TAG#v}"
+          MAJOR="$(echo "$VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$VERSION" | cut -d. -f3)"
+          PATCH="$((PATCH + 1))"
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "$NEW_TAG" > tag.txt
+
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEW_TAG already exists. Please re-run."
+            exit 1
+          fi
+
+      - name: Create & push annotated tag (with retry)
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.nexttag.outputs.tag }}"
+
+          git config user.email "routex@orion-hub"
+          git config user.name "routex-bot"
+
+          git tag -a "$TAG" -m "CI release $TAG"
+
+          for i in 1 2 3; do
+            if git push origin "$TAG"; then
+              echo "Pushed tag $TAG"
+              break
+            fi
+            echo "Push tag failed, retry $i..."
+            sleep $((i * 2))
+            git fetch --tags --force --prune
+            if [ "$i" -eq 3 ]; then
+              echo "Failed to push tag after retries."
+              exit 1
+            fi
+          done
+
+      # -------------------------
+      # 2) SETUP NODE + VERIFY BUILD
+      # -------------------------
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify build
+        run: |
+          npx tsc --noEmit
+          npm run lint --if-present
+          npm test -- --runInBand --passWithNoTests
+          npm run build
+
+      # -------------------------
+      # 3) BUILD & PUSH IMAGE
+      # -------------------------
+      - name: Login to GitLab Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.CI_REGISTRY }}
+          username: ${{ secrets.CI_REGISTRY_USER }}
+          password: ${{ secrets.CI_REGISTRY_PASSWORD }}
+
+      - name: Build & push image
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="$(cat tag.txt)"
+          IMAGE="${{ secrets.CI_REGISTRY_IMAGE }}"
+
+          echo "Build & push image: ${IMAGE}:${TAG}"
+          docker build -t "${IMAGE}:${TAG}" .
+          docker push "${IMAGE}:${TAG}"
+
+      # -------------------------
+      # 4) UPDATE GITOPS VALUES (dev)
+      # -------------------------
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          ref: ${{ secrets.GITOPS_BRANCH }}
+          token: ${{ secrets.GITOPS_PUSH_TOKEN }}
+          path: gitops
+          fetch-depth: 0
+
+      - name: Update values-dev.yaml and push
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TAG="$(cat tag.txt)"
+          IMAGE="${{ secrets.CI_REGISTRY_IMAGE }}"
+          PROJECT_NAME="$(basename "${GITHUB_REPOSITORY}")"
+          VALUES_PATH="deployment-config/service/${PROJECT_NAME}/values-dev.yaml"
+
+          cd gitops
+          git config user.email "routex@orion-hub"
+          git config user.name "routex-bot"
+
+          ls -la deployment-config/service || true
+          echo "PROJECT_NAME=$PROJECT_NAME"
+          echo "VALUES_PATH=$VALUES_PATH"
+
+          test -f "$VALUES_PATH"
+
+          yq -i ".image.repository = \"${IMAGE}\"" "$VALUES_PATH"
+          yq -i ".image.tag = \"${TAG}\"" "$VALUES_PATH"
+
+          git add "$VALUES_PATH"
+          git commit -m "chore(gitops): ${PROJECT_NAME} -> ${TAG} (dev)" || echo "No changes"
+
+          git pull --rebase origin "${{ secrets.GITOPS_BRANCH }}"
+          git push origin "${{ secrets.GITOPS_BRANCH }}"
