@@ -1,34 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AdminLayout } from './Components/AdminLayout'
+import { DashboardAnalyticsPage } from './pages/admin/DashboardAnalyticsPage'
+import { DashboardFinancePage } from './pages/admin/DashboardFinancePage'
+import { DashboardOverviewPage } from './pages/admin/DashboardOverviewPage'
+import { UserProfileOverviewPage } from './pages/admin/UserProfileOverviewPage'
+
+// Client pages
+import LandingPage from './pages/client/LandingPage'
+import LoginPage from './pages/client/LoginPage'
+import RegisterPage from './pages/client/RegisterPage'
+import HomePage from './pages/client/HomePage'
+import SearchResultPage from './pages/client/SearchResultPage'
+import RouteDetailPage from './pages/client/RouteDetailPage'
+import BookingPage from './pages/client/BookingPage'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Routes>
+      {/* ─── Client / Public Routes ─── */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/search-results" element={<SearchResultPage />} />
+      <Route path="/route-detail" element={<RouteDetailPage />} />
+      <Route path="/booking" element={<BookingPage />} />
+
+      {/* ─── Admin Routes ─── */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardOverviewPage />} />
+        <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
+        <Route path="dashboard/finance" element={<DashboardFinancePage />} />
+        <Route path="staff" element={<UserProfileOverviewPage />} />
+      </Route>
+
+      {/* ─── Fallback ─── */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
