@@ -127,11 +127,11 @@ export default function RouteDetailPage() {
   const seatColorClass = (seatNo: string) => {
     const status = seatStatusMap.get(seatNo) ?? 'AVAILABLE'
     const isSelected = selectedSeats.includes(seatNo)
-    if (isSelected) return 'bg-[#12B3A8] border-[#12B3A8] text-white cursor-pointer'
-    if (status === 'SOLD') return 'bg-neutral-200 border-neutral-200 text-neutral-400 cursor-not-allowed'
-    if (status === 'HELD') return 'bg-red-50 border-red-200 text-red-400 cursor-not-allowed'
-    if (status === 'BLOCKED') return 'bg-neutral-400 border-neutral-400 text-white cursor-not-allowed'
-    return 'bg-white border-neutral-200 text-[#192031] hover:border-[#12B3A8] cursor-pointer'
+    if (isSelected) return 'bg-brand-primary border-brand-primary text-white cursor-pointer shadow-lg shadow-brand-primary/20 scale-105'
+    if (status === 'SOLD') return 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+    if (status === 'HELD') return 'bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed'
+    if (status === 'BLOCKED') return 'bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed'
+    return 'bg-white border-slate-200 text-slate-900 hover:border-brand-primary hover:text-brand-primary cursor-pointer'
   }
 
   const stops = useMemo(() => {
@@ -152,112 +152,135 @@ export default function RouteDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">
       {/* Header */}
-      <div className="bg-[#192031] pt-10 pb-6 px-6"
-        style={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="bg-brand-dark pt-14 pb-10 px-8 sticky top-0 z-50 shadow-xl"
+        style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50 }}>
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+            className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all active:scale-90 border border-white/5 backdrop-blur-md">
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
-          <h1 className="text-white font-black text-xl">Route Detail</h1>
-          <div className="w-10" />
+          <h1 className="text-white font-black text-2xl tracking-tight">Chi tiết tuyến đường</h1>
+          <div className="w-12" />
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 pb-44 space-y-6">
+      <main className="max-w-5xl mx-auto px-8 py-12 pb-48 space-y-10">
         {/* Route Info Card */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex-1 pr-4">
-              <h2 className="text-2xl font-black text-[#192031] mb-2">
-                {routeData.origin} → {routeData.destination}
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row md:items-start justify-between mb-10 gap-6">
+            <div className="flex-1">
+              <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                {routeData.origin} <span className="text-brand-primary mx-2">→</span> {routeData.destination}
               </h2>
-              <span className="px-3 py-1 rounded-full bg-neutral-100 text-[10px] font-black uppercase tracking-widest text-[#192031]">
-                {routeData.routeCode}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 rounded-xl bg-slate-900 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                  {routeData.routeCode}
+                </span>
+                <span className="text-slate-400 font-bold text-sm">Chuyến đi trong ngày</span>
+              </div>
             </div>
-            <div className="px-4 py-2 bg-[#EAFBF9] rounded-full">
-              <span className="text-[#1f615d] font-black text-sm">
-                {routeData.availableSeats ?? 0} seats left
+            <div className="px-6 py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl self-start">
+              <span className="text-brand-primary font-black text-base flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
+                Còn {routeData.availableSeats ?? 0} chỗ trống
               </span>
             </div>
           </div>
 
           {/* Time Row */}
-          <div className="flex items-center gap-6 mb-8">
-            <div>
-              <div className="text-3xl font-black text-[#192031]">{formatTimeHHmm(routeData.plannedStartTime)}</div>
-              <div className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-1">Depart</div>
+          <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
+            <div className="text-center md:text-left min-w-[120px]">
+              <div className="text-4xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedStartTime)}</div>
+              <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">Giờ xuất phát</div>
             </div>
-            <div className="flex-1 flex flex-col items-center">
-              <div className="text-xs font-black text-neutral-300 uppercase tracking-widest mb-2">
+            
+            <div className="flex-1 flex flex-col items-center w-full px-4">
+              <div className="text-xs font-black text-brand-primary uppercase tracking-[0.2em] mb-3 bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm">
                 {durationText(routeData.plannedStartTime, routeData.plannedEndTime)}
               </div>
-              <div className="w-full h-[2px] bg-neutral-100 rounded-full" />
-              <div className="text-xs text-neutral-400 font-bold mt-2">
+              <div className="w-full h-[3px] bg-slate-200 rounded-full relative overflow-hidden">
+                <div className="absolute left-0 top-0 h-full w-1/3 bg-brand-primary rounded-full" />
+                <Bus className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 text-brand-primary bg-white rounded-full p-0.5" />
+              </div>
+              <div className="text-xs text-slate-500 font-bold mt-4 tracking-tight">
                 {formatDateDDMMYYYY(routeData.plannedStartTime)}
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-black text-[#192031]">{formatTimeHHmm(routeData.plannedEndTime)}</div>
-              <div className="text-xs text-neutral-400 font-bold uppercase tracking-widest mt-1">Arrive</div>
+
+            <div className="text-center md:text-right min-w-[120px]">
+              <div className="text-4xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedEndTime)}</div>
+              <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">Giờ kết thúc</div>
             </div>
           </div>
 
           {/* Details */}
-          <div className="pt-6 border-t border-neutral-50 grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Pickup branch</p>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#12B3A8]" />
-                <span className="font-bold text-[#192031]">{routeData.pickupBranch || '—'}</span>
+          <div className="pt-10 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-10">
+            <div className="flex items-start gap-4 group/item">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20 group-hover/item:scale-110 transition-transform">
+                <MapPin className="w-6 h-6 text-brand-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Điểm đón khách</p>
+                <span className="font-bold text-slate-900 text-lg tracking-tight">{routeData.pickupBranch || '—'}</span>
               </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Vehicle</p>
-              <div className="flex items-center gap-2">
-                <Bus className="w-4 h-4 text-[#12B3A8]" />
-                <span className="font-bold text-[#192031]">{routeData.vehicleType || '—'} • {routeData.vehiclePlate || '—'}</span>
+            <div className="flex items-start gap-4 group/item">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20 group-hover/item:scale-110 transition-transform">
+                <Bus className="w-6 h-6 text-brand-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Phương tiện</p>
+                <span className="font-bold text-slate-900 text-lg tracking-tight">{routeData.vehicleType || '—'} • {routeData.vehiclePlate || '—'}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Seat Map */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-          <h3 className="text-xl font-black text-[#192031] mb-6">Select seats</h3>
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50">
+          <h3 className="text-2xl font-black text-slate-900 mb-10 tracking-tight flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center">
+              <ChevronRight className="w-6 h-6 text-white" />
+            </div>
+            Chọn chỗ ngồi của bạn
+          </h3>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-6 mb-8">
+          <div className="flex flex-wrap gap-8 mb-12 bg-slate-50 p-6 rounded-3xl border border-slate-100">
             {[
-              { color: 'bg-white border border-neutral-200', label: 'Available' },
-              { color: 'bg-[#12B3A8]', label: 'Selected' },
-              { color: 'bg-neutral-200', label: 'Sold' },
-              { color: 'bg-red-50 border border-red-200', label: 'Processing' },
-            ].map(({ color, label }) => (
-              <div key={label} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded ${color}`} />
-                <span className="text-xs font-bold text-neutral-500">{label}</span>
+              { color: 'bg-white border-2 border-slate-200', label: 'Còn trống', sub: 'Chưa có người đặt' },
+              { color: 'bg-brand-primary border-2 border-brand-primary', label: 'Đang chọn', sub: 'Chỗ bạn muốn đặt' },
+              { color: 'bg-slate-100 opacity-50 border-2 border-slate-100', label: 'Đã bán', sub: 'Không khả dụng' },
+              { color: 'bg-rose-50 border-2 border-rose-100', label: 'Đang giữ', sub: 'Khách đang thanh toán' },
+            ].map(({ color, label, sub }) => (
+              <div key={label} className="flex items-center gap-4">
+                <div className={`w-6 h-6 rounded-lg ${color}`} />
+                <div>
+                  <div className="text-xs font-black text-slate-900 leading-tight">{label}</div>
+                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{sub}</div>
+                </div>
               </div>
             ))}
           </div>
 
           {/* Seat Grid */}
           {loadingSeats ? (
-            <div className="py-16 flex items-center justify-center gap-3">
-              <Loader2 className="w-6 h-6 text-[#12B3A8] animate-spin" />
-              <span className="text-neutral-400 font-bold">Loading seat map...</span>
+            <div className="py-24 flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200">
+              <div className="w-16 h-16 rounded-full border-4 border-slate-200 border-t-brand-primary animate-spin" />
+              <span className="text-slate-400 font-bold tracking-tight">Đang tải sơ đồ chỗ ngồi...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-10 gap-4 p-4">
               {routeSeats.map((seat) => (
                 <button
                   key={seat.seatNo}
                   onClick={() => toggleSeat(seat.seatNo)}
                   disabled={seat.status !== 'AVAILABLE' && !selectedSeats.includes(seat.seatNo)}
-                  className={`h-12 rounded-xl border-2 font-black text-sm transition-all ${seatColorClass(seat.seatNo)}`}
+                  className={`h-16 rounded-2xl border-2 font-black text-lg transition-all active:scale-90 flex items-center justify-center ${seatColorClass(seat.seatNo)}`}
                 >
                   {seat.seatNo}
                 </button>
@@ -268,17 +291,32 @@ export default function RouteDetailPage() {
 
         {/* Stop Points */}
         {stops.length > 0 && (
-          <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-            <h3 className="text-xl font-black text-[#192031] mb-6">Stop points</h3>
-            <div className="space-y-5 relative ml-3">
-              <div className="absolute top-2 bottom-2 left-0 w-0.5 bg-neutral-100" />
-              {stops.map((s) => (
-                <div key={s.id} className="relative pl-6">
-                  <div className="absolute top-1.5 left-[-5px] w-2.5 h-2.5 rounded-full bg-white border-2 border-[#12B3A8]" />
-                  <p className="font-black text-[#192031]">Stop {s.stopOrder}: {s.note || '—'}</p>
-                  <p className="text-xs text-neutral-400 font-bold mt-1">
-                    Arrival: {formatTimeHHmm(s.plannedArrivalTime)} &bull; Departure: {formatTimeHHmm(s.plannedDepartureTime)}
-                  </p>
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50">
+            <h3 className="text-2xl font-black text-slate-900 mb-10 tracking-tight flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-white" />
+              </div>
+              Lộ trình dừng nghỉ
+            </h3>
+            <div className="space-y-10 relative ml-6">
+              <div className="absolute top-2 bottom-2 left-0 w-0.5 bg-slate-100" />
+              {stops.map((s, idx) => (
+                <div key={s.id} className="relative pl-10 group/stop">
+                  <div className="absolute top-1.5 left-[-8px] w-4 h-4 rounded-full bg-white border-4 border-brand-primary group-hover/stop:scale-125 transition-transform" />
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 p-6 rounded-3xl border border-slate-100 transition-colors">
+                    <div>
+                      <p className="font-black text-slate-900 text-lg">Điểm dừng {idx + 1}: {s.note || 'Trạm dừng chân'}</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.1em] mt-1 italic">Vị trí trạm: {s.stopOrder}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="text-right">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thời gian</p>
+                          <p className="font-black text-brand-primary bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm text-sm">
+                             {formatTimeHHmm(s.plannedArrivalTime)} - {formatTimeHHmm(s.plannedDepartureTime)}
+                          </p>
+                       </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -288,37 +326,37 @@ export default function RouteDetailPage() {
 
       {/* Bottom Action Bar */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-6 py-5 border-t border-neutral-100"
-        style={{ backgroundColor: 'rgba(245,247,250,0.97)', backdropFilter: 'blur(12px)' }}
+        className="fixed bottom-0 left-0 right-0 px-8 py-8 border-t border-slate-100 z-[60]"
+        style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}
       >
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center gap-6">
           {/* Summary */}
-          <div className="bg-white border border-neutral-100 rounded-2xl px-6 py-4 flex justify-between items-center shadow-sm">
+          <div className="flex-1 w-full bg-slate-900 rounded-3xl px-8 py-6 flex justify-between items-center shadow-2xl shadow-slate-900/20">
             <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Selected seats</p>
-              <p className="text-[#192031] font-black text-base mt-1">
-                {selectedSeats.length > 0 ? selectedSeats.join(', ') : 'None selected'}
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Chỗ ngồi đã chọn</p>
+              <p className="text-white font-black text-xl tracking-tight">
+                {selectedSeats.length > 0 ? selectedSeats.sort().join(', ') : 'Chưa có chỗ được chọn'}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Count</p>
-              <p className="text-[#192031] font-black text-2xl mt-1">{selectedSeats.length}</p>
+            <div className="text-right pl-6 border-l border-white/10">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Số lượng</p>
+              <p className="text-brand-primary font-black text-3xl tracking-tighter">{selectedSeats.length}</p>
             </div>
           </div>
 
           <button
             onClick={handleContinue}
             disabled={selectedSeats.length === 0 || holding}
-            className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${
+            className={`w-full sm:w-[300px] py-7 rounded-3xl font-black text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] ${
               selectedSeats.length > 0
-                ? 'bg-[#12B3A8] hover:bg-[#0f968d] text-white shadow-[#12B3A8]/20'
-                : 'bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none'
+                ? 'bg-brand-primary hover:bg-brand-primary shadow-[0_20px_40px_-15px_rgba(14,165,233,0.4)] text-white hover:scale-[1.02]'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
             }`}
           >
             {holding ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+              <><Loader2 className="w-7 h-7 animate-spin" /> Đang xử lý...</>
             ) : (
-              <>Continue <ChevronRight className="w-5 h-5" /></>
+              <>Tiếp tục đặt vé <ChevronRight className="w-6 h-6" /></>
             )}
           </button>
         </div>

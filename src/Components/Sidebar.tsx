@@ -51,14 +51,13 @@ const navGroups: NavGroup[] = [
         label: 'Reports',
         icon: ClipboardList,
         subItems: [
-          { label: 'Daily Operations', to: '/admin/reports/daily' },
-          { label: 'Fleet Efficiency', to: '/admin/reports/fleet' },
           { label: 'Revenue Analysis', to: '/admin/reports/revenue' },
-          { label: 'Fuel Tracking', to: '/admin/reports/fuel' }
+          { label: 'Fleet Expenses', to: '/admin/reports/expenses' },
+          { label: 'Payroll & Salaries', to: '/admin/reports/salaries' },
         ]
       },
-      { label: 'System Health', icon: Settings },
-      { label: 'Feedback', icon: MessageSquare },
+      { label: 'System Health', to: '/admin/health', icon: Settings },
+      { label: 'Feedback', to: '/admin/feedback', icon: MessageSquare },
     ]
   },
   {
@@ -80,31 +79,33 @@ export function Sidebar() {
   const navigate = useNavigate()
 
   return (
-    <aside className="w-56 flex flex-col h-screen py-6 px-4 shrink-0 overflow-y-auto bg-white">
-      <Link to="/admin/dashboard" className="flex items-center gap-3 mb-8 px-2 mt-2 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 rounded-lg bg-[#1C1C1C] flex items-center justify-center text-white">
-          <Bus size={20} />
+    <aside className="w-64 flex flex-col h-screen py-8 px-5 shrink-0 overflow-y-auto bg-white border-r border-slate-100">
+      <Link to="/admin/dashboard" className="flex items-center gap-3 mb-12 px-2 hover:opacity-80 transition-opacity group">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center text-white shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
+          <Bus size={22} />
         </div>
         <div>
-           <span className="font-bold text-[15px] block text-gray-900 leading-none">Go Routex</span>
-           <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Bus Operations</span>
+           <span className="font-black text-lg block text-slate-900 leading-none tracking-tight">Go Routex</span>
+           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">Management</span>
         </div>
       </Link>
 
-      <div className="space-y-6">
+      <div className="space-y-10">
         {navGroups.map((group) => (
           <div key={group.title}>
-            <h3 className="text-gray-400 text-[11px] font-semibold uppercase tracking-wider px-2 mb-2">
+            <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] px-3 mb-4">
               {group.title}
             </h3>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {group.items.map((item) => (
                 <div key={item.label}>
                   <NavLink
                     to={item.to || '#'}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 px-2 py-2 rounded-xl text-[13px] transition-all duration-200 ${
-                        isActive && item.to && item.to !== '#' ? 'bg-black text-white font-medium shadow-md shadow-black/10' : 'text-gray-600 hover:bg-black/5'
+                      `flex items-center gap-3 px-3 py-3 rounded-2xl text-[13.5px] font-bold transition-all duration-300 ${
+                        isActive && item.to && item.to !== '#' 
+                          ? 'bg-brand-primary/10 text-brand-primary shadow-sm ring-1 ring-brand-primary/20' 
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                       }`
                     }
                   >
@@ -112,26 +113,26 @@ export function Sidebar() {
                       <>
                         {item.icon && (
                           <item.icon
-                            size={16}
-                            className={`transition-colors ${isActive && item.to && item.to !== '#' ? 'text-white' : 'text-gray-400'}`}
+                            size={18}
+                            className={`transition-colors ${isActive && item.to && item.to !== '#' ? 'text-brand-primary' : 'text-slate-400'}`}
                           />
                         )}
-                        {!item.icon && <div className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-1.5 mr-0.5" />}
+                        {!item.icon && <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1.5 mr-0.5" />}
                         <span className="flex-1">{item.label}</span>
-                        {item.subItems && <ChevronRight size={14} className="text-gray-400" />}
+                        {item.subItems && <ChevronRight size={14} className="opacity-40" />}
                       </>
                     )}
                   </NavLink>
                   {item.subItems && (
-                     <div className="ml-6 mt-1 space-y-1 border-l border-gray-100 pl-3 py-1">
+                     <div className="ml-8 mt-2 space-y-1.5 border-l border-slate-100 pl-4 py-1">
                         {item.subItems.map((sub) => (
-                           <div
+                           <button
                              key={sub.label}
                              onClick={() => navigate(sub.to)}
-                             className="text-[12px] text-gray-400 py-1.5 hover:text-black cursor-pointer transition-colors"
+                             className="text-[12.5px] text-slate-400 py-1.5 hover:text-brand-primary font-semibold block w-full text-left transition-colors"
                            >
                               {sub.label}
-                           </div>
+                           </button>
                         ))}
                      </div>
                   )}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bus, User, Lock, Eye, EyeOff, Phone, Mail, ArrowLeft } from 'lucide-react'
+import { Bus, User, Lock, Eye, EyeOff, Phone, Mail } from 'lucide-react'
 
 const InputField = ({
   label,
@@ -21,21 +21,23 @@ const InputField = ({
   rightIcon?: any
   onRightIconClick?: () => void
 }) => (
-  <div className="space-y-2">
-    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">{label}</label>
-    <div className="flex items-center gap-4 p-4 bg-[#192031] border-2 border-[#33415C] focus-within:border-[#12B3A8] rounded-2xl transition-all">
-      <Icon className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+  <div className="space-y-3">
+    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
+    <div className="flex items-center gap-5 p-5 bg-slate-50 border-2 border-slate-50 focus-within:border-brand-primary/30 focus-within:bg-white rounded-[1.5rem] transition-all duration-300 shadow-sm focus-within:shadow-xl focus-within:shadow-brand-primary/10 group">
+      <div className="w-12 h-12 rounded-[1rem] bg-white flex items-center justify-center shadow-sm flex-shrink-0 border border-slate-100 group-focus-within:border-brand-primary/20 transition-all">
+         <Icon className="w-6 h-6 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+      </div>
       <input
         type={type}
         placeholder={placeholder}
-        className="bg-transparent border-none focus:outline-none focus:ring-0 text-white font-bold w-full placeholder:text-neutral-600 placeholder:font-normal"
+        className="bg-transparent border-none focus:outline-none focus:ring-0 text-slate-900 font-black w-full placeholder:text-slate-300 placeholder:font-normal text-lg"
         value={value}
         onChange={e => onChange(e.target.value)}
       />
       {rightIcon && (
         <button
           onClick={onRightIconClick}
-          className="text-neutral-500 hover:text-neutral-300 transition-colors flex-shrink-0"
+          className="w-12 h-12 rounded-[1rem] hover:bg-slate-100 text-slate-400 hover:text-brand-primary transition-all flex items-center justify-center"
           type="button"
         >
           {rightIcon}
@@ -69,98 +71,105 @@ export default function RegisterPage() {
   const handleRegister = () => {
     setError('')
     if (!canRegister) {
-      setError('Please fill in all required fields.')
+      setError('Vui lòng điền đầy đủ các thông tin bắt buộc.')
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError('Mật khẩu xác nhận không trùng khớp.')
       return
     }
     setSuccess(true)
   }
 
   return (
-    <div className="min-h-screen bg-[#192031] flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-8 py-20 font-sans selection:bg-brand-primary/30 relative overflow-hidden">
+      {/* Decorative Circles */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-primary/5 rounded-full -mr-64 -mt-64 blur-3xl opacity-50 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-secondary/5 rounded-full -ml-40 -mb-40 blur-3xl opacity-50 pointer-events-none" />
+
+      <div className="w-full max-w-lg relative z-10">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 rounded-[28px] bg-[#12B3A8] flex items-center justify-center mb-6 shadow-2xl shadow-[#12B3A8]/30">
-            <Bus className="w-10 h-10 text-white" />
+        <div className="flex flex-col items-center mb-16 transform transition-all duration-700 hover:scale-110">
+          <div className="w-24 h-24 rounded-[2.5rem] bg-brand-primary flex items-center justify-center mb-8 shadow-2xl shadow-brand-primary/40 group">
+            <Bus className="w-12 h-12 text-white group-hover:rotate-12 transition-transform duration-500" />
           </div>
           <div className="text-center">
-            <div className="text-white text-3xl font-black tracking-tight">GO <span className="text-[#12B3A8]">ROUTEX</span></div>
-            <p className="text-neutral-400 mt-3 font-medium">Create your account to start booking</p>
+            <div className="text-slate-900 text-4xl font-black tracking-tight leading-none">GO <span className="text-brand-primary">ROUTEX</span></div>
+            <p className="text-slate-400 mt-4 font-black uppercase tracking-[0.2em] text-[10px] opacity-70">Quản lý hành trình thông minh</p>
           </div>
         </div>
 
         {success ? (
-          <div className="bg-[#222C3F] rounded-[32px] p-10 border border-[#33415C] text-center">
-            <div className="w-16 h-16 rounded-full bg-[#12B3A8] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#12B3A8]/20">
-              <User className="w-8 h-8 text-white" />
+          <div className="bg-white rounded-[3rem] p-16 border border-slate-100 text-center shadow-2xl shadow-slate-200/50 animate-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 rounded-[2.5rem] bg-brand-primary flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-brand-primary/30">
+              <div className="w-12 h-12 rounded-full border-4 border-white/30 border-t-white animate-[spin_2s_linear_infinite]" />
+              <User className="w-10 h-10 text-white absolute" />
             </div>
-            <h2 className="text-white text-2xl font-black mb-3">Account Created!</h2>
-            <p className="text-neutral-400 font-medium mb-8">Your account has been successfully registered.</p>
+            <h2 className="text-slate-900 text-4xl font-black mb-4 tracking-tight">Đăng ký thành công!</h2>
+            <p className="text-slate-500 font-medium text-lg mb-12">Tài khoản của bạn đã được tạo. Hãy bắt đầu hành trình ngay.</p>
             <button
               onClick={() => navigate('/login')}
-              className="w-full bg-[#12B3A8] hover:bg-[#0f968d] text-white py-4 rounded-2xl font-black transition-all shadow-xl shadow-[#12B3A8]/20"
+              className="w-full bg-brand-primary hover:bg-brand-dark text-white py-6 rounded-[1.5rem] font-black text-xl transition-all shadow-2xl shadow-brand-primary/30 hover:shadow-brand-dark/30 hover:-translate-y-1"
             >
-              Sign In Now
+              Đăng nhập ngay
             </button>
           </div>
         ) : (
-          <div className="bg-[#222C3F] rounded-[32px] p-8 border border-[#33415C] shadow-2xl shadow-black/20">
-            <h1 className="text-white text-2xl font-black mb-8">Create account</h1>
+          <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-2xl shadow-slate-200/50 hover:shadow-brand-primary/5 transition-all duration-500">
+            <h1 className="text-slate-900 text-3xl font-black mb-10 tracking-tight">Tạo tài khoản mới</h1>
 
-            <div className="space-y-5">
-              <InputField label="Full name" icon={User} placeholder="Enter your full name" value={fullName} onChange={setFullName} />
-              <InputField label="Username" icon={User} placeholder="Choose a username" value={username} onChange={setUsername} />
-              <InputField label="Phone number" icon={Phone} placeholder="Enter phone number" type="tel" value={phone} onChange={setPhone} />
-              <InputField label="Email" icon={Mail} placeholder="Enter email address" type="email" value={email} onChange={setEmail} />
+            <div className="space-y-6">
+              <InputField label="Họ và tên" icon={User} placeholder="Nhập đầy đủ họ tên" value={fullName} onChange={setFullName} />
+              <InputField label="Tên đăng nhập" icon={User} placeholder="Chọn tên đăng nhập" value={username} onChange={setUsername} />
+              <InputField label="Số điện thoại" icon={Phone} placeholder="Nhập số điện thoại" type="tel" value={phone} onChange={setPhone} />
+              <InputField label="Email" icon={Mail} placeholder="Nhập địa chỉ email" type="email" value={email} onChange={setEmail} />
               <InputField
-                label="Password"
+                label="Mật khẩu"
                 icon={Lock}
-                placeholder="Create a password"
+                placeholder="Tạo mật khẩu an toàn"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={setPassword}
-                rightIcon={showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                rightIcon={showPassword ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                 onRightIconClick={() => setShowPassword(v => !v)}
               />
               <InputField
-                label="Confirm password"
+                label="Xác nhận mật khẩu"
                 icon={Lock}
-                placeholder="Repeat your password"
+                placeholder="Nhập lại mật khẩu"
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                rightIcon={showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                rightIcon={showConfirm ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                 onRightIconClick={() => setShowConfirm(v => !v)}
               />
 
               {error && (
-                <p className="text-red-400 text-sm font-bold text-center">{error}</p>
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center justify-center gap-2 text-red-500 text-sm font-black uppercase tracking-wider animate-shake">
+                   <span>⚠️</span> {error}
+                </div>
               )}
 
               <button
                 onClick={handleRegister}
                 disabled={!canRegister}
-                className={`w-full py-4 rounded-2xl font-black text-lg transition-all mt-2 ${
+                className={`w-full py-6 rounded-[1.5rem] font-black text-xl transition-all mt-6 shadow-2xl ${
                   canRegister
-                    ? 'bg-[#12B3A8] hover:bg-[#0f968d] text-white shadow-xl shadow-[#12B3A8]/20'
-                    : 'bg-[#2C364D] text-neutral-500 cursor-not-allowed'
+                    ? 'bg-brand-primary hover:bg-brand-dark text-white shadow-brand-primary/30 hover:shadow-brand-dark/30 hover:-translate-y-1'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                 }`}
               >
-                Create Account
+                Đăng ký tài khoản
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <span className="text-neutral-500 font-medium">Already have an account?</span>
+            <div className="flex flex-col items-center gap-4 mt-12 border-t border-slate-50 pt-10">
+              <span className="text-slate-400 font-medium">Bạn đã có tài khoản rồi?</span>
               <button
                 onClick={() => navigate('/login')}
-                className="text-[#12B3A8] font-black hover:text-[#4AE8DD] transition-colors"
+                className="text-brand-primary text-lg font-black hover:text-brand-dark transition-all hover:scale-105 active:scale-95"
               >
-                Login
+                Đăng nhập tại đây
               </button>
             </div>
           </div>
@@ -168,10 +177,12 @@ export default function RegisterPage() {
 
         <button
           onClick={() => navigate('/')}
-          className="w-full mt-6 text-neutral-500 hover:text-neutral-300 font-bold text-sm transition-colors text-center flex items-center justify-center gap-2"
+          className="w-full mt-10 text-slate-400 hover:text-brand-primary font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 group"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to home
+          <div className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center group-hover:border-brand-primary/30 transition-all">
+             <span className="group-hover:-translate-x-1 transition-transform">←</span>
+          </div>
+          Quay lại trang chính
         </button>
       </div>
     </div>
