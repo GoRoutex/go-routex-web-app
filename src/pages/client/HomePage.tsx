@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bus,
@@ -16,6 +16,8 @@ import {
   TrendingUp,
   History as HistoryIcon,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 const POPULAR_ROUTES = [
   {
@@ -56,10 +58,32 @@ const STATS = [
   { value: "50k+", label: "Trips Completed" },
 ];
 
+type FieldProps = {
+  label: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}
+
+const Field = ({ label, icon: Icon, children }: FieldProps) => (
+  <div className="flex flex-col gap-1.5 flex-1">
+    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
+      {label}
+    </span>
+    <div
+      className="flex items-center gap-3 px-4 py-4 bg-slate-50 border border-slate-100
+                      focus-within:border-brand-primary/40 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand-primary/5
+                      rounded-2xl transition-all group cursor-text"
+    >
+      <Icon className="w-5 h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+      {children}
+    </div>
+  </div>
+)
+
 export default function HomePage() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("");
+  const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
+  const [userName] = useState(() => localStorage.getItem("userName") || "");
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [searchData, setSearchData] = useState({
     originCity: "",
@@ -67,12 +91,6 @@ export default function HomePage() {
     departureDate: "",
     seats: 1,
   });
-
-  useEffect(() => {
-    const flag = localStorage.getItem("isLoggedIn");
-    setIsLoggedIn(flag === "true");
-    setUserName(localStorage.getItem("userName") || "");
-  }, []);
 
   const handleSearch = () => {
     if (
@@ -89,31 +107,6 @@ export default function HomePage() {
   const patchRoute = (from: string, to: string) => {
     setSearchData((s) => ({ ...s, originCity: from, destinationCity: to }));
   };
-
-  /* ─── helper: inline input field ─── */
-  const Field = ({
-    label,
-    icon: Icon,
-    children,
-  }: {
-    label: string;
-    icon: any;
-    children: React.ReactNode;
-  }) => (
-    <div className="flex flex-col gap-1.5 flex-1">
-      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
-        {label}
-      </span>
-      <div
-        className="flex items-center gap-3 px-4 py-4 bg-slate-50 border border-slate-100
-                      focus-within:border-brand-primary/40 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand-primary/5
-                      rounded-2xl transition-all group cursor-text"
-      >
-        <Icon className="w-5 h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
-        {children}
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">

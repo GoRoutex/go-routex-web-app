@@ -9,13 +9,14 @@ import {
   ArrowRight,
   TrendingDown
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 const FeatureCard = ({
   icon: Icon,
   title,
   description
 }: {
-  icon: any,
+  icon: LucideIcon,
   title: string,
   description?: string
 }) => (

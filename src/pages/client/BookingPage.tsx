@@ -10,6 +10,7 @@ import {
   StickyNote,
   ChevronRight,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type StopPoint = {
   id: string;
@@ -87,7 +88,7 @@ const InputField = ({
   multiline,
 }: {
   label: string;
-  icon: any;
+  icon: LucideIcon;
   placeholder: string;
   type?: string;
   value: string;

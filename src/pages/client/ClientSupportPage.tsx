@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bus, User, LayoutDashboard, Send, Phone, Mail, HelpCircle, ChevronDown, CheckCircle2 } from 'lucide-react'
 
@@ -11,16 +11,10 @@ const FAQS = [
 
 export default function ClientSupportPage() {
   const navigate = useNavigate()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userName, setUserName] = useState('')
+  const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
+  const [userName] = useState(() => localStorage.getItem('userName') || '')
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0)
   const [formSent, setFormSent] = useState(false)
-
-  useEffect(() => {
-    const flag = localStorage.getItem('isLoggedIn')
-    setIsLoggedIn(flag === 'true')
-    setUserName(localStorage.getItem('userName') || '')
-  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

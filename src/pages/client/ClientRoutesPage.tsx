@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bus, User, LayoutDashboard, Search, MapPin, Navigation, ArrowRight, Clock } from 'lucide-react'
 
@@ -15,15 +15,9 @@ const ALL_ROUTES = [
 
 export default function ClientRoutesPage() {
   const navigate = useNavigate()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userName, setUserName] = useState('')
+  const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
+  const [userName] = useState(() => localStorage.getItem('userName') || '')
   const [searchTerm, setSearchTerm] = useState('')
-
-  useEffect(() => {
-    const flag = localStorage.getItem('isLoggedIn')
-    setIsLoggedIn(flag === 'true')
-    setUserName(localStorage.getItem('userName') || '')
-  }, [])
 
   const filteredRoutes = ALL_ROUTES.filter(r => 
     r.from.toLowerCase().includes(searchTerm.toLowerCase()) || 

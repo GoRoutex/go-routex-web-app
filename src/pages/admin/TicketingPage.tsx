@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Ticket, Search, CheckCircle2, XCircle, ArrowRight, Eye, RefreshCw } from 'lucide-react'
+import type { SVGProps } from 'react'
 
 const initialTickets = [
   { id: 'TKT-99201', passName: 'Michael Corleone', route: 'Downtown Express', date: '2026-03-20', time: '08:00 AM', seat: '12A', price: '$24.00', status: 'Booked' },
@@ -128,7 +129,7 @@ export function TicketingPage() {
   )
 }
 
-function Plus(props: any) {
+function Plus(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

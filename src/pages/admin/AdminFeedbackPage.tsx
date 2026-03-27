@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MessageSquare, Star, Send, Filter, CheckCircle2, Clock3, AlertCircle } from 'lucide-react'
+import { Star, Send, Filter, CheckCircle2, Clock3, AlertCircle } from 'lucide-react'
 
 const feedbackItems = [
   {

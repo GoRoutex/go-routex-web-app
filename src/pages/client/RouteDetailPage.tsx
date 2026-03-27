@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Bus, MapPin, ChevronRight, Loader2 } from 'lucide-react'
 
@@ -96,19 +96,12 @@ export default function RouteDetailPage() {
   const passedRoute: RouteItem | undefined = location.state?.routeData
   const routeData = passedRoute ?? mockRouteData
 
-  const [routeSeats, setRouteSeats] = useState<RouteSeatItem[]>([])
-  const [loadingSeats, setLoadingSeats] = useState(true)
+  const routeSeats = useMemo(
+    () => generateMockSeats(routeData.id, routeData.seatCapacity ?? 34),
+    [routeData.id, routeData.seatCapacity]
+  )
   const [selectedSeats, setSelectedSeats] = useState<string[]>([])
   const [holding, setHolding] = useState(false)
-
-  // Simulate fetching seats
-  useEffect(() => {
-    setLoadingSeats(true)
-    setTimeout(() => {
-      setRouteSeats(generateMockSeats(routeData.id, routeData.seatCapacity ?? 34))
-      setLoadingSeats(false)
-    }, 800)
-  }, [routeData.id, routeData.seatCapacity])
 
   const seatStatusMap = useMemo(() => {
     const map = new Map<string, RouteSeatStatus>()
@@ -268,25 +261,18 @@ export default function RouteDetailPage() {
           </div>
 
           {/* Seat Grid */}
-          {loadingSeats ? (
-            <div className="py-24 flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200">
-              <div className="w-16 h-16 rounded-full border-4 border-slate-200 border-t-brand-primary animate-spin" />
-              <span className="text-slate-400 font-bold tracking-tight">Đang tải sơ đồ chỗ ngồi...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-10 gap-4 p-4">
-              {routeSeats.map((seat) => (
-                <button
-                  key={seat.seatNo}
-                  onClick={() => toggleSeat(seat.seatNo)}
-                  disabled={seat.status !== 'AVAILABLE' && !selectedSeats.includes(seat.seatNo)}
-                  className={`h-16 rounded-2xl border-2 font-black text-lg transition-all active:scale-90 flex items-center justify-center ${seatColorClass(seat.seatNo)}`}
-                >
-                  {seat.seatNo}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-10 gap-4 p-4">
+            {routeSeats.map((seat) => (
+              <button
+                key={seat.seatNo}
+                onClick={() => toggleSeat(seat.seatNo)}
+                disabled={seat.status !== 'AVAILABLE' && !selectedSeats.includes(seat.seatNo)}
+                className={`h-16 rounded-2xl border-2 font-black text-lg transition-all active:scale-90 flex items-center justify-center ${seatColorClass(seat.seatNo)}`}
+              >
+                {seat.seatNo}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Stop Points */}

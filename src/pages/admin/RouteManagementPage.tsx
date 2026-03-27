@@ -1,8 +1,19 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, MapPin, Map, Clock, User, Bus } from 'lucide-react'
 
+type Route = {
+  id: string
+  name: string
+  origin: string
+  dest: string
+  dist: string
+  time: string
+  assignedVehicle: string | null
+  assignedDriver: string | null
+}
+
 // Dummy Data
-const initialRoutes = [
+const initialRoutes: Route[] = [
   { id: '1', name: 'Downtown Express', origin: 'Central Station', dest: 'Business District', dist: '12 km', time: '45 min', assignedVehicle: 'Bus-01', assignedDriver: 'John Doe' },
   { id: '2', name: 'Airport Shuttle', origin: 'City Mall', dest: 'International Airport', dist: '25 km', time: '60 min', assignedVehicle: 'Van-05', assignedDriver: 'Alice Smith' },
   { id: '3', name: 'Coastal Line', origin: 'West Terminal', dest: 'East Beach', dist: '30 km', time: '90 min', assignedVehicle: null, assignedDriver: null },
@@ -12,7 +23,7 @@ export function RouteManagementPage() {
   const [routes] = useState(initialRoutes)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
-  const [selectedRoute, setSelectedRoute] = useState<any>(null)
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bus, User, LayoutDashboard, Calendar, Clock, MapPin, CheckCircle2 } from 'lucide-react'
 
@@ -12,15 +12,9 @@ const SCHEDULES = [
 
 export default function ClientSchedulesPage() {
   const navigate = useNavigate()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userName, setUserName] = useState('')
+  const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
+  const [userName] = useState(() => localStorage.getItem('userName') || '')
   const [selectedDate, setSelectedDate] = useState('Hôm nay')
-
-  useEffect(() => {
-    const flag = localStorage.getItem('isLoggedIn')
-    setIsLoggedIn(flag === 'true')
-    setUserName(localStorage.getItem('userName') || '')
-  }, [])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans flex flex-col selection:bg-brand-primary/10">

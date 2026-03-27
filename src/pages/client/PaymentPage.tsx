@@ -12,6 +12,34 @@ import {
   User,
 } from "lucide-react";
 
+type PaymentMethod = "card" | "momo" | "bank";
+
+const paymentMethods: Array<{
+  id: PaymentMethod
+  label: string
+  icon: typeof CreditCard
+  sub: string
+}> = [
+  {
+    id: "card",
+    label: "Thẻ Tín dụng / Ghi nợ",
+    icon: CreditCard,
+    sub: "Visa, Mastercard, JCB",
+  },
+  {
+    id: "momo",
+    label: "Ví điện tử MoMo",
+    icon: Wallet,
+    sub: "Xử lý ngay lập tức",
+  },
+  {
+    id: "bank",
+    label: "Chuyển khoản Ngân hàng",
+    icon: Landmark,
+    sub: "Xác nhận thủ công",
+  },
+]
+
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,9 +58,7 @@ export default function PaymentPage() {
     totalAmount = 320000,
   } = location.state || {};
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "momo" | "bank">(
-    "card",
-  );
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes total for payment
   const [isSuccess, setIsSuccess] = useState(false);
@@ -172,29 +198,10 @@ export default function PaymentPage() {
             </div>
 
             <div className="space-y-4">
-              {[
-                {
-                  id: "card",
-                  label: "Thẻ Tín dụng / Ghi nợ",
-                  icon: CreditCard,
-                  sub: "Visa, Mastercard, JCB",
-                },
-                {
-                  id: "momo",
-                  label: "Ví điện tử MoMo",
-                  icon: Wallet,
-                  sub: "Xử lý ngay lập tức",
-                },
-                {
-                  id: "bank",
-                  label: "Chuyển khoản Ngân hàng",
-                  icon: Landmark,
-                  sub: "Xác nhận thủ công",
-                },
-              ].map((method) => (
+              {paymentMethods.map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => setPaymentMethod(method.id as any)}
+                  onClick={() => setPaymentMethod(method.id)}
                   className={`w-full flex items-center gap-5 p-6 rounded-[28px] border-2 transition-all duration-300 ${
                     paymentMethod === method.id
                       ? "border-brand-primary bg-brand-primary/5 shadow-inner"
