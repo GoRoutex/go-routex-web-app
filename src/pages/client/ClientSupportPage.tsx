@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Bus, User, LayoutDashboard, Send, Phone, Mail, HelpCircle, ChevronDown, CheckCircle2 } from 'lucide-react'
 
 const FAQS = [
@@ -221,8 +221,12 @@ export default function ClientSupportPage() {
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Go Routex © 2026 • Đồng hành cùng khách hàng</span>
           </div>
           <div className="flex gap-10 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-            {['Chính sách bảo mật', 'Điều khoản sử dụng', 'Văn phòng đại diện'].map(l => (
-              <a key={l} href="#" className="hover:text-brand-primary transition-colors">{l}</a>
+            {[
+              { label: 'Chính sách bảo mật', to: '/chinh-sach-bao-mat' },
+              { label: 'Điều khoản dịch vụ', to: '/dieu-khoan-dich-vu' },
+              { label: 'Liên hệ chúng tôi', to: '/lien-he-chung-toi' },
+            ].map(item => (
+              <Link key={item.label} to={item.to} className="hover:text-brand-primary transition-colors">{item.label}</Link>
             ))}
           </div>
         </div>

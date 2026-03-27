@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bus,
   Search,
@@ -202,9 +202,9 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-10 text-slate-500 text-sm font-black uppercase tracking-widest">
-            <a href="#" className="hover:text-brand-primary transition-colors">Chính sách bảo mật</a>
-            <a href="#" className="hover:text-brand-primary transition-colors">Điều khoản dịch vụ</a>
-            <a href="#" className="hover:text-brand-primary transition-colors">Liên hệ chúng tôi</a>
+            <Link to="/chinh-sach-bao-mat" className="hover:text-brand-primary transition-colors">Chính sách bảo mật</Link>
+            <Link to="/dieu-khoan-dich-vu" className="hover:text-brand-primary transition-colors">Điều khoản dịch vụ</Link>
+            <Link to="/lien-he-chung-toi" className="hover:text-brand-primary transition-colors">Liên hệ chúng tôi</Link>
           </div>
         </div>
       </footer>
