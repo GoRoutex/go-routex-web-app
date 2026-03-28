@@ -23,20 +23,27 @@ const team = [
   { name: 'David Lee', role: 'Safety Officer', avatar: 'https://i.pravatar.cc/150?u=5' },
 ]
 
-export function RightSidebar() {
+interface RightSidebarProps {
+  visible?: boolean
+  isDarkMode?: boolean
+}
+
+export function RightSidebar({ visible = true, isDarkMode = false }: RightSidebarProps) {
+  if (!visible) return null
+
   return (
-    <aside className="w-64 shrink-0 h-screen py-8 px-6 overflow-y-auto space-y-10 border-l border-gray-100 bg-white hidden 2xl:block">
+    <aside className={`w-64 shrink-0 h-screen py-8 px-6 overflow-y-auto space-y-12 border-l hidden 2xl:block transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
       <div>
-        <h3 className="text-[13px] font-bold text-gray-900 uppercase tracking-widest mb-6">Critical Alerts</h3>
+        <h3 className={`text-[11px] font-black uppercase tracking-[0.15em] mb-6 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Thông báo quan trọng</h3>
         <div className="space-y-6">
           {notifications.map((n, i) => (
-            <div key={i} className="flex gap-4">
-              <div className={`w-9 h-9 rounded-xl ${n.bg} flex items-center justify-center shrink-0`}>
-                <n.icon size={16} className={n.color} />
+            <div key={i} className="flex gap-4 group cursor-pointer">
+              <div className={`w-10 h-10 rounded-2xl ${n.bg} flex items-center justify-center shrink-0 border border-transparent group-hover:scale-110 transition-transform`}>
+                <n.icon size={18} className={n.color} />
               </div>
-              <div className="min-w-0">
-                <p className="text-[12px] font-semibold leading-tight text-gray-900">{n.title}</p>
-                <p className="text-[10px] text-gray-400 mt-1">{n.time}</p>
+              <div className="min-w-0 flex flex-col justify-center">
+                <p className={`text-[12.5px] font-bold leading-snug group-hover:text-brand-primary transition-colors ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{n.title}</p>
+                <p className="text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">{n.time}</p>
               </div>
             </div>
           ))}
@@ -44,16 +51,16 @@ export function RightSidebar() {
       </div>
 
       <div>
-        <h3 className="text-[13px] font-bold text-gray-900 uppercase tracking-widest mb-6">Recent Activity</h3>
-        <div className="space-y-5">
+        <h3 className={`text-[11px] font-black uppercase tracking-[0.15em] mb-6 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Hoạt động gần đây</h3>
+        <div className="space-y-6">
           {activities.map((a, i) => (
-            <div key={i} className="flex gap-4 relative">
-              <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-lg shrink-0 z-10 border border-gray-100">
+            <div key={i} className="flex gap-4 relative group cursor-pointer">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 z-10 border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 group-hover:bg-slate-700' : 'bg-slate-50 border-slate-100 group-hover:bg-white group-hover:shadow-lg group-hover:shadow-slate-100'}`}>
                 {a.icon}
               </div>
-              <div className="min-w-0 pt-0.5">
-                <p className="text-[12px] font-medium leading-tight text-gray-700">{a.title}</p>
-                <p className="text-[10px] text-gray-400 mt-1">{a.time}</p>
+              <div className="min-w-0 pt-0.5 flex flex-col justify-center">
+                <p className={`text-[12.5px] font-bold leading-snug transition-colors ${isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'}`}>{a.title}</p>
+                <p className="text-[10px] text-slate-400 font-semibold mt-1 uppercase tracking-wider">{a.time}</p>
               </div>
             </div>
           ))}
@@ -61,14 +68,14 @@ export function RightSidebar() {
       </div>
 
       <div>
-        <h3 className="text-[13px] font-bold text-gray-900 uppercase tracking-widest mb-6">Operations Team</h3>
+        <h3 className={`text-[11px] font-black uppercase tracking-[0.15em] mb-6 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Đội ngũ vận hành</h3>
         <div className="space-y-5">
           {team.map((c, i) => (
-            <div key={i} className="flex items-center gap-4 group cursor-pointer">
-              <img src={c.avatar} alt="" className="w-8 h-8 rounded-full border-2 border-transparent group-hover:border-black transition-all" />
+            <div key={i} className={`flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-2xl transition-all ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
+              <img src={c.avatar} alt="" className="w-10 h-10 rounded-xl border-2 border-transparent group-hover:border-brand-primary transition-all object-cover shadow-sm" />
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-gray-900">{c.name}</p>
-                <p className="text-[10px] text-gray-400">{c.role}</p>
+                <p className={`text-[13px] font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{c.name}</p>
+                <p className="text-[11px] text-slate-400 font-semibold">{c.role}</p>
               </div>
             </div>
           ))}

@@ -74,79 +74,85 @@ export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => voi
   const stopCount = stops.length
 
   return (
-    <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all overflow-hidden group">
-      <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
+    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 overflow-hidden group">
+      <div className="p-8 md:p-10 flex flex-col md:flex-row gap-10">
         {/* Left Info */}
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1 bg-neutral-100 text-[#192031] text-[10px] font-black uppercase tracking-widest rounded-full">
+        <div className="flex-1 space-y-6">
+          <div className="flex items-center gap-4">
+            <span className="px-4 py-1.5 bg-brand-primary/10 text-brand-primary text-[11px] font-black uppercase tracking-[0.2em] rounded-xl border border-brand-primary/10">
               {item.routeCode}
             </span>
-            <span className="text-neutral-400 text-xs font-bold uppercase tracking-widest">{date}</span>
+            <span className="text-slate-400 text-xs font-black uppercase tracking-widest">{date}</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-black text-[#192031]">{startTime}</span>
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Depart</span>
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-start gap-1">
+              <span className="text-3xl font-black text-slate-900 tracking-tight">{startTime}</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Khởi hành</span>
             </div>
 
             <div className="flex-1 flex flex-col items-center px-4">
-              <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mb-2">{dur}</span>
-              <div className="w-full h-[2px] bg-neutral-100 relative rounded-full">
-                <div className="absolute top-1/2 left-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-neutral-200" />
-                <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-[#12B3A8] transition-colors" />
+              <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.2em] mb-2">{dur}</span>
+              <div className="w-full h-[3px] bg-slate-50 relative rounded-full overflow-hidden border border-slate-100">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-brand-primary to-brand-accent transition-all duration-1000" 
+                  style={{ width: '100%' }}
+                />
               </div>
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-2">
-                {stopCount === 0 ? "Direct" : `${stopCount} stop${stopCount > 1 ? "s" : ""}`}
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">
+                {stopCount === 0 ? "Chạy thẳng" : `${stopCount} điểm dừng`}
               </span>
             </div>
 
             <div className="flex flex-col items-end gap-1">
-              <span className="text-2xl font-black text-[#192031]">{endTime}</span>
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Arrive</span>
+              <span className="text-3xl font-black text-slate-900 tracking-tight">{endTime}</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kết thúc</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
-            <div className="flex items-center gap-2">
-              <Bus className="w-4 h-4 text-neutral-400" />
-              <span className="text-sm font-bold text-neutral-600">{item.vehicleType || 'Limousine'} • {item.seatCapacity || 32} seats</span>
+          <div className="flex flex-wrap gap-x-8 gap-y-3 pt-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                <Bus className="w-4 h-4 text-brand-primary" />
+              </div>
+              <span className="text-[13px] font-bold text-slate-600 tracking-tight">{item.vehicleType || 'Limousine'} • {item.seatCapacity || 32} chỗ</span>
             </div>
             {item.pickupBranch && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-bold text-neutral-600">{item.pickupBranch}</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                  <MapPin className="w-4 h-4 text-brand-secondary" />
+                </div>
+                <span className="text-[13px] font-bold text-slate-600 tracking-tight">{item.pickupBranch}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Right Action */}
-        <div className="md:w-56 md:border-l border-neutral-50 md:pl-8 flex flex-col justify-between items-end md:items-center text-center">
+        <div className="md:w-64 md:border-l border-slate-100 md:pl-10 flex flex-col justify-between items-end md:items-center text-center">
           <div>
-            <div className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-1">Price per person</div>
-            <div className="text-3xl font-black text-[#12B3A8]">{formatVnd(item.price || 50000)}</div>
+            <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Giá vé 1 người</div>
+            <div className="text-4xl font-black text-brand-primary tracking-tighter">{formatVnd(item.price || 50000)}</div>
           </div>
 
-          <div className="mt-6 md:mt-0 w-full flex flex-col gap-3">
+          <div className="mt-8 md:mt-0 w-full flex flex-col gap-4">
              {lowSeat && (
-              <div className="text-[10px] font-black text-red-500 uppercase tracking-wide animate-pulse">
-                Only {seats} seats left!
+              <div className="text-[11px] font-black text-red-500 uppercase tracking-widest animate-pulse mb-1">
+                Chỉ còn {seats} ghế cuối!
               </div>
             )}
             <button
               onClick={onClick}
-              className="w-full bg-[#192031] hover:bg-[#12B3A8] text-white py-3.5 rounded-2xl font-black text-sm transition-all shadow-lg hover:shadow-[#12B3A8]/20"
+              className="w-full bg-brand-dark hover:bg-brand-primary text-white py-4 rounded-2xl font-black text-sm transition-all duration-300 shadow-xl shadow-brand-dark/10 hover:shadow-brand-primary/25 hover:-translate-y-1"
             >
-              Select Trip
+              Chọn chuyến này
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-              className="w-full text-neutral-400 hover:text-[#192031] py-2 font-bold text-xs flex items-center justify-center gap-1"
+              className="w-full text-slate-400 hover:text-slate-900 py-2 font-black text-[11px] uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-colors"
             >
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              {expanded ? 'Hide Details' : 'View Stops'}
+              {expanded ? 'Ẩn chi tiết' : 'Xem điểm dừng'}
             </button>
           </div>
         </div>
@@ -154,18 +160,18 @@ export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => voi
 
       {/* Expanded Stops */}
       {expanded && stopCount > 0 && (
-        <div className="px-8 pb-8 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="bg-neutral-50 rounded-[24px] p-6 space-y-4">
-            <h5 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-4">Route Information</h5>
-            <div className="space-y-6 relative ml-2">
-              <div className="absolute top-2 bottom-2 left-0 w-0.5 bg-neutral-200" />
+        <div className="px-10 pb-10 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-slate-50 rounded-[2.5rem] p-8 space-y-6 border border-white">
+            <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Thông tin lộ trình</h5>
+            <div className="space-y-8 relative ml-3">
+              <div className="absolute top-2 bottom-2 left-0 w-1 bg-gradient-to-b from-brand-primary/20 via-brand-accent/20 to-brand-secondary/20 rounded-full" />
               {stops.map((stop) => (
-                <div key={stop.id} className="relative pl-6">
-                  <div className="absolute top-2 left-[-3px] w-2 h-2 rounded-full bg-white border-2 border-neutral-300" />
+                <div key={stop.id} className="relative pl-8 group/stop">
+                  <div className="absolute top-1.5 left-[-6px] w-4 h-4 rounded-full bg-white border-2 border-slate-200 group-hover/stop:border-brand-primary group-hover/stop:scale-125 transition-all shadow-sm" />
                   <div className="flex justify-between items-start">
                     <div>
-                      <h6 className="font-black text-sm text-[#192031]">{stop.note || `Stop ${stop.stopOrder}`}</h6>
-                      <p className="text-xs text-neutral-400 font-bold mt-1">Arrival: {stop.plannedArrivalTime ? formatTimeHHmm(stop.plannedArrivalTime) : 'TBD'}</p>
+                      <h6 className="font-black text-base text-slate-900 tracking-tight">{stop.note || `Trạm dừng ${stop.stopOrder}`}</h6>
+                      <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Đến lúc: {stop.plannedArrivalTime ? formatTimeHHmm(stop.plannedArrivalTime) : 'Dự kiến'}</p>
                     </div>
                   </div>
                 </div>

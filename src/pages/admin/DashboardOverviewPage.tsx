@@ -5,10 +5,10 @@ import {
 } from 'recharts'
 
 const kpis = [
-  { label: 'Today Passengers', value: '12.8K', delta: '+8.2%', positive: true, bg: 'bg-[#E3F5FF]' },
-  { label: 'Active Fleet', value: '86/92', delta: '93.4%', positive: true, bg: 'bg-[#E5ECF6]' },
-  { label: 'On-Time Rate', value: '96.2%', delta: '+1.5%', positive: true, bg: 'bg-[#E3F5FF]' },
-  { label: 'Daily Revenue', value: '$24.6K', delta: '+12.4%', positive: true, bg: 'bg-[#E5ECF6]' },
+  { label: 'Hành khách hôm nay', value: '12.8K', delta: '+8.2%', positive: true, bg: 'bg-brand-primary/10' },
+  { label: 'Đội xe đang chạy', value: '86/92', delta: '93.4%', positive: true, bg: 'bg-brand-secondary/10' },
+  { label: 'Tỉ lệ đúng giờ', value: '96.2%', delta: '+1.5%', positive: true, bg: 'bg-brand-accent/10' },
+  { label: 'Doanh thu ngày', value: '$24.6K', delta: '+12.4%', positive: true, bg: 'bg-orange-50' },
 ]
 
 const occupancyData = [
@@ -47,25 +47,31 @@ const regionalDemand = [
 
 export function DashboardOverviewPage() {
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Operational Summary</h2>
-        <span className="text-[12px] text-gray-400 font-medium">Last updated: 5 minutes ago</span>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Tổng quan vận hành</h2>
+          <p className="text-slate-500 font-medium mt-1">Chào mừng quay trở lại, đây là những gì đang diễn ra hôm nay.</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+           <div className="w-2 h-2 rounded-full bg-brand-secondary animate-pulse" />
+           <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">Cập nhật: 5 phút trước</span>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className={`${kpi.bg} p-6 rounded-2xl space-y-2 shadow-sm border border-black/5`}>
-            <p className="text-[13px] font-medium text-black/80">{kpi.label}</p>
+          <div key={kpi.label} className={`${kpi.bg} p-8 rounded-[2rem] space-y-4 shadow-sm border border-white transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-slate-200/50 group`}>
+            <p className="text-[13px] font-black text-slate-500 uppercase tracking-widest">{kpi.label}</p>
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold tracking-tight">{kpi.value}</h3>
-              <div className="flex items-center gap-1 text-[11px] font-medium">
-                <span className="text-black/80">{kpi.delta}</span>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">{kpi.value}</h3>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black ${kpi.positive ? 'bg-white text-brand-secondary' : 'bg-white text-red-500'}`}>
+                <span>{kpi.delta}</span>
                 {kpi.positive ? (
-                  <ArrowUpRight size={12} className="text-black/60" />
+                  <ArrowUpRight size={14} />
                 ) : (
-                  <ArrowDownRight size={12} className="text-black/60" />
+                  <ArrowDownRight size={14} />
                 )}
               </div>
             </div>
@@ -73,68 +79,73 @@ export function DashboardOverviewPage() {
         ))}
       </div>
 
-      {/* Main Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Large Line Chart */}
-        <div className="lg:col-span-2 bg-[#F7F9FB] rounded-3xl p-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-6 text-[12px] font-semibold">
-              <span className="text-gray-900 border-b-2 border-black pb-1 cursor-pointer">Live Occupancy</span>
-              <span className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">Fuel Consumption</span>
-              <span className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">Revenue Trend</span>
+        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+            <div className="flex items-center gap-8 text-[13px] font-black">
+              <span className="text-brand-primary border-b-2 border-brand-primary pb-2 cursor-pointer uppercase tracking-wider">Lưu lượng khách</span>
+              <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Tiên thụ nhiên liệu</span>
+              <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Doanh thu</span>
             </div>
-            <div className="flex items-center gap-6 text-[11px]">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                <span className="text-gray-900 font-medium">Actual</span>
+            <div className="flex items-center gap-6 text-[11px] font-bold">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+                <span className="text-slate-600 uppercase tracking-widest">Thực tế</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                <span className="text-gray-400">Capacity</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                <span className="text-slate-400 uppercase tracking-widest">Kế hoạch</span>
               </div>
             </div>
           </div>
 
-          <div className="h-[280px]">
+          <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={occupancyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#E5E7EB" strokeDasharray="3 3" />
+                <defs>
+                  <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                   dy={15}
                 />
                 <YAxis
                    axisLine={false}
                    tickLine={false}
-                   tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                   tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                 />
                 <Tooltip
                   contentStyle={{
-                    borderRadius: '12px',
+                    borderRadius: '16px',
                     border: 'none',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                    fontSize: '12px'
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.05)',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
                   }}
-                  itemStyle={{ fontWeight: 'bold' }}
+                  itemStyle={{ color: '#0EA5E9' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="capacity"
-                  stroke="#ADADAD"
+                  stroke="#E2E8F0"
                   strokeWidth={2}
-                  strokeDasharray="4 4"
+                  strokeDasharray="6 6"
                   fill="transparent"
                 />
                 <Area
                   type="monotone"
                   dataKey="current"
-                  stroke="#000"
-                  strokeWidth={2}
-                  fill="#000"
-                  fillOpacity={0.03}
+                  stroke="#0EA5E9"
+                  strokeWidth={4}
+                  fill="url(#colorCurrent)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -142,19 +153,19 @@ export function DashboardOverviewPage() {
         </div>
 
         {/* Route Efficiency */}
-        <div className="bg-[#F7F9FB] rounded-3xl p-8">
-          <h3 className="text-[14px] font-semibold mb-8">Route Efficiency</h3>
-          <div className="space-y-5">
+        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Hiệu suất tuyến đường</h3>
+          <div className="space-y-7">
             {routeEfficiency.map((item) => (
-              <div key={item.name} className="flex flex-col gap-1.5">
-                <div className="flex justify-between text-[11px] font-medium">
-                  <span className="text-gray-600">{item.name}</span>
-                  <span className="text-black">{item.value}%</span>
+              <div key={item.name} className="flex flex-col gap-2.5">
+                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider">
+                  <span className="text-slate-500">{item.name}</span>
+                  <span className="text-brand-primary">{item.value}%</span>
                 </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                   <div
-                    className="h-full bg-black rounded-full transition-all duration-1000"
-                    style={{ width: `${item.value}%`, opacity: item.value / 100 * 0.8 + 0.2 }}
+                    className="h-full bg-gradient-to-r from-brand-primary to-brand-accent rounded-full transition-all duration-1000"
+                    style={{ width: `${item.value}%` }}
                   />
                 </div>
               </div>
@@ -163,32 +174,31 @@ export function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Bottom Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Fleet Distribution */}
-        <div className="bg-[#F7F9FB] rounded-3xl p-8">
-          <h3 className="text-[14px] font-semibold mb-8">Fleet Assignment Status</h3>
-          <div className="h-[240px]">
+        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Trạng thái đội xe</h3>
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={fleetStatus} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#E5E7EB" strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                   dy={15}
                 />
                 <YAxis
                    axisLine={false}
                    tickLine={false}
-                   tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                   tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                 />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={32}>
+                <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
                   {fleetStatus.map((entry, index) => (
                     <Cell
                        key={`cell-${index}`}
-                       fill={entry.name === 'Active' ? '#1C1C1C' : entry.name === 'Maintenance' ? '#A1A7FF' : '#B1E3FF'}
+                       fill={entry.name === 'Active' ? '#0EA5E9' : entry.name === 'Maintenance' ? '#6366F1' : '#CBD5E1'}
                        fillOpacity={0.9}
                     />
                   ))}
@@ -199,37 +209,38 @@ export function DashboardOverviewPage() {
         </div>
 
         {/* Regional Demand */}
-        <div className="bg-[#F7F9FB] rounded-3xl p-8">
-          <h3 className="text-[14px] font-semibold mb-8">Regional Demand Distribution</h3>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-12 h-[240px]">
-            <div className="w-full h-full max-w-[200px]">
+        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Nhu cầu theo khu vực</h3>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-12 h-[280px]">
+            <div className="w-full h-full max-w-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={regionalDemand}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={85}
-                    paddingAngle={3}
+                    innerRadius={70}
+                    outerRadius={100}
+                    paddingAngle={8}
                     dataKey="value"
+                    stroke="none"
                   >
                     {regionalDemand.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color === '#1C1C1C' ? '#0EA5E9' : entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-1 gap-4 shrink-0">
+            <div className="grid grid-cols-1 gap-5 shrink-0">
               {regionalDemand.map((item) => (
-                <div key={item.name} className="flex items-center justify-between gap-12 text-[12px]">
+                <div key={item.name} className="flex items-center justify-between gap-12 text-[13px] font-bold">
                    <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-gray-500 font-medium">{item.name}</span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color === '#1C1C1C' ? '#0EA5E9' : item.color }} />
+                      <span className="text-slate-500">{item.name}</span>
                    </div>
-                   <span className="font-bold text-gray-900">{item.value}%</span>
+                   <span className="text-slate-900">{item.value}%</span>
                 </div>
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bus,
   Search,
@@ -9,29 +9,30 @@ import {
   ArrowRight,
   TrendingDown
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 const FeatureCard = ({
   icon: Icon,
   title,
   description
 }: {
-  icon: any,
+  icon: LucideIcon,
   title: string,
   description?: string
 }) => (
-  <div className="bg-[#263148] border border-[#33415C] rounded-2xl p-6 transition-all hover:border-[#12B3A8]/50 group">
-    <div className="w-12 h-12 rounded-xl bg-[#12B3A8]/20 flex items-center justify-center mb-4 group-hover:bg-[#12B3A8]/30 transition-colors">
-      <Icon className="w-6 h-6 text-[#12B3A8]" />
+  <div className="bg-white border border-slate-100 rounded-[2rem] p-8 transition-all hover:border-brand-primary/50 group shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-1">
+    <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center mb-6 group-hover:bg-brand-primary/20 transition-colors">
+      <Icon className="w-7 h-7 text-brand-primary" />
     </div>
-    <h3 className="text-white font-bold text-lg mb-2">{title}</h3>
-    {description && <p className="text-neutral-400 text-sm leading-relaxed">{description}</p>}
+    <h3 className="text-slate-900 font-black text-xl mb-3 tracking-tight">{title}</h3>
+    {description && <p className="text-slate-500 text-base font-medium leading-relaxed">{description}</p>}
   </div>
 )
 
 const StatCard = ({ value, label }: { value: string, label: string }) => (
-  <div className="bg-[#1E2738] rounded-2xl px-6 py-6 border border-[#2C364D] flex-1">
-    <div className="text-[#12B3A8] text-3xl font-extrabold mb-1">{value}</div>
-    <div className="text-neutral-300 text-sm font-medium">{label}</div>
+  <div className="bg-white rounded-[2rem] px-8 py-8 border border-white flex-1 shadow-xl shadow-slate-200/50">
+    <div className="text-brand-primary text-4xl font-black mb-2 tracking-tighter">{value}</div>
+    <div className="text-slate-400 text-[11px] font-black uppercase tracking-[0.2em]">{label}</div>
   </div>
 )
 
@@ -39,104 +40,104 @@ export default function LandingPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#192031] text-white selection:bg-[#12B3A8]/30">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 selection:bg-brand-primary/30 font-sans">
       {/* Navigation */}
-      <nav className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#12B3A8] flex items-center justify-center shadow-lg shadow-[#12B3A8]/20">
-            <Bus className="w-6 h-6 text-white" />
+      <nav className="max-w-7xl mx-auto px-8 py-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-brand-primary flex items-center justify-center shadow-2xl shadow-brand-primary/30">
+            <Bus className="w-7 h-7 text-white" />
           </div>
           <div>
-            <div className="text-white text-xl font-black tracking-tight leading-none">GO</div>
-            <div className="text-[#4AE8DD] text-sm italic font-bold tracking-wider">ROUTEX</div>
+            <div className="text-slate-900 text-2xl font-black tracking-tight leading-none group">GO <span className="text-brand-primary">ROUTEX</span></div>
+            <div className="text-slate-400 text-[10px] font-black tracking-[0.3em] uppercase mt-1">Vận tải thông minh</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <button
             onClick={() => navigate('/login')}
-            className="text-neutral-300 font-semibold hover:text-white transition-colors"
+            className="text-slate-500 font-black text-sm uppercase tracking-widest hover:text-brand-primary transition-colors"
           >
-            Sign In
+            Đăng nhập
           </button>
           <button
             onClick={() => navigate('/register')}
-            className="bg-[#12B3A8] hover:bg-[#0f968d] text-white px-6 py-2.5 rounded-full font-bold transition-all shadow-lg shadow-[#12B3A8]/20"
+            className="bg-brand-dark hover:bg-brand-primary text-white px-8 py-3.5 rounded-2xl font-black text-sm transition-all shadow-xl shadow-brand-dark/10 hover:shadow-brand-primary/25 hover:-translate-y-1"
           >
-            Register
+            Đăng ký ngay
           </button>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-6 pt-12 pb-24 grid lg:grid-cols-2 gap-16 items-center">
-        <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#12B3A8]/10 border border-[#12B3A8]/20 text-[#12B3A8] text-xs font-bold uppercase tracking-wider">
-            <TrendingDown className="w-3.5 h-3.5" />
-            Next Gen Transport Platform
+      <main className="max-w-7xl mx-auto px-8 pt-16 pb-32 grid lg:grid-cols-2 gap-20 items-center">
+        <div className="space-y-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-[10px] font-black uppercase tracking-[0.2em]">
+            <TrendingDown className="w-4 h-4" />
+            Nền tảng vận tải thế hệ mới
           </div>
 
-          <h1 className="text-6xl md:text-7xl font-black leading-[1.1]">
-            Book <span className="text-white">smarter,</span><br />
-            <span className="text-[#12B3A8]">manage routes faster.</span>
+          <h1 className="text-6xl md:text-8xl font-black leading-[1.05] tracking-tight text-slate-900">
+            Đặt vé <span className="text-brand-primary">thông minh,</span><br />
+             hành trình <span className="text-brand-secondary">trọn vẹn.</span>
           </h1>
 
-          <p className="text-neutral-400 text-xl leading-relaxed max-w-xl">
-            Search routes, choose seats, track availability, and streamline
-            transport operations in one modern experience.
+          <p className="text-slate-500 text-xl font-medium leading-relaxed max-w-xl">
+            Tìm kiếm lộ trình, chọn chỗ ngồi trực quan và trải nghiệm quy trình
+            đặt vé hiện đại nhất dành riêng cho các nhà xe chuyên nghiệp.
           </p>
 
-          <div className="flex flex-wrap gap-4 pt-4">
+          <div className="flex flex-wrap gap-6 pt-4">
             <button
               onClick={() => navigate('/home')}
-              className="bg-[#12B3A8] hover:bg-[#0f968d] text-white px-8 py-4 rounded-2xl font-black text-lg transition-all shadow-xl shadow-[#12B3A8]/20 flex items-center gap-2"
+              className="bg-brand-primary hover:bg-brand-dark text-white px-10 py-5 rounded-[2rem] font-black text-xl transition-all shadow-2xl shadow-brand-primary/30 hover:shadow-brand-dark/30 flex items-center gap-3 hover:-translate-y-1"
             >
-              Discover Routes
-              <ArrowRight className="w-5 h-5" />
+              Khám phá lộ trình
+              <ArrowRight className="w-6 h-6" />
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="bg-transparent border-2 border-[#3A455E] hover:border-neutral-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all"
+              className="bg-white border-2 border-slate-100 hover:border-brand-primary/30 text-slate-600 px-10 py-5 rounded-[2rem] font-black text-xl transition-all shadow-lg shadow-slate-200/50 hover:shadow-xl hover:-translate-y-1"
             >
-              Manage Bookings
+              Quản lý đặt vé
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 pt-8">
-            <StatCard value="24/7" label="Trip monitoring" />
-            <StatCard value="Live" label="Seat inventory" />
-            <StatCard value="Fast" label="Booking flow" />
+          <div className="grid grid-cols-3 gap-6 pt-10">
+            <StatCard value="24/7" label="Giám sát chuyến" />
+            <StatCard value="Live" label="Sơ đồ ghế thực" />
+            <StatCard value="Fast" label="Đặt vé siêu tốc" />
           </div>
         </div>
 
         <div className="relative">
           {/* Decorative Elements */}
-          <div className="absolute -top-10 -right-10 w-64 h-64 bg-[#12B3A8]/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#4AE8DD]/10 rounded-full blur-3xl animate-pulse delay-700" />
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-brand-primary/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-brand-secondary/5 rounded-full blur-3xl animate-pulse delay-700" />
 
-          <div className="grid grid-cols-2 gap-6 relative z-10">
-            <div className="space-y-6 pt-12">
+          <div className="grid grid-cols-2 gap-8 relative z-10">
+            <div className="space-y-8 pt-16">
               <FeatureCard
                 icon={Search}
-                title="Route Search"
-                description="Find the best paths across multiple regions in seconds."
+                title="Tìm kiếm lộ trình"
+                description="Tìm thấy những chuyến đi tốt nhất trên mọi vùng miền chỉ trong vài giây."
               />
               <FeatureCard
                 icon={CalendarClock}
-                title="Assignment"
-                description="Automated vehicle and driver assignment for every trip."
+                title="Sắp xếp chuyến"
+                description="Tự động phân bổ xe và tài xế cho từng hành trình một cách thông minh."
               />
             </div>
-            <div className="space-y-6">
+            <div className="space-y-8">
               <FeatureCard
                 icon={Armchair}
-                title="Seat Map"
-                description="Interactive seat selection with real-time status updates."
+                title="Sơ đồ chỗ ngồi"
+                description="Chọn ghế trực quan với cập nhật tình trạng chỗ trống theo thời gian thực."
               />
               <FeatureCard
                 icon={TicketCheck}
-                title="Booking Flow"
-                description="Seamless end-to-end booking experience with digital tickets."
+                title="Quy trình thanh toán"
+                description="Trải nghiệm đặt vé xuyên suốt với hệ thống vé điện tử hiện đại."
               />
             </div>
           </div>
@@ -144,41 +145,47 @@ export default function LandingPage() {
       </main>
 
       {/* Info Section */}
-      <section className="bg-white text-[#192031] py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
+      <section className="bg-white text-slate-900 py-32 rounded-[4rem] mx-8 mb-8 shadow-2xl shadow-slate-200/50 border border-white">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="flex flex-col md:flex-row justify-between items-end gap-12 mb-20">
             <div className="max-w-2xl">
-              <h2 className="text-4xl md:text-5xl font-black mb-6">Route operations at your fingertips</h2>
-              <p className="text-neutral-500 text-xl leading-relaxed">
-                From trip planning to seat holding and booking confirmation,
-                everything stays synchronized in real time across our entire platform.
+              <h2 className="text-5xl md:text-6xl font-black mb-8 tracking-tight">Vận hành nhà xe trong tầm tay</h2>
+              <p className="text-slate-500 text-xl font-medium leading-relaxed">
+                Từ việc lập kế hoạch chuyến đi đến giữ chỗ và xác nhận đặt vé,
+                mọi thứ luôn được đồng bộ hóa tức thời trên toàn bộ nền tảng.
               </p>
             </div>
-            <div className="w-20 h-20 rounded-3xl bg-[#12B3A8] flex items-center justify-center shadow-2xl shadow-[#12B3A8]/40">
-              <TicketCheck className="w-10 h-10 text-white" />
+            <div className="w-24 h-24 rounded-[2.5rem] bg-brand-primary flex items-center justify-center shadow-2xl shadow-brand-primary/40 group hover:rotate-12 transition-transform">
+              <TicketCheck className="w-12 h-12 text-white" />
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-[32px] bg-[#F5F7FA] border border-neutral-100">
-              <CheckCircle2 className="w-8 h-8 text-[#12B3A8] mb-6" />
-              <h4 className="text-xl font-black mb-4">On-time departures</h4>
-              <p className="text-neutral-500 leading-relaxed">
-                Manage and operate trips with accurate departure planning and real-time adjustment tools.
+          <div className="grid md:grid-cols-3 gap-10">
+            <div className="p-10 rounded-[3rem] bg-slate-50 border border-white shadow-sm hover:shadow-xl transition-all hover:-translate-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center mb-8">
+                 <CheckCircle2 className="w-8 h-8 text-brand-primary" />
+              </div>
+              <h4 className="text-2xl font-black mb-4 tracking-tight">Khởi hành đúng giờ</h4>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Quản lý và điều hành các chuyến đi với kế hoạch khởi hành chính xác và công cụ điều chỉnh linh hoạt.
               </p>
             </div>
-            <div className="p-8 rounded-[32px] bg-[#F5F7FA] border border-neutral-100">
-              <CheckCircle2 className="w-8 h-8 text-[#12B3A8] mb-6" />
-              <h4 className="text-xl font-black mb-4">Seat availability</h4>
-              <p className="text-neutral-500 leading-relaxed">
-                Track available, held, sold and blocked seats in real time with our unified inventory system.
+            <div className="p-10 rounded-[3rem] bg-slate-50 border border-white shadow-sm hover:shadow-xl transition-all hover:-translate-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-brand-secondary/10 flex items-center justify-center mb-8">
+                 <CheckCircle2 className="w-8 h-8 text-brand-secondary" />
+              </div>
+              <h4 className="text-2xl font-black mb-4 tracking-tight">Ghế trống thực tế</h4>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Theo dõi vé đã bán, đang giữ chỗ và các ghế bị khóa theo thời gian thực với hệ thống kho chỗ tập trung.
               </p>
             </div>
-            <div className="p-8 rounded-[32px] bg-[#F5F7FA] border border-neutral-100">
-              <CheckCircle2 className="w-8 h-8 text-[#12B3A8] mb-6" />
-              <h4 className="text-xl font-black mb-4">Real-time sync</h4>
-              <p className="text-neutral-500 leading-relaxed">
-                Every booking, cancellation or change is instantly reflected across all devices and platforms.
+            <div className="p-10 rounded-[3rem] bg-slate-50 border border-white shadow-sm hover:shadow-xl transition-all hover:-translate-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-brand-accent/10 flex items-center justify-center mb-8">
+                 <CheckCircle2 className="w-8 h-8 text-brand-accent" />
+              </div>
+              <h4 className="text-2xl font-black mb-4 tracking-tight">Đồng bộ tức thời</h4>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                Mọi giao dịch đặt vé, hủy chuyến hoặc thay đổi đều được phản ánh ngay lập tức trên tất cả thiết bị.
               </p>
             </div>
           </div>
@@ -186,17 +193,19 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#192031] border-t border-[#2C364D] py-12">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3 opacity-60">
-            <Bus className="w-5 h-5 text-[#12B3A8]" />
-            <span className="font-bold text-sm tracking-widest uppercase">Go Routex &copy; 2026</span>
+      <footer className="bg-brand-dark py-20 px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
+               <Bus className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-black text-slate-300 tracking-[0.2em] uppercase text-sm">Go Routex &copy; 2026</span>
           </div>
 
-          <div className="flex gap-8 text-neutral-500 text-sm font-medium">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Contact Us</a>
+          <div className="flex flex-wrap justify-center gap-10 text-slate-500 text-sm font-black uppercase tracking-widest">
+            <Link to="/chinh-sach-bao-mat" className="hover:text-brand-primary transition-colors">Chính sách bảo mật</Link>
+            <Link to="/dieu-khoan-dich-vu" className="hover:text-brand-primary transition-colors">Điều khoản dịch vụ</Link>
+            <Link to="/lien-he-chung-toi" className="hover:text-brand-primary transition-colors">Liên hệ chúng tôi</Link>
           </div>
         </div>
       </footer>

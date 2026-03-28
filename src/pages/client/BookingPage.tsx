@@ -1,56 +1,66 @@
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Bus, MapPin, User, Phone, Mail, StickyNote, TicketCheck, ChevronRight } from 'lucide-react'
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  ArrowLeft,
+  Bus,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  StickyNote,
+  ChevronRight,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type StopPoint = {
-  id: string
-  stopOrder: string
-  routeId: string
-  plannedArrivalTime?: string
-  plannedDepartureTime?: string
-  note?: string
-}
+  id: string;
+  stopOrder: string;
+  routeId: string;
+  plannedArrivalTime?: string;
+  plannedDepartureTime?: string;
+  note?: string;
+};
 
 type RouteItem = {
-  id: string
-  pickupBranch?: string | null
-  origin: string
-  destination: string
-  availableSeats?: number | null
-  plannedStartTime: string
-  plannedEndTime: string
-  routeCode: string
-  vehiclePlate?: string | null
-  vehicleType?: string | null
-  seatCapacity?: number | null
-  stopPoints?: StopPoint[] | null
-  price?: number | null
-}
+  id: string;
+  pickupBranch?: string | null;
+  origin: string;
+  destination: string;
+  availableSeats?: number | null;
+  plannedStartTime: string;
+  plannedEndTime: string;
+  routeCode: string;
+  vehiclePlate?: string | null;
+  vehicleType?: string | null;
+  seatCapacity?: number | null;
+  stopPoints?: StopPoint[] | null;
+  price?: number | null;
+};
 
-const pad2 = (n: number) => String(n).padStart(2, '0')
+const pad2 = (n: number) => String(n).padStart(2, "0");
 const formatTimeHHmm = (iso?: string) => {
-  if (!iso) return '--:--'
-  const d = new Date(iso)
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-}
+  if (!iso) return "--:--";
+  const d = new Date(iso);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
 const formatDateDDMMYYYY = (iso?: string) => {
-  if (!iso) return '--/--/----'
-  const d = new Date(iso)
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`
-}
+  if (!iso) return "--/--/----";
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+};
 const durationText = (s?: string, e?: string) => {
-  if (!s || !e) return '--'
-  const diff = Math.max(0, new Date(e).getTime() - new Date(s).getTime())
-  const h = Math.floor(diff / 3600000)
-  const m = Math.floor((diff % 3600000) / 60000)
-  if (h === 0) return `${m}m`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
+  if (!s || !e) return "--";
+  const diff = Math.max(0, new Date(e).getTime() - new Date(s).getTime());
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
 const formatVnd = (v?: number | null) => {
-  if (typeof v !== 'number') return '—'
-  return new Intl.NumberFormat('vi-VN').format(v) + ' ₫'
-}
+  if (typeof v !== "number") return "—";
+  return new Intl.NumberFormat("vi-VN").format(v) + " ₫";
+};
 
 const mockRouteData: RouteItem = {
   id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
@@ -66,242 +76,335 @@ const mockRouteData: RouteItem = {
   seatCapacity: 34,
   price: 320000,
   stopPoints: [],
-}
+};
 
 const InputField = ({
   label,
   icon: Icon,
   placeholder,
-  type = 'text',
+  type = "text",
   value,
   onChange,
   multiline,
 }: {
-  label: string
-  icon: any
-  placeholder: string
-  type?: string
-  value: string
-  onChange: (v: string) => void
-  multiline?: boolean
+  label: string;
+  icon: LucideIcon;
+  placeholder: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
 }) => (
-  <div className="space-y-2">
-    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">{label}</label>
-    <div className="flex items-start gap-4 p-4 bg-neutral-50 border-2 border-transparent focus-within:border-[#12B3A8]/30 rounded-2xl transition-all">
-      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
-        <Icon className="w-5 h-5 text-neutral-400" />
+  <div className="space-y-3">
+    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
+      {label}
+    </label>
+    <div className="flex items-start gap-5 p-5 bg-slate-50 border-2 border-slate-50 focus-within:border-brand-primary/30 focus-within:bg-white rounded-[1.5rem] transition-all duration-300 shadow-sm focus-within:shadow-xl focus-within:shadow-brand-primary/10 group">
+      <div className="w-12 h-12 rounded-[1rem] bg-white flex items-center justify-center shadow-sm shrink-0 mt-0.5 border border-slate-100 group-focus-within:border-brand-primary/20 transition-all">
+        <Icon className="w-6 h-6 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
       </div>
       {multiline ? (
         <textarea
-          className="bg-transparent border-none focus:outline-none focus:ring-0 font-bold text-[#192031] w-full resize-none placeholder:text-neutral-300 placeholder:font-normal"
+          className="bg-transparent border-none focus:outline-none focus:ring-0 font-black text-slate-900 w-full resize-none placeholder:text-slate-300 placeholder:font-normal text-lg pt-2.5"
           rows={4}
           placeholder={placeholder}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
         />
       ) : (
         <input
           type={type}
-          className="bg-transparent border-none focus:outline-none focus:ring-0 font-bold text-[#192031] w-full placeholder:text-neutral-300 placeholder:font-normal"
+          className="bg-transparent border-none focus:outline-none focus:ring-0 font-black text-slate-900 w-full placeholder:text-slate-300 placeholder:font-normal text-lg pt-2.5"
           placeholder={placeholder}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
         />
       )}
     </div>
   </div>
-)
+);
 
 export default function BookingPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const passedRoute: RouteItem | undefined = location.state?.routeData
-  const passedSeats: string[] = location.state?.selectedSeats ?? []
-  const routeData = passedRoute ?? mockRouteData
-  const selectedSeats = passedSeats.length > 0 ? passedSeats : ['A1', 'A2']
+  const navigate = useNavigate();
+  const location = useLocation();
+  const passedRoute: RouteItem | undefined = location.state?.routeData;
+  const passedSeats: string[] = location.state?.selectedSeats ?? [];
+  const routeData = passedRoute ?? mockRouteData;
+  const selectedSeats = passedSeats.length > 0 ? passedSeats : ["A1", "A2"];
 
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
-  const [note, setNote] = useState('')
-  const [confirmed, setConfirmed] = useState(false)
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [note, setNote] = useState("");
 
-  const unitPrice = routeData.price ?? 0
-  const totalAmount = unitPrice * selectedSeats.length
-  const canContinue = customerName.trim().length > 0 && customerPhone.trim().length > 0 && selectedSeats.length > 0
+  const unitPrice = routeData.price ?? 0;
+  const totalAmount = unitPrice * selectedSeats.length;
+  const canContinue =
+    customerName.trim().length > 0 &&
+    customerPhone.trim().length > 0 &&
+    selectedSeats.length > 0;
 
   const handleConfirm = () => {
-    if (!canContinue) return
-    setConfirmed(true)
-  }
-
-  if (confirmed) {
-    return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-6">
-        <div className="max-w-md w-full bg-white rounded-[40px] p-10 text-center shadow-2xl shadow-slate-200 border border-neutral-100">
-          <div className="w-20 h-20 rounded-full bg-[#12B3A8] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#12B3A8]/20">
-            <TicketCheck className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-3xl font-black text-[#192031] mb-3">Booking Confirmed!</h2>
-          <p className="text-neutral-400 font-bold mb-2">{routeData.origin} → {routeData.destination}</p>
-          <p className="text-neutral-400 text-sm mb-8">Seats: <span className="text-[#192031] font-black">{selectedSeats.join(', ')}</span></p>
-          <div className="bg-neutral-50 rounded-3xl p-6 text-left space-y-3 mb-8">
-            <div className="flex justify-between">
-              <span className="text-neutral-400 font-bold text-sm">Passenger</span>
-              <span className="text-[#192031] font-black text-sm">{customerName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-400 font-bold text-sm">Total</span>
-              <span className="text-[#12B3A8] font-black text-sm">{formatVnd(totalAmount)}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/home')}
-            className="w-full bg-[#192031] hover:bg-[#12B3A8] text-white py-4 rounded-2xl font-black transition-all"
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    )
-  }
+    if (!canContinue) return;
+    navigate("/payment", {
+      state: {
+        routeData,
+        selectedSeats,
+        customerName,
+        customerPhone,
+        customerEmail,
+        totalAmount,
+        note,
+      },
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans pb-64">
       {/* Header */}
-      <div className="bg-[#192031] pt-10 pb-6 px-6"
-        style={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <button onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
+      <div
+        className="bg-brand-dark pt-12 pb-20 px-8 relative overflow-hidden"
+        style={{ borderBottomLeftRadius: 60, borderBottomRightRadius: 60 }}
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
+        <div className="max-w-5xl mx-auto flex items-center justify-between relative z-10">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 group"
+          >
+            <ArrowLeft className="w-6 h-6 text-white group-hover:-translate-x-1 transition-transform" />
           </button>
-          <h1 className="text-white font-black text-xl">Booking</h1>
-          <div className="w-10" />
+          <div className="text-center">
+            <h1 className="text-white font-black text-2xl tracking-tight">
+              Đặt vé
+            </h1>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1 opacity-70">
+              Nhập thông tin hành khách
+            </p>
+          </div>
+          <div className="w-12" />
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 pb-48 space-y-6">
-        {/* Route Summary */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-          <h2 className="text-2xl font-black text-[#192031] mb-1">{routeData.origin} → {routeData.destination}</h2>
-          <span className="text-xs font-black text-neutral-400 uppercase tracking-widest">{routeData.routeCode}</span>
-
-          <div className="flex items-center gap-6 my-6">
-            <div>
-              <div className="text-2xl font-black text-[#192031]">{formatTimeHHmm(routeData.plannedStartTime)}</div>
-              <div className="text-xs text-neutral-400 font-bold mt-1">Depart</div>
-            </div>
-            <div className="flex-1 flex flex-col items-center">
-              <div className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mb-1">
-                {durationText(routeData.plannedStartTime, routeData.plannedEndTime)}
+      <main className="max-w-5xl mx-auto px-8 py-12 -mt-10 grid grid-cols-1 md:grid-cols-12 gap-8">
+        <div className="md:col-span-7 space-y-8">
+          {/* Customer Information */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50 space-y-8">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-brand-primary" />
               </div>
-              <div className="w-full h-[2px] bg-neutral-100 rounded-full" />
-              <div className="text-xs text-neutral-400 font-bold mt-1">
-                {formatDateDDMMYYYY(routeData.plannedStartTime)}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-black text-[#192031]">{formatTimeHHmm(routeData.plannedEndTime)}</div>
-              <div className="text-xs text-neutral-400 font-bold mt-1">Arrive</div>
-            </div>
-          </div>
-
-          <div className="pt-5 border-t border-neutral-50 grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Pickup Branch</p>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#12B3A8]" />
-                <span className="font-bold text-[#192031] text-sm">{routeData.pickupBranch || '—'}</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Vehicle</p>
-              <div className="flex items-center gap-2">
-                <Bus className="w-4 h-4 text-[#12B3A8]" />
-                <span className="font-bold text-[#192031] text-sm">{routeData.vehicleType || '—'} • {routeData.vehiclePlate || '—'}</span>
-              </div>
-            </div>
+              Thông tin hành khách
+            </h3>
+            <InputField
+              label="Họ và tên"
+              icon={User}
+              placeholder="Nhập đầy đủ họ tên"
+              value={customerName}
+              onChange={setCustomerName}
+            />
+            <InputField
+              label="Số điện thoại"
+              icon={Phone}
+              placeholder="Nhập số điện thoại liện hệ"
+              type="tel"
+              value={customerPhone}
+              onChange={setCustomerPhone}
+            />
+            <InputField
+              label="Email"
+              icon={Mail}
+              placeholder="Nhập địa chỉ email nhận vé"
+              type="email"
+              value={customerEmail}
+              onChange={setCustomerEmail}
+            />
+            <InputField
+              label="Ghi chú"
+              icon={StickyNote}
+              placeholder="Yêu cầu đặc biệt hoặc ghi chú thêm..."
+              value={note}
+              onChange={setNote}
+              multiline
+            />
           </div>
         </div>
 
-        {/* Selected Seats */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-          <h3 className="text-xl font-black text-[#192031] mb-5">Selected seats</h3>
-          <div className="flex flex-wrap gap-3">
-            {selectedSeats.length === 0 ? (
-              <p className="text-neutral-400 font-bold">No seats selected</p>
-            ) : (
-              selectedSeats.map(seat => (
-                <span key={seat} className="px-4 py-2 bg-[#EAFBF9] text-[#1f615d] font-black rounded-full">
-                  {seat}
+        <div className="md:col-span-5 space-y-8">
+          {/* Route Summary */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-primary/10 transition-colors" />
+            <span className="text-brand-primary text-[11px] font-black uppercase tracking-[0.2em] mb-4 bg-brand-primary/10 px-3 py-1 rounded-lg border border-brand-primary/10 inline-block">
+              {routeData.routeCode}
+            </span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-8">
+              {routeData.origin} <span className="text-slate-300 mx-1">→</span>{" "}
+              {routeData.destination}
+            </h2>
+
+            <div className="flex items-center gap-8 mb-8">
+              <div>
+                <div className="text-2xl font-black text-slate-900 tracking-tight">
+                  {formatTimeHHmm(routeData.plannedStartTime)}
+                </div>
+                <div className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">
+                  Đi
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col items-center">
+                <div className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-1">
+                  {durationText(
+                    routeData.plannedStartTime,
+                    routeData.plannedEndTime,
+                  )}
+                </div>
+                <div className="w-full h-[2px] bg-slate-100 rounded-full relative">
+                  <div className="absolute top-1/2 left-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-200" />
+                  <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand-primary" />
+                </div>
+                <div className="text-[11px] text-slate-400 font-black mt-2 tracking-tighter">
+                  {formatDateDDMMYYYY(routeData.plannedStartTime)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-black text-slate-900 tracking-tight">
+                  {formatTimeHHmm(routeData.plannedEndTime)}
+                </div>
+                <div className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">
+                  Đến
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-slate-50 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Điểm đón
+                </p>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-brand-primary" />
+                  <span className="font-black text-slate-900 text-sm tracking-tight">
+                    {routeData.pickupBranch || "—"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Xe vận hành
+                </p>
+                <div className="flex items-center gap-2">
+                  <Bus className="w-4 h-4 text-brand-secondary" />
+                  <span className="font-black text-slate-900 text-sm tracking-tight">
+                    {routeData.vehicleType || "—"} •{" "}
+                    {routeData.vehiclePlate || "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Seats */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50">
+            <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight flex items-center justify-between">
+              Vị trí ghế đã chọn
+              <span className="text-brand-primary text-sm font-black bg-brand-primary/10 px-3 py-1 rounded-lg">
+                {selectedSeats.length} Ghế
+              </span>
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {selectedSeats.length === 0 ? (
+                <p className="text-slate-400 font-bold">Chưa chọn chỗ ngồi</p>
+              ) : (
+                selectedSeats.map((seat) => (
+                  <span
+                    key={seat}
+                    className="px-5 py-2.5 bg-brand-primary/10 text-brand-primary font-black rounded-xl border border-brand-primary/10 text-base shadow-sm"
+                  >
+                    {seat}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Payment Summary */}
+          <div className="bg-brand-dark rounded-[2.5rem] p-10 shadow-2xl shadow-brand-dark/20 text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/20 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-primary/30 transition-colors" />
+            <h3 className="text-xl font-black mb-8 tracking-tight">
+              Chi tiết thanh toán
+            </h3>
+            <div className="space-y-5">
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="font-bold text-sm uppercase tracking-widest">
+                  Số lượng ghế
                 </span>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Customer Information */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm space-y-6">
-          <h3 className="text-xl font-black text-[#192031]">Customer information</h3>
-          <InputField label="Full name" icon={User} placeholder="Enter full name" value={customerName} onChange={setCustomerName} />
-          <InputField label="Phone number" icon={Phone} placeholder="Enter phone number" type="tel" value={customerPhone} onChange={setCustomerPhone} />
-          <InputField label="Email" icon={Mail} placeholder="Enter email address" type="email" value={customerEmail} onChange={setCustomerEmail} />
-          <InputField label="Note" icon={StickyNote} placeholder="Additional instructions or notes..." value={note} onChange={setNote} multiline />
-        </div>
-
-        {/* Payment Summary */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-sm">
-          <h3 className="text-xl font-black text-[#192031] mb-6">Payment Summary</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-neutral-400 font-bold">Seat quantity</span>
-              <span className="font-black text-[#192031]">{selectedSeats.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-neutral-400 font-bold">Unit price</span>
-              <span className="font-black text-[#192031]">{formatVnd(unitPrice)}</span>
-            </div>
-            <div className="pt-4 border-t border-neutral-50 flex justify-between items-center">
-              <span className="text-xl font-black text-[#192031]">Total</span>
-              <span className="text-2xl font-black text-[#12B3A8]">{formatVnd(totalAmount)}</span>
+                <span className="font-black text-white text-base">
+                  x {selectedSeats.length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="font-bold text-sm uppercase tracking-widest">
+                  Đơn giá
+                </span>
+                <span className="font-black text-white text-base">
+                  {formatVnd(unitPrice)}
+                </span>
+              </div>
+              <div className="pt-6 mt-2 border-t border-white/10 flex justify-between items-center">
+                <span className="text-xl font-black text-slate-300 tracking-tight">
+                  Tổng cộng
+                </span>
+                <span className="text-4xl font-black text-brand-primary tracking-tighter">
+                  {formatVnd(totalAmount)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
       {/* Bottom Action Bar */}
-      <div
-        className="fixed bottom-0 left-0 right-0 px-6 py-5 border-t border-neutral-100"
-        style={{ backgroundColor: 'rgba(245,247,250,0.97)', backdropFilter: 'blur(12px)' }}
-      >
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="bg-white border border-neutral-100 rounded-2xl px-6 py-4 flex justify-between items-center shadow-sm">
-            <div>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Passenger</p>
-              <p className="text-[#192031] font-black text-base mt-1">
-                {customerName.trim().length > 0 ? customerName : 'Not entered'}
-              </p>
+      <div className="fixed bottom-0 left-0 right-0 px-8 py-8 border-t border-slate-100 z-50 bg-white/80 backdrop-blur-2xl">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-6 items-center">
+          <div className="bg-slate-50 border border-slate-100 rounded-3xl px-8 py-4 flex-1 w-full md:w-auto flex justify-between items-center shadow-inner">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center border border-slate-100 shadow-sm">
+                <User className="w-6 h-6 text-brand-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Hành khách
+                </p>
+                <p className="text-slate-900 font-black text-lg mt-0.5 tracking-tight">
+                  {customerName.trim().length > 0
+                    ? customerName
+                    : "Chưa nhập tên"}
+                </p>
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Total</p>
-              <p className="text-[#12B3A8] font-black text-xl mt-1">{formatVnd(totalAmount)}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Tổng thanh toán
+              </p>
+              <p className="text-brand-primary font-black text-2xl mt-0.5 tracking-tighter">
+                {formatVnd(totalAmount)}
+              </p>
             </div>
           </div>
 
           <button
             onClick={handleConfirm}
             disabled={!canContinue}
-            className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${
+            className={`w-full md:w-80 py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 transition-all shadow-2xl ${
               canContinue
-                ? 'bg-[#12B3A8] hover:bg-[#0f968d] text-white shadow-[#12B3A8]/20'
-                : 'bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none'
+                ? "bg-brand-primary hover:bg-brand-accent text-white shadow-brand-primary/30 hover:shadow-brand-accent/30 hover:-translate-y-1"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
             }`}
           >
-            Confirm Booking <ChevronRight className="w-5 h-5" />
+            Tiếp tục thanh toán <ChevronRight className="w-7 h-7" />
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
