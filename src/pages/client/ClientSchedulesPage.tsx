@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bus, User, LayoutDashboard, Calendar, Clock, MapPin, CheckCircle2 } from 'lucide-react'
+import { Bus, LayoutDashboard, Calendar, Clock, MapPin, CheckCircle2 } from 'lucide-react'
+import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
 
 const SCHEDULES = [
   { id: 'TRP-1001', route: 'Hà Nội → Hải Phòng', type: 'Limousine', time: '08:00 AM', arrival: '10:30 AM', duration: '2h 30m', seats: 4, price: '320,000 ₫', status: 'On Time' },
@@ -14,6 +15,7 @@ export default function ClientSchedulesPage() {
   const navigate = useNavigate()
   const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
   const [userName] = useState(() => localStorage.getItem('userName') || '')
+  const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
   const [selectedDate, setSelectedDate] = useState('Hôm nay')
 
   return (
@@ -55,12 +57,10 @@ export default function ClientSchedulesPage() {
                   className="hidden lg:flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-brand-primary transition-colors px-4 py-2 rounded-xl hover:bg-slate-50">
                   <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
                 </button>
-                <div className="flex items-center gap-3 bg-white border border-slate-100 rounded-full pl-1.5 pr-4 py-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 flex items-center justify-center overflow-hidden border-2 border-white">
-                    <User className="w-4 h-4 text-brand-primary" />
-                  </div>
-                  <span className="text-slate-900 text-sm font-bold">{userName || 'Chào bạn'}</span>
-                </div>
+                <ClientAccountMenu
+                  displayName={userName || 'Chào bạn'}
+                  email={userEmail}
+                />
               </div>
             ) : (
               <div className="flex items-center gap-2">

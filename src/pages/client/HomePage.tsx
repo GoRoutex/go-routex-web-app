@@ -10,7 +10,6 @@ import {
   Armchair,
   CheckCircle2,
   ArrowRightLeft,
-  User,
   LayoutDashboard,
   Search,
   TrendingUp,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { ClientAccountMenu } from "../../Components/client/ClientAccountMenu";
 
 const POPULAR_ROUTES = [
   {
@@ -84,6 +84,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
   const [userName] = useState(() => localStorage.getItem("userName") || "");
+  const [userEmail] = useState(() => localStorage.getItem("userEmail") || "");
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [searchData, setSearchData] = useState({
     originCity: "",
@@ -158,14 +159,10 @@ export default function HomePage() {
                 >
                   <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
                 </button>
-                <div className="flex items-center gap-3 bg-white border border-slate-100 rounded-full pl-1.5 pr-4 py-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 flex items-center justify-center overflow-hidden border-2 border-white">
-                    <User className="w-4 h-4 text-brand-primary" />
-                  </div>
-                  <span className="text-slate-900 text-sm font-bold">
-                    {userName || "Chào bạn"}
-                  </span>
-                </div>
+                <ClientAccountMenu
+                  displayName={userName || "Chào bạn"}
+                  email={userEmail}
+                />
               </div>
             ) : (
               <div className="flex items-center gap-2">

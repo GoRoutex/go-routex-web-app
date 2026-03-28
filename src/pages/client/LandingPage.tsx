@@ -83,7 +83,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-slate-500 text-xl font-medium leading-relaxed max-w-xl">
-            Tìm kiếm lộ trình, chọn chỗ ngồi trực quan và trải nghiệm quy trình 
+            Tìm kiếm lộ trình, chọn chỗ ngồi trực quan và trải nghiệm quy trình
             đặt vé hiện đại nhất dành riêng cho các nhà xe chuyên nghiệp.
           </p>
 
@@ -151,7 +151,7 @@ export default function LandingPage() {
             <div className="max-w-2xl">
               <h2 className="text-5xl md:text-6xl font-black mb-8 tracking-tight">Vận hành nhà xe trong tầm tay</h2>
               <p className="text-slate-500 text-xl font-medium leading-relaxed">
-                Từ việc lập kế hoạch chuyến đi đến giữ chỗ và xác nhận đặt vé, 
+                Từ việc lập kế hoạch chuyến đi đến giữ chỗ và xác nhận đặt vé,
                 mọi thứ luôn được đồng bộ hóa tức thời trên toàn bộ nền tảng.
               </p>
             </div>

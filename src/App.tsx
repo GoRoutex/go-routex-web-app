@@ -21,6 +21,10 @@ import LandingPage from './pages/client/LandingPage'
 import LoginPage from './pages/client/LoginPage'
 import ForgotPasswordPage from './pages/client/ForgotPasswordPage'
 import RegisterPage from './pages/client/RegisterPage'
+import VerifyEmailPage from './pages/client/VerifyEmailPage'
+import CompleteProfilePage from './pages/client/CompleteProfilePage'
+import ClientProfilePage from './pages/client/ClientProfilePage'
+import ClientSettingsPage from './pages/client/ClientSettingsPage'
 import HomePage from './pages/client/HomePage'
 import SearchResultPage from './pages/client/SearchResultPage'
 import BookingPage from './pages/client/BookingPage'
@@ -41,6 +45,10 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/complete-profile" element={<CompleteProfilePage />} />
+      <Route path="/profile" element={<ClientProfilePage />} />
+      <Route path="/settings" element={<ClientSettingsPage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/search-results" element={<SearchResultPage />} />
       <Route path="/route-detail" element={<SeatSelectionPage />} />
