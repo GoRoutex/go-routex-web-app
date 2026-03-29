@@ -3,15 +3,29 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarDays,
+  ImageUp,
   Mail,
   Phone,
   UserRound,
 } from "lucide-react";
+import { ClientAvatar } from "../../Components/client/ClientAvatar";
+
+const genderLabel = (value: string | null) => {
+  if (value === "MALE") return "Nam";
+  if (value === "FEMALE") return "Nữ";
+  if (value === "LGBT") return "LGBT";
+  if (value === "OTHER") return "Khác";
+  return "Chưa cập nhật";
+};
+
+const avatarSrc = localStorage.getItem("profileAvatarUrl") || "";
 
 const profileItems = [
   { label: "Họ và tên", value: localStorage.getItem("profileFullName") || localStorage.getItem("userName") || "Chưa cập nhật", icon: UserRound },
   { label: "Email", value: localStorage.getItem("userEmail") || "Chưa cập nhật", icon: Mail },
-  { label: "Số CCCD / CMND", value: localStorage.getItem("profileCccdNumber") || "Chưa cập nhật", icon: BadgeCheck },
+  { label: "Số CCCD / CMND", value: localStorage.getItem("profileNationalId") || localStorage.getItem("profileCccdNumber") || "Chưa cập nhật", icon: BadgeCheck },
+  { label: "Giới tính", value: genderLabel(localStorage.getItem("profileGender")), icon: UserRound },
+  { label: "Ảnh đại diện", value: localStorage.getItem("profileAvatarUrl") || "Chưa cập nhật", icon: ImageUp },
   { label: "Ngày sinh", value: localStorage.getItem("profileDob") || "Chưa cập nhật", icon: CalendarDays },
   { label: "Số điện thoại", value: localStorage.getItem("userPhoneNumber") || "Chưa cập nhật", icon: Phone },
 ];
@@ -57,6 +71,27 @@ export default function ClientProfilePage() {
             >
               Cập nhật hồ sơ
             </button>
+          </div>
+
+          <div className="mt-8 flex items-center gap-4 rounded-[1.4rem] border border-slate-100 bg-slate-50 p-4">
+            <ClientAvatar
+              name={displayName}
+              avatarUrl={avatarSrc}
+              size="lg"
+              className="border-slate-200 shadow-sm"
+              textClassName="text-lg"
+            />
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                Ảnh đại diện hiện tại
+              </div>
+              <div className="mt-1 text-sm font-bold text-slate-900">
+                {avatarSrc.trim() ? "Đã tải ảnh lên" : "Chưa có ảnh đại diện"}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                {avatarSrc.trim() ? "Ảnh được lưu dưới dạng base64 hoặc URL." : "Bạn có thể cập nhật ảnh trong Complete Profile."}
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">

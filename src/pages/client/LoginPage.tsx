@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AuthLayout } from "../../Components/client/AuthLayout";
+import { API_BASE_URL, LOGIN_URL } from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
-
-const LOGIN_ENDPOINT =
-  "http://localhost:8080/api/v1/user-service/authentication/login";
 
 const extractAuthToken = (body: unknown) => {
   if (!body || typeof body !== "object") return "";
@@ -47,11 +45,38 @@ const extractDisplayName = (body: unknown, fallbackEmail: string) => {
   return typeof displayName === "string" ? displayName : fallbackEmail;
 };
 
-const extractNeedsProfileCompletion = (body: unknown) => {
-  if (!body || typeof body !== "object") return false;
+const extractUserId = (body: unknown) => {
+  if (!body || typeof body !== "object") return "";
   const record = body as Record<string, unknown>;
   const data = record.data;
   const candidates = [
+    record.userId,
+    record.id,
+    record.user_id,
+    data && typeof data === "object" ? (data as Record<string, unknown>).userId : undefined,
+    data && typeof data === "object" ? (data as Record<string, unknown>).id : undefined,
+    data && typeof data === "object" ? (data as Record<string, unknown>).user_id : undefined,
+  ];
+
+  const userId = candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+  return typeof userId === "string" ? userId : "";
+};
+
+const extractProfileCompleted = (body: unknown) => {
+  if (!body || typeof body !== "object") return undefined;
+  const record = body as Record<string, unknown>;
+  const data = record.data;
+  const candidates = [
+    record.profileCompleted,
+    data && typeof data === "object"
+      ? (data as Record<string, unknown>).profileCompleted
+      : undefined,
+  ];
+
+  const flag = candidates.find((value) => typeof value === "boolean");
+  if (typeof flag === "boolean") return flag;
+
+  const legacyNeedsProfileCompletion = [
     record.needsProfileCompletion,
     record.requireProfileCompletion,
     record.mustCompleteProfile,
@@ -74,8 +99,11 @@ const extractNeedsProfileCompletion = (body: unknown) => {
       : undefined,
   ];
 
-  const flag = candidates.find((value) => typeof value === "boolean");
-  return typeof flag === "boolean" ? flag : false;
+  const legacyFlag = legacyNeedsProfileCompletion.find(
+    (value) => typeof value === "boolean",
+  );
+
+  return typeof legacyFlag === "boolean" ? !legacyFlag : undefined;
 };
 
 export default function LoginPage() {
@@ -97,7 +125,7 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(LOGIN_ENDPOINT, {
+      const response = await fetch(API_BASE_URL + LOGIN_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -136,19 +164,34 @@ export default function LoginPage() {
       }
 
       const authToken = extractAuthToken(responseBody);
+      const userId = extractUserId(responseBody);
       const displayName = extractDisplayName(responseBody, email.trim());
-      const needsProfileCompletion = extractNeedsProfileCompletion(responseBody);
-      const profileCompleted = localStorage.getItem("profileCompleted") === "true";
+      const profileCompleted = extractProfileCompleted(responseBody);
+      const shouldCompleteProfile = profileCompleted === false;
 
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", displayName);
       localStorage.setItem("userEmail", email.trim());
+      if (userId) {
+        localStorage.setItem("userId", userId);
+      }
+      if (typeof profileCompleted === "boolean") {
+        localStorage.setItem("profileCompleted", String(profileCompleted));
+      }
       if (authToken) {
         localStorage.setItem("authToken", authToken);
       }
 
-      if (needsProfileCompletion || !profileCompleted) {
-        navigate("/complete-profile");
+      if (shouldCompleteProfile) {
+        const completeProfileParams = new URLSearchParams();
+        if (userId) {
+          completeProfileParams.set("userId", userId);
+        }
+        navigate(
+          completeProfileParams.toString()
+            ? `/complete-profile?${completeProfileParams.toString()}`
+            : "/complete-profile",
+        );
         return;
       }
 

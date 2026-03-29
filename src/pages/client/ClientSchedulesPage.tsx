@@ -14,8 +14,9 @@ const SCHEDULES = [
 export default function ClientSchedulesPage() {
   const navigate = useNavigate()
   const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
-  const [userName] = useState(() => localStorage.getItem('userName') || '')
+  const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '')
   const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
+  const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '')
   const [selectedDate, setSelectedDate] = useState('Hôm nay')
 
   return (
@@ -58,7 +59,8 @@ export default function ClientSchedulesPage() {
                   <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
                 </button>
                 <ClientAccountMenu
-                  displayName={userName || 'Chào bạn'}
+                  fullName={userName || 'Chào bạn'}
+                  avatarUrl={userAvatarUrl}
                   email={userEmail}
                 />
               </div>

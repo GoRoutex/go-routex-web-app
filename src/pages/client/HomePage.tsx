@@ -83,8 +83,13 @@ const Field = ({ label, icon: Icon, children }: FieldProps) => (
 export default function HomePage() {
   const navigate = useNavigate();
   const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
-  const [userName] = useState(() => localStorage.getItem("userName") || "");
+  const [userName] = useState(
+    () => localStorage.getItem("profileFullName") || localStorage.getItem("userName") || "",
+  );
   const [userEmail] = useState(() => localStorage.getItem("userEmail") || "");
+  const [userAvatarUrl] = useState(
+    () => localStorage.getItem("profileAvatarUrl") || "",
+  );
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [searchData, setSearchData] = useState({
     originCity: "",
@@ -160,7 +165,8 @@ export default function HomePage() {
                   <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
                 </button>
                 <ClientAccountMenu
-                  displayName={userName || "Chào bạn"}
+                  fullName={userName || "Chào bạn"}
+                  avatarUrl={userAvatarUrl}
                   email={userEmail}
                 />
               </div>

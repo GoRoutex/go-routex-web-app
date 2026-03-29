@@ -29,10 +29,10 @@ export function AuthLayout({
     "flex-1 inline-flex items-center justify-center gap-2 rounded-t-2xl py-4 text-sm sm:text-base font-black uppercase tracking-[0.18em] transition-all";
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden font-sans">
+    <div className="min-h-screen bg-brand-surface text-slate-900 overflow-hidden font-sans">
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 h-[240px] sm:h-[280px] bg-[linear-gradient(135deg,#0EA5E9_0%,#10B981_55%,#6366F1_100%)]" />
-        <div className="absolute inset-x-0 top-0 h-[240px] sm:h-[280px] bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.16),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.11),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
+        <div className="absolute inset-x-0 top-0 h-60 sm:h-70 bg-[linear-gradient(135deg,#0EA5E9_0%,#10B981_55%,#6366F1_100%)]" />
+        <div className="absolute inset-x-0 top-0 h-60 sm:h-70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.16),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.11),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 py-5 sm:py-6">
           <div className="flex items-center justify-between gap-4">
@@ -67,12 +67,12 @@ export function AuthLayout({
       </div>
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14 -mt-16 sm:-mt-20">
-        <div className="rounded-[2rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-[0_30px_90px_rgba(15,23,42,0.08)] overflow-hidden">
+        <div className="rounded-4xl sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-[0_30px_90px_rgba(15,23,42,0.08)] overflow-hidden">
           <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
             <section className="relative overflow-hidden bg-[linear-gradient(180deg,#F8FAFC_0%,#FFFFFF_100%)] px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute -top-20 -left-16 w-56 h-56 rounded-full bg-brand-primary/10 blur-3xl" />
-                <div className="absolute bottom-0 right-[-4rem] w-72 h-72 rounded-full bg-brand-secondary/10 blur-3xl" />
+                <div className="absolute bottom-0 -right-16 w-72 h-72 rounded-full bg-brand-secondary/10 blur-3xl" />
               </div>
 
               <div className="relative z-10 flex h-full flex-col justify-between gap-8">
@@ -230,7 +230,7 @@ export function AuthLayout({
                   <div className="absolute left-8 top-8 h-36 w-36 rounded-full bg-brand-primary/10 blur-2xl" />
                   <div className="absolute right-8 top-12 h-32 w-32 rounded-full bg-brand-secondary/10 blur-2xl" />
 
-                  <div className="absolute left-1/2 top-1/2 w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-slate-100 bg-white/92 p-6 shadow-2xl shadow-slate-200/40 backdrop-blur-sm">
+                  <div className="absolute left-1/2 top-1/2 w-90 -translate-x-1/2 -translate-y-1/2 rounded-4xl border border-slate-100 bg-white/92 p-6 shadow-2xl shadow-slate-200/40 backdrop-blur-sm">
                     <div className="flex items-start gap-4">
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.25rem] bg-brand-primary shadow-lg shadow-brand-primary/20">
                         <Bus className="h-8 w-8 text-white" />
@@ -329,9 +329,9 @@ export function AuthLayout({
             </section>
 
             <section className="px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
-              <div className="max-w-[520px] mx-auto">
+              <div className="max-w-130 mx-auto">
                 {showTabs ? (
-                  <div className="flex items-stretch overflow-hidden rounded-[1.5rem] border border-slate-100 bg-slate-50 p-1 shadow-inner shadow-slate-200/40">
+                  <div className="flex items-stretch overflow-hidden rounded-3xl border border-slate-100 bg-slate-50 p-1 shadow-inner shadow-slate-200/40">
                     <button
                       onClick={() => navigate("/login")}
                       className={`${tabBase} ${

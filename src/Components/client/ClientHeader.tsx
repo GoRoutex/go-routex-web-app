@@ -1,16 +1,19 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Bus, LayoutDashboard } from 'lucide-react'
+import { Bus, LayoutDashboard } from 'lucide-react'
+import { ClientAvatar } from './ClientAvatar'
 
 interface ClientHeaderProps {
   isLoggedIn: boolean
   userName: string
+  avatarUrl?: string
   routePoint?: string | null
 }
 
 export const ClientHeader: React.FC<ClientHeaderProps> = ({
   isLoggedIn,
   userName,
+  avatarUrl,
   routePoint,
 }) => {
   const navigate = useNavigate()
@@ -43,10 +46,20 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
             }
           }}
           className={`w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all duration-300 transform hover:scale-110 shadow-xl ${
-            isLoggedIn ? "bg-brand-primary shadow-brand-primary/25" : "bg-slate-100 hover:bg-slate-200"
+            isLoggedIn ? "bg-transparent shadow-none" : "bg-slate-100 hover:bg-slate-200"
           }`}
         >
-          <User className={`w-7 h-7 ${isLoggedIn ? 'text-white' : 'text-slate-600'}`} />
+          {isLoggedIn ? (
+            <ClientAvatar
+              name={userName}
+              avatarUrl={avatarUrl}
+              size="lg"
+              className="border-brand-primary/10 shadow-xl shadow-brand-primary/20"
+              textClassName="text-base"
+            />
+          ) : (
+            <span className="text-slate-600 text-sm font-black">Khách</span>
+          )}
         </button>
       </div>
 

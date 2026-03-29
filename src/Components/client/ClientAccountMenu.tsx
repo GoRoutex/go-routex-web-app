@@ -7,14 +7,17 @@ import {
   Settings2,
   UserRound,
 } from "lucide-react";
+import { ClientAvatar } from "./ClientAvatar";
 
 type ClientAccountMenuProps = {
-  displayName: string;
+  fullName: string;
+  avatarUrl?: string;
   email?: string;
 };
 
 export function ClientAccountMenu({
-  displayName,
+  fullName,
+  avatarUrl,
   email,
 }: ClientAccountMenuProps) {
   const navigate = useNavigate();
@@ -47,23 +50,28 @@ export function ClientAccountMenu({
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
+    localStorage.removeItem("userId");
     localStorage.removeItem("authToken");
     localStorage.removeItem("profileCompleted");
     localStorage.removeItem("profileFullName");
+    localStorage.removeItem("profileNationalId");
     localStorage.removeItem("profileCccdNumber");
     localStorage.removeItem("profileDob");
+    localStorage.removeItem("profileAvatarUrl");
     localStorage.removeItem("profileAddress");
+    localStorage.removeItem("profileGender");
     setOpen(false);
     navigate("/");
   };
 
   const itemClass =
     "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-brand-primary";
+  const resolvedDisplayName = fullName;
   const accountEmail =
     email?.trim().length > 0
       ? email.trim()
-      : displayName.includes("@")
-        ? displayName
+      : resolvedDisplayName.includes("@")
+        ? resolvedDisplayName
         : "";
 
   return (
@@ -74,11 +82,9 @@ export function ClientAccountMenu({
         aria-expanded={open}
         className="flex items-center gap-3 bg-white border border-slate-100 rounded-full pl-1.5 pr-4 py-1.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 flex items-center justify-center overflow-hidden border-2 border-white">
-          <UserRound className="w-4 h-4 text-brand-primary" />
-        </div>
+        <ClientAvatar name={resolvedDisplayName} avatarUrl={avatarUrl} size="sm" />
         <span className="text-slate-900 text-sm font-bold max-w-[220px] truncate">
-          {displayName}
+          {resolvedDisplayName}
         </span>
         <ChevronDown
           className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
@@ -87,12 +93,12 @@ export function ClientAccountMenu({
 
       {open && (
         <div className="absolute right-0 z-50 mt-3 w-[280px] overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
-          <div className="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-              Tài khoản
-            </div>
+            <div className="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                Tài khoản
+              </div>
             <div className="mt-1 text-sm font-black text-slate-900 truncate">
-              {displayName}
+              {resolvedDisplayName}
             </div>
             <div className="mt-0.5 text-xs font-medium text-slate-500 truncate">
               {accountEmail || "Chưa có email"}

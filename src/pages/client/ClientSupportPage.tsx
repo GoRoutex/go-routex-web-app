@@ -13,8 +13,9 @@ const FAQS = [
 export default function ClientSupportPage() {
   const navigate = useNavigate()
   const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
-  const [userName] = useState(() => localStorage.getItem('userName') || '')
+  const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '')
   const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
+  const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '')
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0)
   const [formSent, setFormSent] = useState(false)
 
@@ -64,7 +65,8 @@ export default function ClientSupportPage() {
                   <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
                 </button>
                 <ClientAccountMenu
-                  displayName={userName || 'Chào bạn'}
+                  fullName={userName || 'Chào bạn'}
+                  avatarUrl={userAvatarUrl}
                   email={userEmail}
                 />
               </div>
