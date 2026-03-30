@@ -10,6 +10,8 @@ type AuthLayoutProps = {
   subtitle: string;
   children: ReactNode;
   showTabs?: boolean;
+  showBadge?: boolean;
+  badgeLabel?: string;
   panelTitle?: string;
   panelSubtitle?: string;
 };
@@ -20,6 +22,8 @@ export function AuthLayout({
   subtitle,
   children,
   showTabs = true,
+  showBadge = true,
+  badgeLabel,
   panelTitle,
   panelSubtitle,
 }: AuthLayoutProps) {
@@ -349,16 +353,16 @@ export function AuthLayout({
                           ? "bg-white text-brand-primary shadow-lg shadow-slate-200/60"
                           : "text-slate-400 hover:text-brand-primary"
                       }`}
-                    >
-                      Đăng ký
-                    </button>
-                  </div>
-                ) : (
+                      >
+                        Đăng ký
+                      </button>
+                    </div>
+                ) : showBadge ? (
                   <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/15 bg-brand-primary/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-brand-primary">
                     <Sparkles className="w-4 h-4" />
-                    Hoàn thiện hồ sơ
+                    {badgeLabel || "Hoàn thiện hồ sơ"}
                   </div>
-                )}
+                ) : null}
 
                 <div className="mt-8">
                   <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">

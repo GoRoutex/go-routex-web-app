@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { AdminLayout } from './Components/AdminLayout'
 import { DashboardAnalyticsPage } from './pages/admin/DashboardAnalyticsPage'
 import { DashboardFinancePage } from './pages/admin/DashboardFinancePage'
@@ -6,6 +7,8 @@ import { DashboardOverviewPage } from './pages/admin/DashboardOverviewPage'
 import { UserProfileOverviewPage } from './pages/admin/UserProfileOverviewPage'
 import { RouteManagementPage } from './pages/admin/RouteManagementPage'
 import { FleetManagementPage } from './pages/admin/FleetManagementPage'
+import { LocationManagementPage } from './pages/admin/LocationManagementPage'
+import { VehicleManagementPage } from './pages/admin/VehicleManagementPage'
 import { ExpensesReportPage } from './pages/admin/ExpensesReportPage'
 import { SalaryReportPage } from './pages/admin/SalaryReportPage'
 import { SchedulesPage } from './pages/admin/SchedulesPage'
@@ -24,6 +27,9 @@ import RegisterPage from './pages/client/RegisterPage'
 import VerifyEmailPage from './pages/client/VerifyEmailPage'
 import CompleteProfilePage from './pages/client/CompleteProfilePage'
 import ClientProfilePage from './pages/client/ClientProfilePage'
+import UpdateProfilePage from './pages/client/UpdateProfilePage'
+import ResetPasswordPage from './pages/client/ResetPasswordPage'
+import ResetPasswordSuccessPage from './pages/client/ResetPasswordSuccessPage'
 import ClientSettingsPage from './pages/client/ClientSettingsPage'
 import HomePage from './pages/client/HomePage'
 import SearchResultPage from './pages/client/SearchResultPage'
@@ -36,6 +42,20 @@ import PaymentPage from './pages/client/PaymentPage'
 import PrivacyPolicyPage from './pages/client/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/client/TermsOfServicePage'
 import ContactUsPage from './pages/client/ContactUsPage'
+import { hasAdminRole } from './utils/auth'
+
+function AdminRouteGuard({ children }: { children: ReactNode }) {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!hasAdminRole()) {
+    return <Navigate to="/home" replace />
+  }
+
+  return children
+}
 
 function App() {
   return (
@@ -44,10 +64,13 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/reset-password-success" element={<ResetPasswordSuccessPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/complete-profile" element={<CompleteProfilePage />} />
       <Route path="/profile" element={<ClientProfilePage />} />
+      <Route path="/profile/update" element={<UpdateProfilePage />} />
       <Route path="/settings" element={<ClientSettingsPage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/search-results" element={<SearchResultPage />} />
@@ -62,11 +85,21 @@ function App() {
       <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
 
       {/* ─── Admin Routes ─── */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route
+        path="/admin"
+        element={
+          <AdminRouteGuard>
+            <AdminLayout />
+          </AdminRouteGuard>
+        }
+      >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardOverviewPage />} />
         <Route path="fleet" element={<FleetManagementPage />} />
+        <Route path="vehicles" element={<VehicleManagementPage />} />
         <Route path="routes" element={<RouteManagementPage />} />
+        <Route path="trips" element={<Navigate to="routes" replace />} />
+        <Route path="locations" element={<LocationManagementPage />} />
 
         <Route path="schedules" element={<SchedulesPage />} />
         <Route path="tickets" element={<TicketingPage />} />

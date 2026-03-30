@@ -50,28 +50,32 @@ export function DashboardOverviewPage() {
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Tổng quan vận hành</h2>
-          <p className="text-slate-500 font-medium mt-1">Chào mừng quay trở lại, đây là những gì đang diễn ra hôm nay.</p>
+          <h2 className="text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
+            Tổng quan vận hành
+          </h2>
+          <p className="mt-1.5 max-w-2xl text-[12px] font-medium leading-relaxed text-slate-500">
+            Chào mừng quay trở lại, đây là những gì đang diễn ra hôm nay.
+          </p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
-           <div className="w-2 h-2 rounded-full bg-brand-secondary animate-pulse" />
-           <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider">Cập nhật: 5 phút trước</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm self-start md:self-end">
+           <div className="w-1.5 h-1.5 rounded-full bg-brand-secondary animate-pulse" />
+           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cập nhật: 5 phút trước</span>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className={`${kpi.bg} p-8 rounded-[2rem] space-y-4 shadow-sm border border-white transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-slate-200/50 group`}>
-            <p className="text-[13px] font-black text-slate-500 uppercase tracking-widest">{kpi.label}</p>
+          <div key={kpi.label} className={`${kpi.bg} p-3 rounded-xl space-y-1 shadow-sm border border-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-slate-200/40 group`}>
+            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.12em]">{kpi.label}</p>
             <div className="flex items-center justify-between">
-              <h3 className="text-3xl font-black text-slate-900 tracking-tight">{kpi.value}</h3>
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black ${kpi.positive ? 'bg-white text-brand-secondary' : 'bg-white text-red-500'}`}>
+              <h3 className="text-[1.4rem] font-bold text-slate-900 tracking-tight">{kpi.value}</h3>
+              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${kpi.positive ? 'bg-white text-brand-secondary shadow-sm' : 'bg-white text-red-500 shadow-sm'}`}>
                 <span>{kpi.delta}</span>
                 {kpi.positive ? (
-                  <ArrowUpRight size={14} />
+                  <ArrowUpRight size={10} />
                 ) : (
-                  <ArrowDownRight size={14} />
+                  <ArrowDownRight size={10} />
                 )}
               </div>
             </div>
@@ -81,8 +85,8 @@ export function DashboardOverviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Large Line Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-8 text-[13px] font-black">
               <span className="text-brand-primary border-b-2 border-brand-primary pb-2 cursor-pointer uppercase tracking-wider">Lưu lượng khách</span>
               <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Tiên thụ nhiên liệu</span>
@@ -153,8 +157,8 @@ export function DashboardOverviewPage() {
         </div>
 
         {/* Route Efficiency */}
-        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Hiệu suất tuyến đường</h3>
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Hiệu suất tuyến đường</h3>
           <div className="space-y-7">
             {routeEfficiency.map((item) => (
               <div key={item.name} className="flex flex-col gap-2.5">
@@ -176,8 +180,8 @@ export function DashboardOverviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Fleet Distribution */}
-        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Trạng thái đội xe</h3>
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Trạng thái đội xe</h3>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={fleetStatus} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -209,8 +213,8 @@ export function DashboardOverviewPage() {
         </div>
 
         {/* Regional Demand */}
-        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-          <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Nhu cầu theo khu vực</h3>
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Nhu cầu theo khu vực</h3>
           <div className="flex flex-col md:flex-row items-center justify-center gap-12 h-[280px]">
             <div className="w-full h-full max-w-[240px]">
               <ResponsiveContainer width="100%" height="100%">

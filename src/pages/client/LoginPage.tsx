@@ -2,108 +2,47 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AuthLayout } from "../../Components/client/AuthLayout";
-import { API_BASE_URL, LOGIN_URL } from "../../utils/api";
+import { API_BASE_URL, LOGIN_URL, PROFILE_ME_URL } from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
+import {
+  extractAuthToken,
+  extractDisplayName,
+  extractProfileCompleted,
+  extractRefreshToken,
+  extractMyProfileSnapshot,
+  extractStringArrayValue,
+  extractUserId,
+} from "../../utils/responseExtractors";
 
-const extractAuthToken = (body: unknown) => {
-  if (!body || typeof body !== "object") return "";
-  const record = body as Record<string, unknown>;
-  const data = record.data;
-  const candidates = [
-    record.token,
-    record.accessToken,
-    record.jwt,
-    record.authToken,
-    data && typeof data === "object" ? (data as Record<string, unknown>).token : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).accessToken : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).jwt : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).authToken : undefined,
-  ];
+const resolveDisplayNameFromProfile = async (
+  authToken: string,
+  userId: string,
+  fallbackDisplayName: string,
+) => {
+  if (!userId.trim()) return fallbackDisplayName;
 
-  const token = candidates.find((value) => typeof value === "string" && value.trim().length > 0);
-  return typeof token === "string" ? token : "";
-};
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${PROFILE_ME_URL}?userId=${encodeURIComponent(userId.trim())}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          ...(authToken.trim()
+            ? { Authorization: `Bearer ${authToken.trim()}` }
+            : {}),
+        },
+      },
+    );
 
-const extractDisplayName = (body: unknown, fallbackEmail: string) => {
-  if (!body || typeof body !== "object") return fallbackEmail;
-  const record = body as Record<string, unknown>;
-  const data = record.data;
-  const candidates = [
-    record.fullName,
-    record.name,
-    record.username,
-    record.email,
-    data && typeof data === "object" ? (data as Record<string, unknown>).fullName : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).name : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).username : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).email : undefined,
-  ];
+    if (!response.ok) return fallbackDisplayName;
 
-  const displayName = candidates.find(
-    (value) => typeof value === "string" && value.trim().length > 0,
-  );
-  return typeof displayName === "string" ? displayName : fallbackEmail;
-};
-
-const extractUserId = (body: unknown) => {
-  if (!body || typeof body !== "object") return "";
-  const record = body as Record<string, unknown>;
-  const data = record.data;
-  const candidates = [
-    record.userId,
-    record.id,
-    record.user_id,
-    data && typeof data === "object" ? (data as Record<string, unknown>).userId : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).id : undefined,
-    data && typeof data === "object" ? (data as Record<string, unknown>).user_id : undefined,
-  ];
-
-  const userId = candidates.find((value) => typeof value === "string" && value.trim().length > 0);
-  return typeof userId === "string" ? userId : "";
-};
-
-const extractProfileCompleted = (body: unknown) => {
-  if (!body || typeof body !== "object") return undefined;
-  const record = body as Record<string, unknown>;
-  const data = record.data;
-  const candidates = [
-    record.profileCompleted,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).profileCompleted
-      : undefined,
-  ];
-
-  const flag = candidates.find((value) => typeof value === "boolean");
-  if (typeof flag === "boolean") return flag;
-
-  const legacyNeedsProfileCompletion = [
-    record.needsProfileCompletion,
-    record.requireProfileCompletion,
-    record.mustCompleteProfile,
-    record.firstLogin,
-    record.isFirstLogin,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).needsProfileCompletion
-      : undefined,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).requireProfileCompletion
-      : undefined,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).mustCompleteProfile
-      : undefined,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).firstLogin
-      : undefined,
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>).isFirstLogin
-      : undefined,
-  ];
-
-  const legacyFlag = legacyNeedsProfileCompletion.find(
-    (value) => typeof value === "boolean",
-  );
-
-  return typeof legacyFlag === "boolean" ? !legacyFlag : undefined;
+    const responseBody: unknown = await response.json();
+    const profile = extractMyProfileSnapshot(responseBody);
+    return profile.fullName || profile.customer.fullName || fallbackDisplayName;
+  } catch {
+    return fallbackDisplayName;
+  }
 };
 
 export default function LoginPage() {
@@ -164,13 +103,21 @@ export default function LoginPage() {
       }
 
       const authToken = extractAuthToken(responseBody);
+      const refreshToken = extractRefreshToken(responseBody);
       const userId = extractUserId(responseBody);
-      const displayName = extractDisplayName(responseBody, email.trim());
+      const fallbackDisplayName = extractDisplayName(responseBody, email.trim());
       const profileCompleted = extractProfileCompleted(responseBody);
+      const roles = extractStringArrayValue(responseBody, ["authorities", "roles"]);
       const shouldCompleteProfile = profileCompleted === false;
+      const displayName = await resolveDisplayNameFromProfile(
+        authToken,
+        userId,
+        fallbackDisplayName,
+      );
 
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", displayName);
+      localStorage.setItem("profileFullName", displayName);
       localStorage.setItem("userEmail", email.trim());
       if (userId) {
         localStorage.setItem("userId", userId);
@@ -180,6 +127,13 @@ export default function LoginPage() {
       }
       if (authToken) {
         localStorage.setItem("authToken", authToken);
+      }
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+      if (roles.length > 0) {
+        localStorage.setItem("userRoles", JSON.stringify(roles));
+        localStorage.setItem("userRole", roles[0]);
       }
 
       if (shouldCompleteProfile) {

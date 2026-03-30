@@ -32,7 +32,7 @@ export function RightSidebar({ visible = true, isDarkMode = false }: RightSideba
   if (!visible) return null
 
   return (
-    <aside className={`w-64 shrink-0 h-screen py-8 px-6 overflow-y-auto space-y-12 border-l hidden 2xl:block transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+    <aside className={`w-60 shrink-0 h-screen py-8 px-6 overflow-y-auto space-y-12 border-l hidden 2xl:block transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
       <div>
         <h3 className={`text-[11px] font-black uppercase tracking-[0.15em] mb-6 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Thông báo quan trọng</h3>
         <div className="space-y-6">

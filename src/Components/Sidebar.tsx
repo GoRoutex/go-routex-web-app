@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bus,
-  Map,
+  MapPinned,
   Calendar,
   Users,
   Wrench,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   type LucideIcon,
   Navigation,
+  Route,
 } from 'lucide-react'
 
 interface NavItem {
@@ -31,8 +32,9 @@ const navGroups: NavGroup[] = [
     title: 'Operations',
     items: [
       { label: 'Live Overview', to: '/admin/dashboard', icon: Navigation },
-      { label: 'Fleet Status', to: '/admin/fleet', icon: Bus },
-      { label: 'Route Mapping', to: '/admin/routes', icon: Map },
+      { label: 'Vehicles', to: '/admin/vehicles', icon: Bus },
+      { label: 'Routes', to: '/admin/routes', icon: Route },
+      { label: 'Locations', to: '/admin/locations', icon: MapPinned },
     ],
   },
   {
@@ -105,10 +107,10 @@ export function Sidebar({ collapsed = false, isDarkMode = false }: SidebarProps)
           <Bus size={22} />
         </div>
         <div className={collapsed ? 'hidden' : ''}>
-          <span className={`font-black text-lg block leading-none tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+          <span className={`font-black text-[17px] block leading-none tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             Go Routex
           </span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">
             Management
           </span>
         </div>
@@ -118,7 +120,7 @@ export function Sidebar({ collapsed = false, isDarkMode = false }: SidebarProps)
         {navGroups.map((group) => (
           <div key={group.title}>
             <h3
-              className={`text-[10px] font-black uppercase tracking-[0.15em] mb-4 ${
+              className={`text-[9px] font-black uppercase tracking-[0.15em] mb-4 ${
                 collapsed ? 'hidden' : 'px-3'
               } ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}
             >
@@ -131,7 +133,7 @@ export function Sidebar({ collapsed = false, isDarkMode = false }: SidebarProps)
 
                 const itemClass = `flex items-center ${
                   collapsed ? 'justify-center px-0' : 'gap-3 px-3'
-                } py-3 rounded-2xl text-[13.5px] font-bold transition-all duration-300 ${
+                } py-3 rounded-2xl text-[12px] font-bold transition-all duration-300 ${
                   parentActive
                     ? 'bg-brand-primary/10 text-brand-primary shadow-sm ring-1 ring-brand-primary/20'
                     : isDarkMode
@@ -178,7 +180,7 @@ export function Sidebar({ collapsed = false, isDarkMode = false }: SidebarProps)
                             key={sub.label}
                             to={sub.to}
                             className={({ isActive }) =>
-                              `block w-full text-left text-[12.5px] py-1.5 font-semibold transition-colors ${
+                              `block w-full text-left text-[11px] py-1.5 font-semibold transition-colors ${
                                 isActive
                                   ? 'text-brand-primary'
                                   : isDarkMode

@@ -3,8 +3,11 @@ export const REGISTER_URL = "user-service/authentication/register";
 export const LOGIN_URL = "user-service/authentication/login";
 export const FORGOT_PASSWORD_URL = "user-service/authentication/forgot-password";
 export const CHANGE_PASSWORD_URL = "user-service/authentication/change-password";
+export const RESET_PASSWORD_URL = "user-service/authentication/reset-password";
 export const LOGOUT_URL = "user-service/authentication/logout";
 export const RESEND_VERIFICATION_URL = "user-service/authentication/resend-verification";
 export const VERIFY_URL = "user-service/authentication/verify";
 export const COMPLETE_PROFILE_URL =
   "user-service/profile/complete-profile";
+export const PROFILE_ME_URL = "user-service/profile/me";
+export const PROFILE_UPDATE_URL = "user-service/profile/update";
