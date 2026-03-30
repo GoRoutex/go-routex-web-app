@@ -61,38 +61,6 @@ const extractDirectStringValue = (record: Record<string, unknown>, keys: string[
   return "";
 };
 
-const extractDirectBooleanValue = (
-  record: Record<string, unknown>,
-  keys: string[],
-) => {
-  for (const key of keys) {
-    if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
-    const value = record[key];
-    if (typeof value === "boolean") return value;
-  }
-  return undefined;
-};
-
-const extractDirectStringArrayValue = (
-  record: Record<string, unknown>,
-  keys: string[],
-) => {
-  for (const key of keys) {
-    if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
-    const value = record[key];
-    if (Array.isArray(value)) {
-      return value
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    if (typeof value === "string") {
-      return [value.trim()].filter(Boolean);
-    }
-  }
-  return [];
-};
-
 const extractDirectDisplayValue = (
   record: Record<string, unknown>,
   keys: string[],
