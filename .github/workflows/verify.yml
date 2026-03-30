@@ -1,6 +1,8 @@
 name: CI / verify
 
 on:
+  push:
+    branches: [master]
   pull_request:
 
 jobs:
@@ -26,7 +28,7 @@ jobs:
         run: npm run lint --if-present
 
       - name: Test
-        run: npm test
+        run: npm run test --if-present
 
       - name: Build web
         run: npm run build
