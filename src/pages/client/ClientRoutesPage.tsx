@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bus, LayoutDashboard, Search, MapPin, Navigation, ArrowRight, Clock } from 'lucide-react'
 import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
+import { getClientHomeRoute, hasAdminRole } from '../../utils/auth'
 
 const ALL_ROUTES = [
   { id: 1, from: 'Hà Nội', to: 'Hải Phòng', info: 'Limousine • Up to 8 trips/day', duration: '2h 30m', distance: '120 km', price: '320,000 ₫' },
@@ -17,8 +18,10 @@ const ALL_ROUTES = [
 export default function ClientRoutesPage() {
   const navigate = useNavigate()
   const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
-  const [userName] = useState(() => localStorage.getItem('userName') || '')
+  const canAccessAdmin = hasAdminRole()
+  const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '')
   const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
+  const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '')
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredRoutes = ALL_ROUTES.filter(r => 
@@ -27,7 +30,7 @@ export default function ClientRoutesPage() {
   )
 
   const handleBook = (from: string, to: string) => {
-    navigate('/', { state: { prefill: { from, to } } }) // Mock redirection to home to book
+    navigate(getClientHomeRoute(), { state: { prefill: { from, to } } }) // Mock redirection to home to book
   }
 
   return (
@@ -35,7 +38,7 @@ export default function ClientRoutesPage() {
       {/* ══════════════════  TOP NAV BAR  ══════════════════ */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate(getClientHomeRoute())}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
               <Bus className="w-5 h-5 text-white" />
             </div>
@@ -49,7 +52,7 @@ export default function ClientRoutesPage() {
               <button 
                 key={l}
                 onClick={() => {
-                  if (i === 0) navigate('/')
+                  if (i === 0) navigate(getClientHomeRoute())
                   if (i === 1) navigate('/routes')
                   if (i === 2) navigate('/schedules')
                   if (i === 3) navigate('/support')
@@ -64,13 +67,16 @@ export default function ClientRoutesPage() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
-                <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="hidden lg:flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-brand-primary transition-colors px-4 py-2 rounded-xl hover:bg-slate-50">
-                  <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
-                </button>
+                {canAccessAdmin && (
+                  <button
+                    onClick={() => navigate('/admin/dashboard')}
+                    className="hidden lg:flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-brand-primary transition-colors px-4 py-2 rounded-xl hover:bg-slate-50">
+                    <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
+                  </button>
+                )}
                 <ClientAccountMenu
-                  displayName={userName || 'Chào bạn'}
+                  fullName={userName || 'Chào bạn'}
+                  avatarUrl={userAvatarUrl}
                   email={userEmail}
                 />
               </div>

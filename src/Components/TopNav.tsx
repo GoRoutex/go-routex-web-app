@@ -13,8 +13,9 @@ type TopNavProps = {
 
 const searchTargets = [
   { terms: ['dashboard', 'overview', 'tong quan'], to: '/admin/dashboard' },
-  { terms: ['fleet', 'xe', 'doi xe'], to: '/admin/fleet' },
-  { terms: ['route', 'tuyen', 'tuyen duong'], to: '/admin/routes' },
+  { terms: ['vehicle', 'vehicles', 'fleet', 'xe', 'doi xe', 'phuong tien'], to: '/admin/vehicles' },
+  { terms: ['routes', 'route', 'trip', 'chuyen xe', 'chuyen', 'journey', 'tuyen'], to: '/admin/routes' },
+  { terms: ['location', 'province', 'city', 'tinh', 'thanh pho'], to: '/admin/locations' },
   { terms: ['schedule', 'lich', 'lich trinh', 'lich chuyen'], to: '/admin/schedules' },
   { terms: ['ticket', 've', 'dat cho'], to: '/admin/tickets' },
   { terms: ['maintenance', 'bao tri', 'bảo tri'], to: '/admin/maintenance' },
@@ -56,8 +57,9 @@ export function TopNav({
     const map: Record<string, ReactNode> = {
       '/admin/dashboard': <span className="text-slate-900 font-bold">Tổng quan vận hành</span>,
       '/admin/staff': base('Nhân sự & Tài xế'),
-      '/admin/fleet': base('Đội xe'),
+      '/admin/vehicles': base('Phương tiện'),
       '/admin/routes': base('Tuyến đường'),
+      '/admin/locations': base('Location'),
       '/admin/schedules': base('Lịch chuyến'),
       '/admin/tickets': base('Vé & Đặt chỗ'),
       '/admin/maintenance': base('Bảo trì'),

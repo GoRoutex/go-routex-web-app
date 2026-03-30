@@ -11,9 +11,8 @@ import {
 } from "lucide-react";
 import { AuthLayout } from "../../Components/client/AuthLayout";
 import { createRequestMeta } from "../../utils/requestMeta";
+import { API_BASE_URL, REGISTER_URL } from "../../utils/api";
 
-const REGISTER_ENDPOINT =
-  "http://localhost:8080/api/v1/user-service/authentication/register";
 const DOB_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const getTodayYyyyMmDd = () => {
@@ -30,12 +29,14 @@ const extractToken = (body: unknown) => {
   const data = record.data;
   const direct =
     (typeof record.token === "string" && record.token) ||
-    (typeof record.verificationToken === "string" && record.verificationToken) ||
+    (typeof record.verificationToken === "string" &&
+      record.verificationToken) ||
     (typeof record.verifyToken === "string" && record.verifyToken) ||
     (data && typeof data === "object"
       ? (typeof (data as Record<string, unknown>).token === "string" &&
           (data as Record<string, unknown>).token) ||
-        (typeof (data as Record<string, unknown>).verificationToken === "string" &&
+        (typeof (data as Record<string, unknown>).verificationToken ===
+          "string" &&
           (data as Record<string, unknown>).verificationToken) ||
         (typeof (data as Record<string, unknown>).verifyToken === "string" &&
           (data as Record<string, unknown>).verifyToken)
@@ -154,7 +155,7 @@ export default function RegisterPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(REGISTER_ENDPOINT, {
+      const response = await fetch(API_BASE_URL + REGISTER_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -188,6 +189,9 @@ export default function RegisterPage() {
 
       const userId = extractUserId(responseBody);
       const token = extractToken(responseBody);
+      if (userId) {
+        localStorage.setItem("userId", userId);
+      }
       const verifySearchParams = new URLSearchParams();
       verifySearchParams.set("email", email.trim());
       if (userId) verifySearchParams.set("userId", userId);
@@ -266,7 +270,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="mt-3.5 flex items-center justify-center gap-2 rounded-[1rem] border border-red-100 bg-red-50 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-red-500">
+          <div className="mt-3.5 flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-red-500">
             <span>⚠️</span> {error}
           </div>
         )}
@@ -283,7 +287,7 @@ export default function RegisterPage() {
           {isSubmitting ? "Đang đăng ký..." : "Đăng ký tài khoản"}
         </button>
 
-        <div className="mt-3 rounded-[1rem] border border-slate-100 bg-slate-50 px-4 py-2.5 text-center text-sm text-slate-500">
+        <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-center text-sm text-slate-500">
           Bạn đã có tài khoản rồi?{" "}
           <button
             onClick={() => navigate("/login")}
