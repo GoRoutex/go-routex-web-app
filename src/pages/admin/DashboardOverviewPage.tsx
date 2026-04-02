@@ -23,26 +23,26 @@ const occupancyData = [
 ]
 
 const routeEfficiency = [
-  { name: 'Route A1 (North)', value: 94 },
-  { name: 'Route B5 (Downtown)', value: 82 },
-  { name: 'Airport Express', value: 98 },
-  { name: 'Cross-Town 10', value: 76 },
-  { name: 'Coastal Line', value: 89 },
-  { name: 'Suburb Link', value: 65 },
+  { name: 'Tuyến A1 (Bắc)', value: 94 },
+  { name: 'Tuyến B5 (Trung tâm)', value: 82 },
+  { name: 'Tuyến sân bay', value: 98 },
+  { name: 'Tuyến liên quận 10', value: 76 },
+  { name: 'Tuyến ven biển', value: 89 },
+  { name: 'Tuyến ngoại ô', value: 65 },
 ]
 
 const fleetStatus = [
-  { name: 'Active', value: 780 },
-  { name: 'Maintenance', value: 45 },
-  { name: 'Idle', value: 62 },
-  { name: 'Out of Order', value: 12 },
+  { name: 'Đang hoạt động', value: 780 },
+  { name: 'Bảo trì', value: 45 },
+  { name: 'Đang chờ', value: 62 },
+  { name: 'Ngừng hoạt động', value: 12 },
 ]
 
 const regionalDemand = [
-  { name: 'City Center', value: 45.2, color: '#1C1C1C' },
-  { name: 'Suburban North', value: 24.8, color: '#B1E3FF' },
-  { name: 'Industrial East', value: 18.2, color: '#A1A7FF' },
-  { name: 'Airport / Transit', value: 11.8, color: '#A8FFD2' },
+  { name: 'Trung tâm thành phố', value: 45.2, color: '#1C1C1C' },
+  { name: 'Ngoại ô phía Bắc', value: 24.8, color: '#B1E3FF' },
+  { name: 'Khu công nghiệp phía Đông', value: 18.2, color: '#A1A7FF' },
+  { name: 'Sân bay / trung chuyển', value: 11.8, color: '#A8FFD2' },
 ]
 
 export function DashboardOverviewPage() {
@@ -89,7 +89,7 @@ export function DashboardOverviewPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-8 text-[13px] font-black">
               <span className="text-brand-primary border-b-2 border-brand-primary pb-2 cursor-pointer uppercase tracking-wider">Lưu lượng khách</span>
-              <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Tiên thụ nhiên liệu</span>
+              <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Tiêu thụ nhiên liệu</span>
               <span className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors uppercase tracking-wider">Doanh thu</span>
             </div>
             <div className="flex items-center gap-6 text-[11px] font-bold">

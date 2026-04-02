@@ -7,8 +7,8 @@ const feedbackItems = [
     name: 'Nguyễn Minh Khang',
     route: 'Hà Nội - Hải Phòng',
     rating: 5,
-    category: 'Service',
-    status: 'New',
+    category: 'Dịch vụ',
+    status: 'Mới',
     message: 'Xe sạch, tài xế thân thiện và khởi hành đúng giờ.',
   },
   {
@@ -16,8 +16,8 @@ const feedbackItems = [
     name: 'Trần Thu Hà',
     route: 'Sài Gòn - Nha Trang',
     rating: 4,
-    category: 'Booking',
-    status: 'In Review',
+    category: 'Đặt chỗ',
+    status: 'Đang xem xét',
     message: 'Quy trình chọn ghế tốt, mong có thêm phương thức thanh toán.',
   },
   {
@@ -25,26 +25,26 @@ const feedbackItems = [
     name: 'Lê Hoàng Nam',
     route: 'Đà Nẵng - Huế',
     rating: 3,
-    category: 'Support',
-    status: 'Resolved',
+    category: 'Hỗ trợ',
+    status: 'Đã xử lý',
     message: 'Đội hỗ trợ phản hồi nhanh nhưng cần cập nhật trạng thái vé rõ hơn.',
   },
 ]
 
 export function AdminFeedbackPage() {
-  const [selectedStatus, setSelectedStatus] = useState('All')
-  const filteredItems = selectedStatus === 'All'
+  const [selectedStatus, setSelectedStatus] = useState('Tất cả')
+  const filteredItems = selectedStatus === 'Tất cả'
     ? feedbackItems
     : feedbackItems.filter((item) => item.status === selectedStatus)
 
   const badge = (status: string) => {
     switch (status) {
-      case 'New':
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-wider"><Clock3 size={12} /> New</span>
-      case 'In Review':
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold uppercase tracking-wider"><AlertCircle size={12} /> In Review</span>
+      case 'Mới':
+        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-wider"><Clock3 size={12} /> Mới</span>
+      case 'Đang xem xét':
+        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold uppercase tracking-wider"><AlertCircle size={12} /> Đang xem xét</span>
       default:
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold uppercase tracking-wider"><CheckCircle2 size={12} /> Resolved</span>
+        return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold uppercase tracking-wider"><CheckCircle2 size={12} /> Đã xử lý</span>
     }
   }
 
@@ -52,18 +52,18 @@ export function AdminFeedbackPage() {
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Feedback</h2>
-          <span className="text-[12px] text-gray-400 font-medium">Review passenger feedback and service requests</span>
+          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Phản hồi</h2>
+          <span className="text-[12px] text-gray-400 font-medium">Xem phản hồi của hành khách và các yêu cầu dịch vụ</span>
         </div>
         <button className="bg-[#1C1C1C] text-white px-5 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 hover:bg-black/80 transition-all">
           <Send size={16} />
-          Broadcast update
+          Gửi thông báo
         </button>
       </div>
 
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-wrap gap-3 items-center">
         <Filter size={16} className="text-gray-400" />
-        {['All', 'New', 'In Review', 'Resolved'].map((status) => (
+        {['Tất cả', 'Mới', 'Đang xem xét', 'Đã xử lý'].map((status) => (
           <button
             key={status}
             onClick={() => setSelectedStatus(status)}
@@ -87,7 +87,7 @@ export function AdminFeedbackPage() {
                   {badge(item.status)}
                 </div>
                 <p className="text-[13px] text-gray-500">
-                  Route: <span className="font-semibold text-gray-700">{item.route}</span> • Category: <span className="font-semibold text-gray-700">{item.category}</span>
+                  Tuyến: <span className="font-semibold text-gray-700">{item.route}</span> • Danh mục: <span className="font-semibold text-gray-700">{item.category}</span>
                 </p>
                 <p className="text-[13px] text-gray-700 leading-relaxed max-w-3xl">{item.message}</p>
               </div>
@@ -99,7 +99,7 @@ export function AdminFeedbackPage() {
                   ))}
                 </div>
                 <button className="px-4 py-2 rounded-xl bg-gray-900 text-white text-[12px] font-bold hover:bg-black transition-colors">
-                  Reply
+                  Trả lời
                 </button>
               </div>
             </div>

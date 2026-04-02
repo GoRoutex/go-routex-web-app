@@ -16,7 +16,6 @@ import { TicketingPage } from './pages/admin/TicketingPage'
 import { MaintenancePage } from './pages/admin/MaintenancePage'
 import { AdminSystemHealthPage } from './pages/admin/AdminSystemHealthPage'
 import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage'
-import { AdminProfileSettingsPage } from './pages/admin/AdminProfileSettingsPage'
 import { AdminProfileOverviewPage } from './pages/admin/AdminProfileOverviewPage'
 
 // Client pages
@@ -114,7 +113,7 @@ function App() {
         <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
         <Route path="health" element={<AdminSystemHealthPage />} />
         <Route path="feedback" element={<AdminFeedbackPage />} />
-        <Route path="profile/settings" element={<AdminProfileSettingsPage />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
 
       {/* ─── Fallback ─── */}

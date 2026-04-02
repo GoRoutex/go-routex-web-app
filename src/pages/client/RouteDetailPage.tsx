@@ -56,6 +56,16 @@ const durationText = (s?: string, e?: string) => {
   return `${h}h ${m}m`
 }
 
+const formatVehicleType = (value?: string | null) => {
+  if (!value) return "Xe khách"
+  const normalized = value.trim().toUpperCase()
+  if (normalized === "LIMOUSINE") return "Xe limousine"
+  if (normalized === "SLEEPER") return "Xe giường nằm"
+  if (normalized === "STANDARD" || normalized === "COACH") return "Xe tiêu chuẩn"
+  if (normalized === "PREMIUM") return "Xe cao cấp"
+  return value
+}
+
 // Mock seats generated from capacity
 const generateMockSeats = (routeId: string, capacity: number): RouteSeatItem[] =>
   Array.from({ length: capacity }, (_, i) => ({
@@ -67,7 +77,7 @@ const generateMockSeats = (routeId: string, capacity: number): RouteSeatItem[] =
 
 const mockRouteData: RouteItem = {
   id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-  pickupBranch: "233 Dien Bien Phu",
+  pickupBranch: "233 Điện Biên Phủ",
   origin: "Hà Nội",
   destination: "Hải Phòng",
   availableSeats: 32,
@@ -85,7 +95,7 @@ const mockRouteData: RouteItem = {
       routeId: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
       plannedArrivalTime: "2026-03-04T09:30:00Z",
       plannedDepartureTime: "2026-03-04T09:45:00Z",
-      note: "Trạm Dừng Chân",
+      note: "Trạm dừng chân",
     },
   ],
 }
@@ -227,7 +237,7 @@ export default function RouteDetailPage() {
               </div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Phương tiện</p>
-                <span className="font-bold text-slate-900 text-lg tracking-tight">{routeData.vehicleType || '—'} • {routeData.vehiclePlate || '—'}</span>
+                <span className="font-bold text-slate-900 text-lg tracking-tight">{formatVehicleType(routeData.vehicleType)} • {routeData.vehiclePlate || '—'}</span>
               </div>
             </div>
           </div>

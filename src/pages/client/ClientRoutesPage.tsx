@@ -5,14 +5,14 @@ import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
 import { getClientHomeRoute, hasAdminRole } from '../../utils/auth'
 
 const ALL_ROUTES = [
-  { id: 1, from: 'Hà Nội', to: 'Hải Phòng', info: 'Limousine • Up to 8 trips/day', duration: '2h 30m', distance: '120 km', price: '320,000 ₫' },
-  { id: 2, from: 'Sài Gòn', to: 'Nha Trang', info: 'Sleeper bus • Overnight route', duration: '8h 00m', distance: '400 km', price: '280,000 ₫' },
-  { id: 3, from: 'Đà Lạt', to: 'Sài Gòn', info: 'Premium coach • Morning departures', duration: '6h 30m', distance: '300 km', price: '240,000 ₫' },
-  { id: 4, from: 'Hà Nội', to: 'Đà Nẵng', info: 'Express • Limited seats', duration: '14h 00m', distance: '760 km', price: '450,000 ₫' },
-  { id: 5, from: 'Sài Gòn', to: 'Cần Thơ', info: 'Standard coach • Hourly departures', duration: '3h 30m', distance: '160 km', price: '150,000 ₫' },
-  { id: 6, from: 'Đà Nẵng', to: 'Huế', info: 'Fast transit • Scenic route', duration: '2h 00m', distance: '100 km', price: '120,000 ₫' },
-  { id: 7, from: 'Hải Phòng', to: 'Hạ Long', info: 'Luxury Limousine', duration: '1h 15m', distance: '75 km', price: '200,000 ₫' },
-  { id: 8, from: 'Sài Gòn', to: 'Vũng Tàu', info: 'Express • High frequency', duration: '2h 15m', distance: '110 km', price: '160,000 ₫' },
+  { id: 1, from: 'Hà Nội', to: 'Hải Phòng', info: 'Xe limousine • Tối đa 8 chuyến/ngày', duration: '2h 30m', distance: '120 km', price: '320,000 ₫' },
+  { id: 2, from: 'Sài Gòn', to: 'Nha Trang', info: 'Xe giường nằm • Tuyến đêm', duration: '8h 00m', distance: '400 km', price: '280,000 ₫' },
+  { id: 3, from: 'Đà Lạt', to: 'Sài Gòn', info: 'Xe cao cấp • Giờ khởi hành buổi sáng', duration: '6h 30m', distance: '300 km', price: '240,000 ₫' },
+  { id: 4, from: 'Hà Nội', to: 'Đà Nẵng', info: 'Tuyến nhanh • Số chỗ có hạn', duration: '14h 00m', distance: '760 km', price: '450,000 ₫' },
+  { id: 5, from: 'Sài Gòn', to: 'Cần Thơ', info: 'Xe tiêu chuẩn • Khởi hành mỗi giờ', duration: '3h 30m', distance: '160 km', price: '150,000 ₫' },
+  { id: 6, from: 'Đà Nẵng', to: 'Huế', info: 'Tuyến nhanh • Cung đường ngắm cảnh', duration: '2h 00m', distance: '100 km', price: '120,000 ₫' },
+  { id: 7, from: 'Hải Phòng', to: 'Hạ Long', info: 'Xe limousine cao cấp', duration: '1h 15m', distance: '75 km', price: '200,000 ₫' },
+  { id: 8, from: 'Sài Gòn', to: 'Vũng Tàu', info: 'Tuyến nhanh • Tần suất cao', duration: '2h 15m', distance: '110 km', price: '160,000 ₫' },
 ]
 
 export default function ClientRoutesPage() {

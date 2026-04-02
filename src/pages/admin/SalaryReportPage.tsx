@@ -6,38 +6,38 @@ import {
 
 export function SalaryReportPage() {
   const salaryData = [
-    { name: 'Jan', drivers: 35000, admin: 12000, maintenance: 8000 },
-    { name: 'Feb', drivers: 36000, admin: 12000, maintenance: 8200 },
-    { name: 'Mar', drivers: 35500, admin: 12500, maintenance: 8200 },
-    { name: 'Apr', drivers: 38000, admin: 12500, maintenance: 8500 },
-    { name: 'May', drivers: 40000, admin: 13000, maintenance: 9000 },
-    { name: 'Jun', drivers: 42000, admin: 13000, maintenance: 9500 },
+    { name: 'T1', drivers: 35000, admin: 12000, maintenance: 8000 },
+    { name: 'T2', drivers: 36000, admin: 12000, maintenance: 8200 },
+    { name: 'T3', drivers: 35500, admin: 12500, maintenance: 8200 },
+    { name: 'T4', drivers: 38000, admin: 12500, maintenance: 8500 },
+    { name: 'T5', drivers: 40000, admin: 13000, maintenance: 9000 },
+    { name: 'T6', drivers: 42000, admin: 13000, maintenance: 9500 },
   ]
 
   const salaryDistribution = [
-    { name: 'Senior Drivers', value: 45 },
-    { name: 'Junior Drivers', value: 25 },
-    { name: 'Admin Staff', value: 15 },
-    { name: 'Mechanics', value: 15 },
+    { name: 'Tài xế kỳ cựu', value: 45 },
+    { name: 'Tài xế mới', value: 25 },
+    { name: 'Nhân sự văn phòng', value: 15 },
+    { name: 'Thợ kỹ thuật', value: 15 },
   ]
 
   const kpis = [
-    { label: 'Total Payroll (Jun)', value: '$64.5K', icon: Users, bg: 'bg-[#F7F9FB]' },
-    { label: 'Avg Salary / Driver', value: '$3.2K', icon: UserCheck, bg: 'bg-[#E3F5FF]' },
-    { label: 'New Hires YTD', value: '14', icon: UserPlus, bg: 'bg-[#E5ECF6]' },
+    { label: 'Tổng quỹ lương (tháng 6)', value: '$64.5K', icon: Users, bg: 'bg-[#F7F9FB]' },
+    { label: 'Lương trung bình / tài xế', value: '$3.2K', icon: UserCheck, bg: 'bg-[#E3F5FF]' },
+    { label: 'Nhân sự mới trong năm', value: '14', icon: UserPlus, bg: 'bg-[#E5ECF6]' },
   ]
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Salary & Payroll Reports</h2>
-          <span className="text-[12px] text-gray-400 font-medium">Tracking personnel compensation</span>
+          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Báo cáo lương & quỹ lương</h2>
+          <span className="text-[12px] text-gray-400 font-medium">Theo dõi chi trả nhân sự</span>
         </div>
         <div className="flex items-center gap-3">
            <select className="bg-white border border-gray-200 text-gray-700 text-[12px] font-semibold rounded-xl px-4 py-2 outline-none cursor-pointer">
-             <option>First Half 2026</option>
-             <option>Second Half 2025</option>
+             <option>Nửa đầu 2026</option>
+             <option>Nửa cuối 2025</option>
            </select>
         </div>
       </div>
@@ -60,20 +60,20 @@ export function SalaryReportPage() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-[14px] font-semibold flex items-center gap-2">
               <TrendingUp size={16} className="text-gray-400" />
-              Monthly Payroll by Department
+              Quỹ lương hằng tháng theo bộ phận
             </h3>
             <div className="flex items-center gap-4 text-[11px]">
                <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                  <span className="text-gray-900 font-medium">Drivers</span>
+                  <span className="text-gray-900 font-medium">Tài xế</span>
                </div>
                <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
-                  <span className="text-gray-400">Admin</span>
+                  <span className="text-gray-400">Văn phòng</span>
                </div>
                <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-300" />
-                  <span className="text-gray-400">Maintenance</span>
+                  <span className="text-gray-400">Bảo trì</span>
                </div>
             </div>
           </div>
@@ -97,7 +97,7 @@ export function SalaryReportPage() {
 
         {/* Breakdown */}
         <div className="bg-[#F7F9FB] rounded-3xl p-8">
-          <h3 className="text-[14px] font-semibold mb-8">Role Distribution</h3>
+          <h3 className="text-[14px] font-semibold mb-8">Phân bố theo vai trò</h3>
           <div className="h-[280px] flex items-end">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={salaryDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

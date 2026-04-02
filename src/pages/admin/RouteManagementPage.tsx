@@ -1,18 +1,77 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Clock,
-  Edit2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Clock3,
+  Loader2,
   Map,
   MapPin,
   Plus,
+  RefreshCw,
   Route,
   Save,
-  Search,
-  Trash2,
   X,
 } from "lucide-react";
+import { ROUTE_SERVICE_BASE_URL } from "../../utils/api";
+import {
+  createRequestEnvelopeHeaders,
+  createRequestMeta,
+} from "../../utils/requestMeta";
+import { PROVINCES_SERVICE_BASE_URL } from "../../utils/api";
+import {
+  extractArrayValue,
+  extractBooleanValue,
+  extractDisplayValue,
+  extractNumberValue,
+  extractStringValue,
+} from "../../utils/responseExtractors";
 
-type RouteStatus = "ACTIVE" | "DRAFT" | "PAUSED";
+type RouteStatus =
+  | "PLANNED"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "DELAYED"
+  | "CANCELED"
+  | "ACTIVE"
+  | "DRAFT"
+  | "PAUSED"
+  | "UNKNOWN";
+
+type StopPoint = {
+  id: string;
+  stopOrder: string;
+  location: string;
+  note: string;
+  plannedArrivalTime: string;
+  plannedDepartureTime: string;
+};
+
+type RouteOperationPointForm = {
+  operationOrder: string;
+  plannedArrivalTime: string;
+  plannedDepartureTime: string;
+  note: string;
+};
+
+type RouteCreateForm = {
+  creator: string;
+  pickupBranch: string;
+  origin: string;
+  destination: string;
+  plannedStartTime: string;
+  plannedEndTime: string;
+  operationPoints: RouteOperationPointForm[];
+};
+
+type ProvinceOption = {
+  id: string;
+  name: string;
+  code: string;
+  label: string;
+};
 
 type RouteRow = {
   id: string;
@@ -20,63 +79,50 @@ type RouteRow = {
   routeName: string;
   origin: string;
   destination: string;
+  pickupBranch: string;
   departureTime: string;
   arrivalTime: string;
+  actualStartTime: string;
+  actualEndTime: string;
   assignedVehicle: string;
   licensePlate: string;
   assignedDriver: string;
   status: RouteStatus;
+  statusText: string;
+  stopLocation: string;
+  stopInfo: string;
+  stopPoints: StopPoint[];
   note: string;
 };
 
-type RouteForm = Omit<RouteRow, "id">;
-
-const initialRoutes: RouteRow[] = [
-  {
-    id: "1",
-    routeCode: "HCM-NT-001",
-    routeName: "TP.HCM - Nha Trang",
-    origin: "TP.HCM",
-    destination: "Nha Trang",
-    departureTime: "00:10",
-    arrivalTime: "06:10",
-    assignedVehicle: "Bus-01",
-    licensePlate: "51B-123.45",
-    assignedDriver: "Nguyễn Văn A",
-    status: "ACTIVE",
-    note: "Chuyến đêm cao cấp",
-  },
-  {
-    id: "2",
-    routeCode: "HCM-NT-002",
-    routeName: "TP.HCM - Nha Trang",
-    origin: "TP.HCM",
-    destination: "Nha Trang",
-    departureTime: "08:30",
-    arrivalTime: "14:30",
-    assignedVehicle: "Bus-05",
-    licensePlate: "51B-678.90",
-    assignedDriver: "Trần Văn B",
-    status: "ACTIVE",
-    note: "Chuyến sáng ngày",
-  },
-  {
-    id: "3",
-    routeCode: "HN-HP-001",
-    routeName: "Hà Nội - Hải Phòng",
-    origin: "Hà Nội",
-    destination: "Hải Phòng",
-    departureTime: "07:00",
-    arrivalTime: "09:30",
-    assignedVehicle: "Van-02",
-    licensePlate: "29B-445.56",
-    assignedDriver: "Lê Văn C",
-    status: "DRAFT",
-    note: "Tuyến Limousine VIP",
-  },
-];
+const PAGE_SIZE = 10;
+const UTC_PLUS_7 = "+07:00";
 
 const statusMeta: Record<RouteStatus, { label: string; badge: string }> = {
+  PLANNED: {
+    label: "Đã lên kế hoạch",
+    badge: "bg-sky-50 text-sky-700 border-sky-100",
+  },
+  ASSIGNED: {
+    label: "Đã phân công",
+    badge: "bg-violet-50 text-violet-700 border-violet-100",
+  },
+  IN_PROGRESS: {
+    label: "Đang diễn ra",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  },
+  COMPLETED: {
+    label: "Đã hoàn thành",
+    badge: "bg-slate-100 text-slate-600 border-slate-200",
+  },
+  DELAYED: {
+    label: "Bị trì hoãn",
+    badge: "bg-amber-50 text-amber-700 border-amber-100",
+  },
+  CANCELED: {
+    label: "Đã huỷ",
+    badge: "bg-rose-50 text-rose-700 border-rose-100",
+  },
   ACTIVE: {
     label: "Đang chạy",
     badge: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -89,100 +135,875 @@ const statusMeta: Record<RouteStatus, { label: string; badge: string }> = {
     label: "Tạm dừng",
     badge: "bg-slate-100 text-slate-600 border-slate-200",
   },
+  UNKNOWN: {
+    label: "Trạng thái",
+    badge: "bg-sky-50 text-sky-700 border-sky-100",
+  },
 };
 
-const formTemplate: RouteForm = {
-  routeCode: "",
-  routeName: "",
+const normalizeStatus = (rawValue: unknown): RouteStatus => {
+  if (typeof rawValue === "boolean") {
+    return rawValue ? "ACTIVE" : "PAUSED";
+  }
+
+  if (typeof rawValue !== "string") {
+    return "UNKNOWN";
+  }
+
+  const value = rawValue.trim().toLowerCase();
+  if (!value) return "UNKNOWN";
+
+  if (
+    [
+      "active",
+      "running",
+      "opened",
+      "enabled",
+      "published",
+      "available",
+    ].includes(value)
+  ) {
+    return "ACTIVE";
+  }
+
+  if (
+    ["planned", "plan", "scheduled", "schedule", "open", "ready"].includes(
+      value,
+    )
+  ) {
+    return "PLANNED";
+  }
+
+  if (["assigned", "allocated", "booked"].includes(value)) {
+    return "ASSIGNED";
+  }
+
+  if (
+    [
+      "in_progress",
+      "inprogress",
+      "progress",
+      "ongoing",
+      "running_now",
+    ].includes(value)
+  ) {
+    return "IN_PROGRESS";
+  }
+
+  if (["completed", "done", "finished", "success"].includes(value)) {
+    return "COMPLETED";
+  }
+
+  if (["delayed", "late", "postponed", "rescheduled", "hold"].includes(value)) {
+    return "DELAYED";
+  }
+
+  if (
+    ["canceled", "cancelled", "void", "aborted", "terminated"].includes(value)
+  ) {
+    return "CANCELED";
+  }
+
+  if (["draft", "pending", "new"].includes(value)) {
+    return "DRAFT";
+  }
+
+  if (
+    [
+      "paused",
+      "inactive",
+      "disabled",
+      "suspended",
+      "stopped",
+      "closed",
+    ].includes(value)
+  ) {
+    return "PAUSED";
+  }
+
+  return "UNKNOWN";
+};
+
+const formatTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.length <= 16) return trimmed;
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return trimmed;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(parsed);
+};
+
+const formatLocalDateTimeWithOffset = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+    return `${trimmed}:00${UTC_PLUS_7}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return `${trimmed}${UTC_PLUS_7}`;
+  }
+  return trimmed;
+};
+
+const getCurrentLocalDateTimeValue = () => {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+    now.getDate(),
+  )}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+};
+
+const parseLocalDateTimeValue = (value: string) => {
+  if (!value.trim()) return Number.NaN;
+  const parsed = new Date(value);
+  return parsed.getTime();
+};
+
+const extractErrorMessage = async (response: Response, fallback: string) => {
+  try {
+    const body = await response.json();
+    return (
+      body?.message || body?.error || body?.detail || body?.title || fallback
+    );
+  } catch {
+    return fallback;
+  }
+};
+
+const getVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages: Array<number | "ellipsis"> = [1];
+  const windowStart = Math.max(2, currentPage - 1);
+  const windowEnd = Math.min(totalPages - 1, currentPage + 1);
+
+  if (windowStart > 1) pages.push("ellipsis");
+  for (let page = windowStart; page <= windowEnd; page += 1) {
+    pages.push(page);
+  }
+  if (windowEnd < totalPages - 1) pages.push("ellipsis");
+  pages.push(totalPages);
+
+  return pages;
+};
+
+const createRouteFormTemplate = (): RouteCreateForm => ({
+  creator:
+    localStorage.getItem("userName") ||
+    localStorage.getItem("userId") ||
+    "demo_user",
+  pickupBranch: "",
   origin: "",
   destination: "",
-  departureTime: "",
-  arrivalTime: "",
-  assignedVehicle: "",
-  licensePlate: "",
-  assignedDriver: "",
-  status: "ACTIVE",
-  note: "",
+  plannedStartTime: "",
+  plannedEndTime: "",
+  operationPoints: [
+    {
+      operationOrder: "1",
+      plannedArrivalTime: "",
+      plannedDepartureTime: "",
+      note: "",
+    },
+  ],
+});
+
+const mapProvinceOption = (rawItem: unknown, index: number): ProvinceOption => {
+  const item = rawItem as Record<string, unknown>;
+  const name = extractStringValue(item, [
+    "name",
+    "provinceName",
+    "province",
+    "title",
+    "label",
+  ]);
+  const code = extractStringValue(item, [
+    "code",
+    "provinceCode",
+    "shortCode",
+    "abbreviation",
+  ]);
+  const id =
+    extractStringValue(item, ["id", "provinceId", "uuid"]) ||
+    code ||
+    name ||
+    `province-${index + 1}`;
+  const label = [name, code ? `(${code})` : ""].filter(Boolean).join(" ").trim();
+
+  return {
+    id,
+    name,
+    code,
+    label: label || name || code || `Địa điểm ${index + 1}`,
+  };
+};
+
+const loadAllProvinceOptions = async (
+  signal: AbortSignal,
+): Promise<ProvinceOption[]> => {
+  const allItems: ProvinceOption[] = [];
+  let pageNumber = 1;
+  let totalPages = 1;
+
+  while (pageNumber <= totalPages) {
+    const authToken = localStorage.getItem("authToken") || "";
+    const url = new URL(PROVINCES_SERVICE_BASE_URL);
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/management/provinces-service/fetch`;
+    url.searchParams.set("pageNumber", String(pageNumber));
+    url.searchParams.set("pageSize", String(PAGE_SIZE));
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...createRequestEnvelopeHeaders(),
+        ...(authToken.trim()
+          ? { Authorization: `Bearer ${authToken.trim()}` }
+          : {}),
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Không thể tải danh sách địa điểm (${response.status})`);
+    }
+
+    const body: unknown = await response.json();
+    const rawItems = extractArrayValue(body, [
+      "content",
+      "items",
+      "data",
+      "provinces",
+      "result",
+      "list",
+    ]);
+
+    allItems.push(...rawItems.map((item, index) => mapProvinceOption(item, index)));
+
+    const resolvedTotalPages = extractNumberValue(body, [
+      "totalPages",
+      "pages",
+      "pageCount",
+      "total_page",
+    ]);
+    if (typeof resolvedTotalPages === "number" && resolvedTotalPages > 0) {
+      totalPages = resolvedTotalPages;
+    } else if (rawItems.length < PAGE_SIZE) {
+      totalPages = pageNumber;
+    }
+
+    pageNumber += 1;
+  }
+
+  return allItems.filter((item, index, array) => {
+    const key = `${item.name || item.code || item.id}`.toLowerCase();
+    return array.findIndex((entry) => `${entry.name || entry.code || entry.id}`.toLowerCase() === key) === index;
+  });
+};
+
+const mapRouteRow = (
+  rawItem: unknown,
+  index: number,
+  pageNumber: number,
+): RouteRow => {
+  const item = rawItem as Record<string, unknown>;
+  const origin = extractStringValue(item, [
+    "origin",
+    "from",
+    "startPoint",
+    "startLocation",
+    "departurePoint",
+  ]);
+  const destination = extractStringValue(item, [
+    "destination",
+    "to",
+    "endPoint",
+    "endLocation",
+    "arrivalPoint",
+  ]);
+  const routeCode =
+    extractStringValue(item, [
+      "routeCode",
+      "code",
+      "routeId",
+      "routeNo",
+      "routeNumber",
+    ]) || `ROUTE-${(pageNumber - 1) * PAGE_SIZE + index + 1}`;
+  const routeName =
+    extractStringValue(item, ["routeName", "name", "title", "label"]) ||
+    (origin && destination
+      ? `${origin} - ${destination}`
+      : "Chưa có tên tuyến");
+  const plannedStartTime = formatTime(
+    extractDisplayValue(item, [
+      "plannedStartTime",
+      "departureTime",
+      "departure",
+      "startTime",
+      "startAt",
+      "departAt",
+    ]),
+  );
+  const plannedEndTime = formatTime(
+    extractDisplayValue(item, [
+      "plannedEndTime",
+      "arrivalTime",
+      "arrival",
+      "endTime",
+      "endAt",
+      "arriveAt",
+    ]),
+  );
+  const actualStartTime = formatTime(
+    extractDisplayValue(item, [
+      "actualStartTime",
+      "realStartTime",
+      "startedAt",
+      "departureTime",
+    ]),
+  );
+  const actualEndTime = formatTime(
+    extractDisplayValue(item, [
+      "actualEndTime",
+      "realEndTime",
+      "endedAt",
+      "arrivalTime",
+    ]),
+  );
+  const assignedVehicle = extractStringValue(item, [
+    "assignedVehicle",
+    "vehicle",
+    "vehicleName",
+    "bus",
+    "vehicleCode",
+  ]);
+  const licensePlate = extractStringValue(item, [
+    "licensePlate",
+    "plate",
+    "vehiclePlate",
+  ]);
+  const assignedDriver = extractStringValue(item, [
+    "assignedDriver",
+    "driver",
+    "driverName",
+  ]);
+  const pickupBranch = extractStringValue(item, [
+    "pickupBranch",
+    "boardingPoint",
+    "startBranch",
+    "branch",
+    "depot",
+  ]);
+  const stopPoints = extractArrayValue(item, [
+    "stopPoints",
+    "stops",
+    "waypoints",
+  ]).map((stop, stopIndex) => {
+    const stopItem = stop as Record<string, unknown>;
+    return {
+      id:
+        extractStringValue(stopItem, ["id", "stopId", "uuid"]) ||
+        `${pageNumber}-${index}-stop-${stopIndex}`,
+      stopOrder:
+        extractStringValue(stopItem, ["stopOrder", "order", "sequence"]) ||
+        String(stopIndex + 1),
+      location: extractStringValue(stopItem, [
+        "location",
+        "stopLocation",
+        "place",
+        "address",
+        "name",
+      ]),
+      note: extractStringValue(stopItem, [
+        "note",
+        "description",
+        "remarks",
+        "memo",
+      ]),
+      plannedArrivalTime: formatTime(
+        extractDisplayValue(stopItem, [
+          "plannedArrivalTime",
+          "arrivalTime",
+          "arrival",
+          "estimatedArrivalTime",
+        ]),
+      ),
+      plannedDepartureTime: formatTime(
+        extractDisplayValue(stopItem, [
+          "plannedDepartureTime",
+          "departureTime",
+          "departure",
+          "estimatedDepartureTime",
+        ]),
+      ),
+    };
+  });
+  const stopLocation =
+    extractStringValue(item, [
+      "stopLocation",
+      "stopAt",
+      "stopPlace",
+      "stopPoint",
+      "restStop",
+      "breakPoint",
+    ]) ||
+    stopPoints[0]?.location ||
+    pickupBranch;
+  const stopInfo =
+    extractStringValue(item, [
+      "stopInfo",
+      "stopDescription",
+      "stopNote",
+      "stopSummary",
+    ]) ||
+    stopPoints[0]?.note ||
+    (stopPoints.length > 0 ? `${stopPoints.length} điểm dừng` : "");
+  const note = extractStringValue(item, [
+    "note",
+    "description",
+    "remarks",
+    "memo",
+  ]);
+
+  const isActive = extractBooleanValue(item, ["isActive", "active", "enabled"]);
+  const statusText = extractStringValue(item, [
+    "status",
+    "routeStatus",
+    "state",
+  ]);
+  const rawStatus =
+    statusText ||
+    (isActive === true ? "ACTIVE" : isActive === false ? "PAUSED" : "");
+
+  return {
+    id:
+      extractStringValue(item, ["id", "routeId", "uuid"]) ||
+      `${pageNumber}-${index}-${routeCode}`,
+    routeCode,
+    routeName: routeName.toUpperCase(),
+    origin,
+    destination,
+    pickupBranch,
+    departureTime: plannedStartTime,
+    arrivalTime: plannedEndTime,
+    assignedVehicle,
+    licensePlate,
+    assignedDriver,
+    status: normalizeStatus(rawStatus),
+    statusText,
+    actualStartTime,
+    actualEndTime,
+    stopLocation,
+    stopInfo,
+    stopPoints,
+    note,
+  };
 };
 
 export function RouteManagementPage() {
-  const [items, setItems] = useState<RouteRow[]>(initialRoutes);
-  const [search, setSearch] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<RouteForm>(formTemplate);
+  const [items, setItems] = useState<RouteRow[]>([]);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const [expandedStops, setExpandedStops] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState<RouteCreateForm>(
+    createRouteFormTemplate,
+  );
+  const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
+  const [provinceLoading, setProvinceLoading] = useState(false);
+  const [provinceError, setProvinceError] = useState("");
+  const [provinceLoaded, setProvinceLoaded] = useState(false);
+  const [createMinDateTime, setCreateMinDateTime] = useState("");
 
-  const filteredItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) =>
-      [item.routeCode, item.routeName, item.origin, item.destination, item.assignedVehicle, item.assignedDriver, item.note]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [items, search]);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadRoutes = async () => {
+      setIsLoading(true);
+      setError("");
+      setItems([]);
+
+      try {
+        const authToken = localStorage.getItem("authToken") || "";
+        const url = new URL(ROUTE_SERVICE_BASE_URL);
+        url.pathname = `${url.pathname.replace(/\/$/, "")}/route-service/fetch`;
+        url.searchParams.set("pageNumber", String(pageNumber));
+        url.searchParams.set("pageSize", String(PAGE_SIZE));
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            ...createRequestEnvelopeHeaders(),
+            ...(authToken.trim()
+              ? { Authorization: `Bearer ${authToken.trim()}` }
+              : {}),
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const message = await extractErrorMessage(
+            response,
+            `Không thể tải danh sách các tuyến xe (${response.status})`,
+          );
+          throw new Error(message);
+        }
+
+        const body: unknown = await response.json();
+        const rawItems = extractArrayValue(body, [
+          "content",
+          "items",
+          "data",
+          "routes",
+          "result",
+          "list",
+        ]);
+
+        const normalizedItems = rawItems.map((item, index) =>
+          mapRouteRow(item, index, pageNumber),
+        );
+
+        const resolvedTotalElements = extractNumberValue(body, [
+          "totalElements",
+          "total",
+          "count",
+          "totalCount",
+        ]);
+        const resolvedTotalPages = extractNumberValue(body, [
+          "totalPages",
+          "pages",
+          "pageCount",
+          "total_page",
+        ]);
+
+        setItems(normalizedItems);
+        setTotalElements(
+          typeof resolvedTotalElements === "number"
+            ? resolvedTotalElements
+            : normalizedItems.length,
+        );
+        setTotalPages(
+          typeof resolvedTotalPages === "number"
+            ? Math.max(1, resolvedTotalPages)
+            : Math.max(
+                1,
+                Math.ceil(
+                  (typeof resolvedTotalElements === "number"
+                    ? resolvedTotalElements
+                    : normalizedItems.length) / PAGE_SIZE,
+                ),
+              ),
+        );
+      } catch (loadError) {
+        if (
+          loadError instanceof DOMException &&
+          loadError.name === "AbortError"
+        ) {
+          return;
+        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Đã xảy ra lỗi khi tải danh sách tuyến xe",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRoutes();
+
+    return () => controller.abort();
+  }, [pageNumber, reloadNonce]);
+
+  useEffect(() => {
+    if (!createModalOpen || provinceLoaded) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadProvinces = async () => {
+      setProvinceLoading(true);
+      setProvinceError("");
+
+      try {
+        const provinces = await loadAllProvinceOptions(controller.signal);
+        setProvinceOptions(provinces);
+        setProvinceLoaded(true);
+      } catch (loadError) {
+        if (
+          loadError instanceof DOMException &&
+          loadError.name === "AbortError"
+        ) {
+          return;
+        }
+
+        setProvinceError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Đã xảy ra lỗi khi tải danh sách địa điểm",
+        );
+      } finally {
+        setProvinceLoading(false);
+      }
+    };
+
+    loadProvinces();
+
+    return () => controller.abort();
+  }, [createModalOpen, provinceLoaded]);
+
+  useEffect(() => {
+    if (!createModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [createModalOpen]);
 
   const summary = useMemo(
     () => ({
       active: items.filter((item) => item.status === "ACTIVE").length,
       draft: items.filter((item) => item.status === "DRAFT").length,
       paused: items.filter((item) => item.status === "PAUSED").length,
-      total: items.length,
+      totalLoaded: items.length,
     }),
     [items],
   );
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(formTemplate);
-    setModalOpen(true);
+  const pageInfo = useMemo(() => {
+    const total = Math.max(totalPages, 1);
+    const current = Math.min(Math.max(pageNumber, 1), total);
+    const start = totalElements === 0 ? 0 : (current - 1) * PAGE_SIZE + 1;
+    const end =
+      totalElements === 0 ? 0 : (current - 1) * PAGE_SIZE + items.length;
+
+    return { current, total, start, end };
+  }, [items.length, pageNumber, totalElements, totalPages]);
+
+  const pageButtons = useMemo(
+    () =>
+      getVisiblePageItems(
+        Math.min(Math.max(pageNumber, 1), totalPages),
+        Math.max(totalPages, 1),
+      ),
+    [pageNumber, totalPages],
+  );
+
+  const renderBadge = (label: string, value: string, tone = "bg-white") => (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm ${tone}`}
+    >
+      <span className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </span>
+      <span className="font-medium text-slate-800">{value}</span>
+    </span>
+  );
+
+  const toggleStopExpansion = (stopId: string) => {
+    setExpandedStops((current) => ({
+      ...current,
+      [stopId]: !current[stopId],
+    }));
   };
 
-  const openEdit = (item: RouteRow) => {
-    setEditingId(item.id);
-    setForm({
-      routeCode: item.routeCode,
-      routeName: item.routeName,
-      origin: item.origin,
-      destination: item.destination,
-      departureTime: item.departureTime,
-      arrivalTime: item.arrivalTime,
-      assignedVehicle: item.assignedVehicle,
-      licensePlate: item.licensePlate,
-      assignedDriver: item.assignedDriver,
-      status: item.status,
-      note: item.note,
+  const openCreateModal = () => {
+    setCreateError("");
+    setCreateForm(createRouteFormTemplate());
+    setCreateMinDateTime(getCurrentLocalDateTimeValue());
+    setCreateModalOpen(true);
+    if (provinceOptions.length === 0) {
+      setProvinceLoaded(false);
+    }
+  };
+
+  const closeCreateModal = () => {
+    if (createSubmitting) return;
+    setCreateModalOpen(false);
+    setCreateError("");
+  };
+
+  const updateOperationPoint = (
+    index: number,
+    patch: Partial<RouteOperationPointForm>,
+  ) => {
+    setCreateForm((current) => ({
+      ...current,
+      operationPoints: current.operationPoints.map((point, pointIndex) =>
+        pointIndex === index ? { ...point, ...patch } : point,
+      ),
+    }));
+  };
+
+  const addOperationPoint = () => {
+    setCreateForm((current) => ({
+      ...current,
+      operationPoints: [
+        ...current.operationPoints,
+        {
+          operationOrder: String(current.operationPoints.length + 1),
+          plannedArrivalTime: "",
+          plannedDepartureTime: "",
+          note: "",
+        },
+      ],
+    }));
+  };
+
+  const removeOperationPoint = (index: number) => {
+    setCreateForm((current) => {
+      const nextPoints = current.operationPoints.filter(
+        (_, pointIndex) => pointIndex !== index,
+      );
+      return {
+        ...current,
+        operationPoints:
+          nextPoints.length > 0
+            ? nextPoints.map((point, pointIndex) => ({
+                ...point,
+                operationOrder: String(pointIndex + 1),
+              }))
+            : [
+                {
+                  operationOrder: "1",
+                  plannedArrivalTime: "",
+                  plannedDepartureTime: "",
+                  note: "",
+                },
+              ],
+      };
     });
-    setModalOpen(true);
   };
 
-  const handleSave = () => {
-    const normalized: RouteRow = {
-      id: editingId || crypto.randomUUID(),
-      routeCode: form.routeCode.trim().toUpperCase(),
-      routeName: form.routeName.trim(),
-      origin: form.origin.trim(),
-      destination: form.destination.trim(),
-      departureTime: form.departureTime.trim(),
-      arrivalTime: form.arrivalTime.trim(),
-      assignedVehicle: form.assignedVehicle.trim(),
-      licensePlate: form.licensePlate.trim(),
-      assignedDriver: form.assignedDriver.trim(),
-      status: form.status,
-      note: form.note.trim(),
-    };
-
-    setItems((current) =>
-      editingId
-        ? current.map((item) => (item.id === editingId ? normalized : item))
-        : [normalized, ...current],
+  const handleCreateRoute = async () => {
+    const pickupBranch = createForm.pickupBranch.trim();
+    const origin = createForm.origin.trim();
+    const destination = createForm.destination.trim();
+    const plannedStartTime = formatLocalDateTimeWithOffset(
+      createForm.plannedStartTime,
     );
-    setModalOpen(false);
-  };
+  const plannedEndTime = formatLocalDateTimeWithOffset(
+      createForm.plannedEndTime,
+    );
+    if (
+      !pickupBranch ||
+      !origin ||
+      !destination ||
+      !plannedStartTime ||
+      !plannedEndTime
+    ) {
+      setCreateError("Vui lòng nhập đầy đủ thông tin chuyến trước khi tạo.");
+      return;
+    }
 
-  const handleDelete = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
+    if (origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
+      setCreateError("Điểm đi và điểm đến không được trùng nhau.");
+      return;
+    }
+
+    if (
+      parseLocalDateTimeValue(createForm.plannedStartTime) <
+        parseLocalDateTimeValue(createMinDateTime) ||
+      parseLocalDateTimeValue(createForm.plannedEndTime) <
+        parseLocalDateTimeValue(createMinDateTime)
+    ) {
+      setCreateError("Không được chọn ngày giờ trong quá khứ.");
+      return;
+    }
+
+    setCreateSubmitting(true);
+    setCreateError("");
+
+    try {
+      const meta = createRequestMeta();
+      const response = await fetch(
+        `${ROUTE_SERVICE_BASE_URL}/management/route-service/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...createRequestEnvelopeHeaders(meta),
+          },
+          body: JSON.stringify({
+            requestId: meta.requestId,
+            requestDateTime: meta.requestDateTime,
+            channel: "OFF",
+            data: {
+              creator: createForm.creator.trim() || "demo_user",
+              pickupBranch,
+              origin,
+              destination,
+              plannedStartTime,
+              plannedEndTime,
+              operationPoints: createForm.operationPoints
+                .map((point, index) => ({
+                  operationOrder:
+                    point.operationOrder.trim() || String(index + 1),
+                  plannedArrivalTime: formatLocalDateTimeWithOffset(
+                    point.plannedArrivalTime,
+                  ),
+                  plannedDepartureTime: formatLocalDateTimeWithOffset(
+                    point.plannedDepartureTime,
+                  ),
+                  note: point.note.trim(),
+                }))
+                .filter(
+                  (point) =>
+                    point.operationOrder ||
+                    point.plannedArrivalTime ||
+                    point.plannedDepartureTime ||
+                    point.note,
+                ),
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const message = await extractErrorMessage(
+          response,
+          `Không thể tạo chuyến (${response.status})`,
+        );
+        throw new Error(message);
+      }
+
+      setCreateModalOpen(false);
+      setPageNumber(1);
+      setReloadNonce((value) => value + 1);
+    } catch (createRouteError) {
+      setCreateError(
+        createRouteError instanceof Error
+          ? createRouteError.message
+          : "Không thể tạo chuyến",
+      );
+    } finally {
+      setCreateSubmitting(false);
+    }
   };
 
   return (
@@ -191,36 +1012,65 @@ export function RouteManagementPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
             <Route className="h-3.5 w-3.5" />
-            Routes Management
+            Quản lý tuyến xe
           </div>
-          <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
-            Quản lý chuyến trong ngày
+          <h2 className="mt-2 text-[1.25rem] font-bold tracking-tight text-slate-900 sm:text-[1.5rem] uppercase">
+            Quản lý các tuyến xe
           </h2>
-          <p className="mt-1.5 max-w-2xl text-[12px] font-medium leading-relaxed text-slate-500">
-            Chi tiết các chuyến xe chạy trong ngày: giờ khởi hành, giờ đến, tài xế và biển số xe cụ thể theo yêu cầu.
-          </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Thêm chuyến
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Tạo Chuyến
+          </button>
+          <button
+            type="button"
+            onClick={() => setReloadNonce((value) => value + 1)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Tải lại
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Đang chạy", value: String(summary.active), note: "Chuyến đang đi" },
-          { label: "Bản nháp", value: String(summary.draft), note: "Sắp khởi hành" },
-          { label: "Tạm dừng", value: String(summary.paused), note: "Tạm ngưng nhận" },
-          { label: "Tổng chuyến hôm nay", value: String(summary.total), note: "Theo lịch trình" },
+          {
+            label: "Tổng routes",
+            value: String(totalElements),
+          },
+          {
+            label: "Đang hiển thị",
+            value: String(summary.totalLoaded),
+            note: `Trang ${pageInfo.current}/${pageInfo.total}`,
+          },
+          {
+            label: "Đang chạy",
+            value: String(summary.active),
+            note: "Trên trang hiện tại",
+          },
+          {
+            label: "Nháp / tạm dừng",
+            value: `${summary.draft + summary.paused}`,
+            note: "Trên trang hiện tại",
+          },
         ].map((item) => (
-          <div key={item.label} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">{item.label}</div>
-            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">{item.value}</div>
+          <div
+            key={item.label}
+            className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm"
+          >
+            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              {item.label}
+            </div>
+            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">
+              {item.value}
+            </div>
             <div className="mt-0.5 text-[11px] text-slate-500">{item.note}</div>
           </div>
         ))}
@@ -229,193 +1079,637 @@ export function RouteManagementPage() {
       <div className="rounded-[1.8rem] border border-slate-100 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-base font-black tracking-tight text-slate-900">
-              Danh sách chuyến xe
+            <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">
+              Danh sách các tuyến xe đang vận hành
             </h3>
-            <p className="mt-1 text-[12px] font-medium text-slate-500">
-              Dùng một layout thoáng, tập trung vào chuyến và thông tin gán kèm.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm mã chuyến, điểm đi, điểm đến..."
-              className="w-44 bg-transparent text-[12px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
-            />
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-500">
+            Trang {pageInfo.current} / {pageInfo.total}
           </div>
         </div>
 
         <div className="mt-5 space-y-3">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-[1.35rem] border border-slate-100 bg-slate-50/70 p-3.5 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-lg hover:shadow-slate-200/40"
-            >
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-[15px] font-black tracking-tight text-slate-900">
-                      {item.routeName}
-                    </div>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${statusMeta[item.status].badge}`}
-                    >
-                      {statusMeta[item.status].label}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-semibold text-slate-600 shadow-sm">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      {item.origin}
-                    </span>
-                    <span className="text-slate-300">→</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-semibold text-slate-600 shadow-sm">
-                      <Map className="h-3.5 w-3.5 text-slate-400" />
-                      {item.destination}
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-primary/5 px-2.5 py-1.25 font-bold text-brand-primary shadow-sm ring-1 ring-brand-primary/10">
-                      <Clock className="h-3.5 w-3.5" />
-                      {item.departureTime} - {item.arrivalTime}
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    <span>{item.note}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 self-start">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Sửa
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id)}
-                    className="inline-flex items-center gap-1 rounded-xl border border-rose-100 bg-white px-3 py-2 text-[11px] font-bold text-rose-500 transition-colors hover:bg-rose-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Xoá
-                  </button>
-                </div>
+          {isLoading ? (
+            <div className="flex min-h-60 items-center justify-center rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50/60">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Đang tải các tuyến xe...
               </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-[12px]">
-                <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm border border-slate-50">
-                   <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Tài xế:</div>
-                   <div className="font-bold text-slate-900">{item.assignedDriver}</div>
+            </div>
+          ) : error ? (
+            <div className="rounded-[1.35rem] border border-rose-100 bg-rose-50/70 p-4 text-rose-700">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-bold">
+                    Không thể tải các tuyến xe
+                  </div>
+                  <div className="mt-1 text-[12px] font-medium leading-relaxed">
+                    {error}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm border border-slate-50">
-                   <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Biển số:</div>
-                   <div className="font-bold text-slate-900">{item.licensePlate}</div>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm border border-slate-50">
-                   <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Xe:</div>
-                   <div className="font-bold text-slate-900">{item.assignedVehicle}</div>
+                <button
+                  type="button"
+                  onClick={() => setReloadNonce((value) => value + 1)}
+                  className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-rose-700 transition-colors hover:bg-rose-100"
+                >
+                  Thử lại
+                </button>
+              </div>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex min-h-60 items-center justify-center rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50/60">
+              <div className="text-center">
+                <div className="text-[13px] font-bold text-slate-900">
+                  Không có tuyến xe nào đang vận hành
                 </div>
               </div>
             </div>
-          ))}
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-[1.35rem] border border-slate-100 bg-slate-50/70 p-3.5 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-lg hover:shadow-slate-200/40"
+              >
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-5 mb-5">
+                          <div className="text-[15px] font-black tracking-tight text-slate-900">
+                            {item.routeName}
+                          </div>
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${statusMeta[item.status].badge}`}
+                          >
+                            {statusMeta[item.status].label ||
+                              item.statusText ||
+                              "Trạng thái"}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-semibold text-slate-600 shadow-sm">
+                            <Route className="h-3.5 w-3.5 text-slate-400" />
+                            {item.routeCode}
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-semibold text-slate-600 shadow-sm">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            {item.origin || "Chưa có điểm đi"}
+                          </span>
+                          <span className="text-slate-300">→</span>
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-semibold text-slate-600 shadow-sm">
+                            <Map className="h-3.5 w-3.5 text-slate-400" />
+                            {item.destination || "Chưa có điểm đến"}
+                          </span>
+                          {item.departureTime ? (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-primary/5 px-2.5 py-1.25 font-bold text-brand-primary shadow-sm ring-1 ring-brand-primary/10">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                Bắt đầu: {item.departureTime}
+                              </span>
+                            </>
+                          ) : null}
+                          {item.arrivalTime ? (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.25 font-bold text-slate-700 shadow-sm ring-1 ring-slate-100">
+                                <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                                Kết thúc: {item.arrivalTime}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {!item.assignedDriver || !item.assignedVehicle ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-fit items-center gap-2 rounded-xl border border-slate-900 bg-slate-900 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+                        >
+                          Gán Chuyến
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-5 text-[12px]">
+                  {renderBadge("Tài xế", item.assignedDriver || "Chưa có")}
+                  {renderBadge("Xe", item.assignedVehicle || "Chưa có")}
+                  {renderBadge("Biển số", item.licensePlate || "Chưa có")}
+                  {renderBadge(
+                    "Điểm Xuất Phát",
+                    item.stopLocation || item.pickupBranch || "Chưa có",
+                    "bg-slate-50",
+                  )}
+                </div>
+
+                {item.stopPoints.length > 0 ? (
+                  <div className="mt-4 rounded-[1.1rem] border border-slate-100 bg-white/80 p-3.5">
+                    <div className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Điểm dừng chân
+                    </div>
+                    <div className="space-y-2">
+                      {item.stopPoints.map((stop) => (
+                        <div
+                          key={stop.id}
+                          className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow-sm"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleStopExpansion(stop.id)}
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-white">
+                                  Trạm {stop.stopOrder}
+                                </span>
+                                <span className="text-[12px] font-bold text-slate-900">
+                                  {stop.location ||
+                                    stop.note ||
+                                    "Trạm dừng chân"}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[11px] font-medium text-slate-500">
+                                {stop.plannedArrivalTime ||
+                                stop.plannedDepartureTime ? (
+                                  <>
+                                    {stop.plannedArrivalTime || "--:--"} -{" "}
+                                    {stop.plannedDepartureTime || "--:--"}
+                                  </>
+                                ) : (
+                                  "Chưa có thời gian chi tiết"
+                                )}
+                              </div>
+                            </div>
+                            <ChevronDown
+                              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${
+                                expandedStops[stop.id] ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          {expandedStops[stop.id] ? (
+                            <div className="border-t border-slate-100 bg-white px-3 py-3">
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                    Vị trí điểm dừng
+                                  </div>
+                                  <div className="mt-1 text-[12px] font-bold text-slate-900">
+                                    {stop.location || "Chưa có thông tin"}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                    Số thứ tự
+                                  </div>
+                                  <div className="mt-1 text-[12px] font-bold text-slate-900">
+                                    {stop.stopOrder}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                    Giờ đến
+                                  </div>
+                                  <div className="mt-1 text-[12px] font-bold text-slate-900">
+                                    {stop.plannedArrivalTime || "Chưa có"}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                    Giờ rời
+                                  </div>
+                                  <div className="mt-1 text-[12px] font-bold text-slate-900">
+                                    {stop.plannedDepartureTime || "Chưa có"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {stop.note ? (
+                                <div className="mt-3 rounded-xl border border-brand-primary/10 bg-brand-primary/5 px-3 py-2.5">
+                                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-brand-primary">
+                                    Thông tin điểm dừng
+                                  </div>
+                                  <div className="mt-1 text-[12px] font-medium leading-relaxed text-slate-700">
+                                    {stop.note}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] text-slate-500">
+                                  Chưa có mô tả chi tiết cho điểm dừng này.
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+
+      <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-[12px] font-medium text-slate-500">
+            {totalElements > 0 ? (
+              <>
+                Hiển thị {pageInfo.start}-{pageInfo.end} trên {totalElements}{" "}
+                routes
+              </>
+            ) : (
+              "Không có dữ liệu để hiển thị"
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPageNumber((value) => Math.max(1, value - 1))}
+              disabled={pageNumber === 1 || isLoading}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Trước
+            </button>
+
+            {pageButtons.map((pageItem, index) =>
+              pageItem === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex h-9 items-center justify-center px-2 text-slate-400"
+                >
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={pageItem}
+                  type="button"
+                  onClick={() => setPageNumber(pageItem)}
+                  disabled={isLoading}
+                  className={`inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-[11px] font-black transition-colors ${
+                    pageItem === pageNumber
+                      ? "border-brand-primary bg-brand-primary text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/20 hover:text-brand-primary"
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {pageItem}
+                </button>
+              ),
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                setPageNumber((value) =>
+                  Math.min(Math.max(totalPages, 1), value + 1),
+                )
+              }
+              disabled={pageNumber >= totalPages || isLoading}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Sau
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-[1.4rem] border border-slate-100 bg-white p-4.5 shadow-2xl sm:p-5">
+      {createModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
+          <div
+            className="mt-4 mb-4 max-h-[calc(100vh-4rem)] w-full max-w-4xl overflow-y-auto rounded-[1.8rem] border border-slate-100 bg-white p-5 shadow-2xl shadow-slate-950/20"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-brand-primary">
-                  {editingId ? "Chỉnh sửa chuyến xe" : "Tạo chuyến xe mới"}
+                <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
+                  <Plus className="h-3.5 w-3.5" />
+                  Tạo Chuyến
                 </div>
-                <h3 className="mt-1 text-[1.35rem] font-black tracking-tight text-slate-900">
-                  {editingId ? "Cập nhật chuyến xe" : "Thêm chuyến xe khai thác"}
+                <h3 className="mt-3 text-2xl font-black tracking-tight text-slate-900">
+                  Tạo chuyến mới
                 </h3>
+                <p className="mt-1 text-[12px] font-medium text-slate-500">
+                  Nhập thông tin chuyến, thời gian dự kiến và các điểm dừng vận hành.
+                </p>
               </div>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900">
-                <X className="h-3.5 w-3.5" />
+
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {[
-                ["routeCode", "Mã chuyến", "VD: HCM-NT-001"],
-                ["routeName", "Tên tuyến", "VD: TP.HCM - Nha Trang"],
-                ["origin", "Điểm đi", "VD: TP.HCM"],
-                ["destination", "Điểm đến", "VD: Nha Trang"],
-                ["departureTime", "Giờ khởi hành", "VD: 00:10"],
-                ["arrivalTime", "Giờ đến", "VD: 06:10"],
-                ["assignedVehicle", "Loại xe", "VD: Bus-01"],
-                ["licensePlate", "Biển số xe", "VD: 51B-123.45"],
-                ["assignedDriver", "Tài xế", "VD: Nguyễn Văn A"],
-              ].map(([key, label, placeholder]) => (
-                <label key={key} className="space-y-2">
-                  <span className="ml-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-                    {label}
-                  </span>
-                  <input
-                    type="text"
-                    value={form[key as keyof RouteForm] as string}
-                    onChange={(e) => setForm((current) => ({ ...current, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-[12px] font-semibold text-slate-900 outline-none transition-all focus:border-brand-primary/30 focus:bg-white focus:ring-4 focus:ring-brand-primary/5"
-                  />
-                </label>
-              ))}
+            {createError ? (
+              <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[12px] font-medium text-rose-700">
+                {createError}
+              </div>
+            ) : null}
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-                  Trạng thái
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Người tạo
+                </span>
+                <input
+                  type="text"
+                  value={createForm.creator}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      creator: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Điểm xuất phát
+                </span>
+                <input
+                  type="text"
+                  value={createForm.pickupBranch}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      pickupBranch: event.target.value,
+                    }))
+                  }
+                  placeholder="Bến xe Miền Tây, TP.HCM"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Điểm đi
                 </span>
                 <select
-                  value={form.status}
-                  onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as RouteStatus }))}
-                  className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-[12px] font-semibold text-slate-900 outline-none transition-all focus:border-brand-primary/30 focus:bg-white focus:ring-4 focus:ring-brand-primary/5"
+                  value={createForm.origin}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      origin: event.target.value,
+                    }))
+                  }
+                  disabled={provinceLoading}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option value="ACTIVE">Đang chạy</option>
-                  <option value="DRAFT">Bản nháp</option>
-                  <option value="PAUSED">Tạm dừng</option>
+                  <option value="">
+                    {provinceLoading ? "Đang tải địa điểm..." : "Chọn điểm đi"}
+                  </option>
+                  {provinceOptions.map((province) => (
+                    <option
+                      key={province.id}
+                      value={province.name || province.label}
+                      disabled={
+                        (createForm.destination.trim().length > 0 &&
+                          (province.name || province.label).trim().toLowerCase() ===
+                            createForm.destination.trim().toLowerCase()) ||
+                        (createForm.origin.trim().length > 0 &&
+                          (province.name || province.label).trim().toLowerCase() ===
+                            createForm.origin.trim().toLowerCase())
+                      }
+                    >
+                      {province.label}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <label className="space-y-2 md:col-span-2">
-                  <span className="ml-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-                    Ghi chú
-                  </span>
-                <textarea
-                  value={form.note}
-                  onChange={(e) => setForm((current) => ({ ...current, note: e.target.value }))}
-                  rows={4}
-                  placeholder="Ghi chú vận hành"
-                  className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-[12px] font-semibold text-slate-900 outline-none transition-all focus:border-brand-primary/30 focus:bg-white focus:ring-4 focus:ring-brand-primary/5"
+              <label className="space-y-2">
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Điểm đến
+                </span>
+                <select
+                  value={createForm.destination}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      destination: event.target.value,
+                    }))
+                  }
+                  disabled={provinceLoading}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">
+                    {provinceLoading ? "Đang tải địa điểm..." : "Chọn điểm đến"}
+                  </option>
+                  {provinceOptions.map((province) => (
+                    <option
+                      key={province.id}
+                      value={province.name || province.label}
+                      disabled={
+                        (createForm.origin.trim().length > 0 &&
+                          (province.name || province.label).trim().toLowerCase() ===
+                            createForm.origin.trim().toLowerCase()) ||
+                        (createForm.destination.trim().length > 0 &&
+                          (province.name || province.label).trim().toLowerCase() ===
+                            createForm.destination.trim().toLowerCase())
+                      }
+                    >
+                      {province.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Giờ khởi hành
+                </span>
+                <input
+                  type="datetime-local"
+                  min={createMinDateTime}
+                  value={createForm.plannedStartTime}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      plannedStartTime: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Giờ kết thúc
+                </span>
+                <input
+                  type="datetime-local"
+                  min={createForm.plannedStartTime || createMinDateTime}
+                  value={createForm.plannedEndTime}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      plannedEndTime: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
                 />
               </label>
             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
+            <div className="mt-3 min-h-[56px]">
+              {provinceError ? (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-[12px] text-amber-800">
+                  <span>{provinceError}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProvinceLoaded(false);
+                      setProvinceError("");
+                    }}
+                    className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-amber-700 transition-colors hover:bg-amber-100"
+                  >
+                    Tải lại địa điểm
+                  </button>
+                </div>
+              ) : provinceLoading ? (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-[12px] text-slate-500">
+                  Đang tải danh sách địa điểm khai thác...
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-5 rounded-[1.4rem] border border-slate-100 bg-slate-50/70 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h4 className="text-[13px] font-black tracking-tight text-slate-900">
+                  Điểm dừng vận hành
+                </h4>
+                <p className="mt-1 text-[12px] font-medium text-slate-500">
+                    Thêm các điểm dừng chân theo thứ tự vận hành.
+                </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addOperationPoint}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Thêm điểm dừng
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {createForm.operationPoints.map((point, index) => (
+                  <div
+                    key={`${point.operationOrder}-${index}`}
+                    className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                          Điểm {index + 1}
+                      </div>
+                      {createForm.operationPoints.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => removeOperationPoint(index)}
+                          className="text-[11px] font-black uppercase tracking-[0.12em] text-rose-500 transition-colors hover:text-rose-700"
+                        >
+                          Xoá
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <label className="space-y-2">
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                          Số thứ tự
+                        </span>
+                        <input
+                          type="text"
+                          value={point.operationOrder}
+                          onChange={(event) =>
+                            updateOperationPoint(index, {
+                              operationOrder: event.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                          Ghi chú
+                        </span>
+                        <input
+                          type="text"
+                          value={point.note}
+                          onChange={(event) =>
+                            updateOperationPoint(index, { note: event.target.value })
+                          }
+                          placeholder="Dừng tại Tiền Giang"
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                          Giờ đến
+                        </span>
+                        <input
+                          type="datetime-local"
+                          value={point.plannedArrivalTime}
+                          onChange={(event) =>
+                            updateOperationPoint(index, {
+                              plannedArrivalTime: event.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                          Giờ rời
+                        </span>
+                        <input
+                          type="datetime-local"
+                          value={point.plannedDepartureTime}
+                          onChange={(event) =>
+                            updateOperationPoint(index, {
+                              plannedDepartureTime: event.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-colors focus:border-slate-300 focus:bg-white"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
-                onClick={() => setModalOpen(false)}
-                className="rounded-xl border border-slate-100 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-600 transition-colors hover:bg-slate-50"
+                onClick={closeCreateModal}
+                disabled={createSubmitting}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.13em] text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="button"
-                onClick={handleSave}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white transition-all hover:-translate-y-0.5 hover:bg-brand-dark"
+                onClick={handleCreateRoute}
+                disabled={createSubmitting}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.13em] text-white transition-all hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
-                Lưu chuyến
+                {createSubmitting ? "Đang tạo..." : "Tạo chuyến"}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

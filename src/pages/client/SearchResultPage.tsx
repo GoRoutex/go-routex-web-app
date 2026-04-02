@@ -6,7 +6,7 @@ import type { RouteItem } from '../../Components/client/Ticket'
 const mockRouteData: RouteItem[] = [
   {
     id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-    pickupBranch: "233 Dien Bien Phu",
+    pickupBranch: "233 Điện Biên Phủ",
     origin: "Hà Nội",
     destination: "Hải Phòng",
     availableSeats: 32,
@@ -23,13 +23,13 @@ const mockRouteData: RouteItem[] = [
         routeId: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
         plannedArrivalTime: "2026-03-04T09:30:00Z",
         plannedDepartureTime: "2026-03-04T09:45:00Z",
-        note: "Trạm Dừng Chân",
+        note: "Trạm dừng chân",
       },
     ],
   },
   {
     id: "1fa5fc7c-d2ce-5ed6-9093-bdb0db903547",
-    pickupBranch: "15 Tran Hung Dao",
+    pickupBranch: "15 Trần Hưng Đạo",
     origin: "Hà Nội",
     destination: "Hải Phòng",
     availableSeats: 3,

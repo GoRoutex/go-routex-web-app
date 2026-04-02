@@ -29,7 +29,7 @@ const initialVehicles: VehicleRow[] = [
   {
     id: "1",
     licensePlate: "B-1029",
-    vehicleType: "Bus - 50 Seats",
+    vehicleType: "Xe khách - 50 chỗ",
     seatCount: "50",
     mileageKm: "120500",
     lastMaintenance: "2026-03-15",
@@ -40,7 +40,7 @@ const initialVehicles: VehicleRow[] = [
   {
     id: "2",
     licensePlate: "B-1030",
-    vehicleType: "Bus - 50 Seats",
+    vehicleType: "Xe khách - 50 chỗ",
     seatCount: "50",
     mileageKm: "185200",
     lastMaintenance: "2026-03-10",
@@ -51,7 +51,7 @@ const initialVehicles: VehicleRow[] = [
   {
     id: "3",
     licensePlate: "V-0544",
-    vehicleType: "Van - 16 Seats",
+    vehicleType: "Xe van - 16 chỗ",
     seatCount: "16",
     mileageKm: "45000",
     lastMaintenance: "2026-03-20",
@@ -78,7 +78,7 @@ const statusMeta: Record<VehicleStatus, { label: string; badge: string }> = {
 
 const formTemplate: VehicleForm = {
   licensePlate: "",
-  vehicleType: "Bus - 50 Seats",
+  vehicleType: "Xe khách - 50 chỗ",
   seatCount: "50",
   mileageKm: "0",
   lastMaintenance: "",
@@ -173,7 +173,7 @@ export function VehicleManagementPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
             <Bus className="h-3.5 w-3.5" />
-            Vehicle Management
+            Quản lý phương tiện
           </div>
           <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
             Quản lý phương tiện
@@ -313,7 +313,7 @@ export function VehicleManagementPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {[
                 ["licensePlate", "Biển số", "VD: B-1029"],
-                ["vehicleType", "Loại xe", "VD: Bus - 50 Seats"],
+                ["vehicleType", "Loại xe", "VD: Xe khách - 50 chỗ"],
                 ["seatCount", "Số ghế", "VD: 50"],
                 ["mileageKm", "Số km", "VD: 120500"],
                 ["lastMaintenance", "Bảo trì gần nhất", "YYYY-MM-DD"],

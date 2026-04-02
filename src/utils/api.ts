@@ -1,4 +1,6 @@
 export const API_BASE_URL =  "http://localhost:8080/api/v1/";
+export const ROUTE_SERVICE_BASE_URL = "http://localhost:8000/api/v1";
+export const PROVINCES_SERVICE_BASE_URL = "http://localhost:8000/api/v1";
 export const REGISTER_URL = "user-service/authentication/register";
 export const LOGIN_URL = "user-service/authentication/login";
 export const FORGOT_PASSWORD_URL = "user-service/authentication/forgot-password";

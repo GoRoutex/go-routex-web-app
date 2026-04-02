@@ -40,7 +40,8 @@ const genderLabel = (value: string | null) => {
 const statusLabel = (value: string) => {
   const normalized = value.trim().toUpperCase();
   if (!normalized) return "Chưa cập nhật";
-  if (normalized === "ACTIVE" || normalized === "ACTIVATED") return "Đang hoạt động";
+  if (normalized === "ACTIVE" || normalized === "ACTIVATED")
+    return "Đang hoạt động";
   if (normalized === "INACTIVE") return "Không hoạt động";
   if (normalized === "PENDING") return "Chờ xử lý";
   if (normalized === "LOCKED" || normalized === "BLOCKED") return "Đã khóa";
@@ -131,20 +132,35 @@ const deriveMembershipProgress = (
   const current = Number(currentPoint || currentAvailablePoints);
   const next = Number(pointToNextTier);
 
-  if (Number.isFinite(current) && Number.isFinite(next) && current >= 0 && next >= 0) {
+  if (
+    Number.isFinite(current) &&
+    Number.isFinite(next) &&
+    current >= 0 &&
+    next >= 0
+  ) {
     const denominator = current + next;
     if (denominator > 0) {
-      return Math.max(0, Math.min(100, Math.round((current / denominator) * 100)));
+      return Math.max(
+        0,
+        Math.min(100, Math.round((current / denominator) * 100)),
+      );
     }
   }
 
   const currentFallback = Number(currentAvailablePoints);
   const totalFallback = Number(totalPoints);
-  if (!Number.isFinite(currentFallback) || !Number.isFinite(totalFallback) || totalFallback <= 0) {
+  if (
+    !Number.isFinite(currentFallback) ||
+    !Number.isFinite(totalFallback) ||
+    totalFallback <= 0
+  ) {
     return 0;
   }
 
-  return Math.max(0, Math.min(100, Math.round((currentFallback / totalFallback) * 100)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round((currentFallback / totalFallback) * 100)),
+  );
 };
 
 const emptyProfile = (): GetMyProfileSnapshot => ({
@@ -290,31 +306,55 @@ const writeLocalProfile = (profile: GetMyProfileSnapshot) => {
   localStorage.setItem("profileDob", profile.dob);
   localStorage.setItem("profileAvatarUrl", profile.avatarUrl);
   localStorage.setItem("profileAddress", profile.address);
-  localStorage.setItem("profileEmailVerified", serializeBoolean(profile.emailVerified));
-  localStorage.setItem("profilePhoneVerified", serializeBoolean(profile.phoneVerified));
+  localStorage.setItem(
+    "profileEmailVerified",
+    serializeBoolean(profile.emailVerified),
+  );
+  localStorage.setItem(
+    "profilePhoneVerified",
+    serializeBoolean(profile.phoneVerified),
+  );
   localStorage.setItem("profileCreatedAt", profile.createdAt);
   localStorage.setItem("profileUpdatedAt", profile.updatedAt);
   localStorage.setItem("membershipId", profile.membership.id);
   localStorage.setItem("membershipCustomerId", profile.membership.customerId);
   localStorage.setItem("membershipTierId", profile.membership.membershipTierId);
-  localStorage.setItem("membershipCurrentPoint", profile.membership.currentPoint);
+  localStorage.setItem(
+    "membershipCurrentPoint",
+    profile.membership.currentPoint,
+  );
   localStorage.setItem(
     "membershipCurrentAvailablePoints",
     profile.membership.currentAvailablePoints,
   );
   localStorage.setItem("membershipTotalPoints", profile.membership.totalPoints);
   localStorage.setItem("membershipPromotedAt", profile.membership.promotedAt);
-  localStorage.setItem("membershipDiscountPercent", profile.membership.discountPercent);
-  localStorage.setItem("membershipPriorityLevel", profile.membership.priorityLevel);
+  localStorage.setItem(
+    "membershipDiscountPercent",
+    profile.membership.discountPercent,
+  );
+  localStorage.setItem(
+    "membershipPriorityLevel",
+    profile.membership.priorityLevel,
+  );
   localStorage.setItem("membershipStatus", profile.membership.status);
   localStorage.setItem("membershipStatsTotalTrips", profile.stats.totalTrips);
   localStorage.setItem("membershipBadge", profile.stats.badge);
   localStorage.setItem("membershipStatsTotalSpent", profile.stats.totalSpent);
-  localStorage.setItem("membershipPointToNextTier", profile.stats.pointToNextTier);
-  localStorage.setItem("membershipPointMultiplier", profile.stats.pointMultiplier);
+  localStorage.setItem(
+    "membershipPointToNextTier",
+    profile.stats.pointToNextTier,
+  );
+  localStorage.setItem(
+    "membershipPointMultiplier",
+    profile.stats.pointMultiplier,
+  );
   localStorage.setItem("membershipNextTierName", profile.stats.nextTierName);
   localStorage.setItem("userRoles", JSON.stringify(profile.authorities));
-  localStorage.setItem("profileAuthorities", JSON.stringify(profile.authorities));
+  localStorage.setItem(
+    "profileAuthorities",
+    JSON.stringify(profile.authorities),
+  );
   localStorage.setItem("userRole", profile.authorities[0] || "");
   localStorage.setItem("profileRole", profile.authorities[0] || "");
   localStorage.setItem("customerId", profile.customer.customerId);
@@ -343,7 +383,12 @@ const toneClasses = {
   accent: "bg-brand-primary/10 text-brand-primary",
 };
 
-const MetricCard = ({ icon: Icon, label, value, tone = "default" }: MetricCardProps) => (
+const MetricCard = ({
+  icon: Icon,
+  label,
+  value,
+  tone = "default",
+}: MetricCardProps) => (
   <div className="rounded-[1.35rem] border border-slate-100 bg-slate-50 p-5">
     <div className="flex items-center gap-3">
       <div
@@ -426,7 +471,10 @@ export default function ClientProfilePage() {
             cachedProfile.fullName,
           email: apiProfile.email || cachedProfile.email,
           phone: apiProfile.phone || cachedProfile.phone,
-          phoneNumber: apiProfile.phoneNumber || apiProfile.phone || cachedProfile.phoneNumber,
+          phoneNumber:
+            apiProfile.phoneNumber ||
+            apiProfile.phone ||
+            cachedProfile.phoneNumber,
           status: apiProfile.status || cachedProfile.status,
           gender: apiProfile.gender || cachedProfile.gender,
           avatarUrl: apiProfile.avatarUrl || cachedProfile.avatarUrl,
@@ -487,19 +535,25 @@ export default function ClientProfilePage() {
               apiProfile.stats.nextTierName || cachedProfile.stats.nextTierName,
           },
           customer: {
-            customerId: apiProfile.customer.customerId || cachedProfile.customer.customerId,
+            customerId:
+              apiProfile.customer.customerId ||
+              cachedProfile.customer.customerId,
             fullName:
               apiProfile.customer.fullName ||
               apiProfile.fullName ||
               cachedProfile.customer.fullName,
             tripPoints:
-              apiProfile.customer.tripPoints || cachedProfile.customer.tripPoints,
+              apiProfile.customer.tripPoints ||
+              cachedProfile.customer.tripPoints,
             totalTrips:
-              apiProfile.customer.totalTrips || cachedProfile.customer.totalTrips,
+              apiProfile.customer.totalTrips ||
+              cachedProfile.customer.totalTrips,
             totalSpent:
-              apiProfile.customer.totalSpent || cachedProfile.customer.totalSpent,
+              apiProfile.customer.totalSpent ||
+              cachedProfile.customer.totalSpent,
             lastTripAt:
-              apiProfile.customer.lastTripAt || cachedProfile.customer.lastTripAt,
+              apiProfile.customer.lastTripAt ||
+              cachedProfile.customer.lastTripAt,
             lastBookingAt:
               apiProfile.customer.lastBookingAt ||
               cachedProfile.customer.lastBookingAt,
@@ -532,7 +586,9 @@ export default function ClientProfilePage() {
     () => [
       {
         label: "Họ và tên",
-        value: formatProfileValue(profile.fullName || profile.customer.fullName || profile.email),
+        value: formatProfileValue(
+          profile.fullName || profile.customer.fullName || profile.email,
+        ),
         icon: UserRound,
         tone: "default" as const,
       },
@@ -582,13 +638,17 @@ export default function ClientProfilePage() {
         label: "Email xác thực",
         value: booleanLabel(profile.emailVerified),
         icon: Mail,
-        tone: profile.emailVerified ? ("success" as const) : ("warning" as const),
+        tone: profile.emailVerified
+          ? ("success" as const)
+          : ("warning" as const),
       },
       {
         label: "SĐT xác thực",
         value: booleanLabel(profile.phoneVerified),
         icon: Phone,
-        tone: profile.phoneVerified ? ("success" as const) : ("warning" as const),
+        tone: profile.phoneVerified
+          ? ("success" as const)
+          : ("warning" as const),
       },
       {
         label: "Ngày tạo",
@@ -660,13 +720,18 @@ export default function ClientProfilePage() {
     () => [
       {
         label: "Badge",
-        value: membershipBadgeLabel(profile.stats.badge || profile.membership.membershipTierId),
+        value: membershipBadgeLabel(
+          profile.stats.badge || profile.membership.membershipTierId,
+        ),
         icon: Award,
         tone: "accent" as const,
       },
       {
         label: "Điểm hiện tại",
-        value: formatNumber(profile.membership.currentPoint || profile.membership.currentAvailablePoints),
+        value: formatNumber(
+          profile.membership.currentPoint ||
+            profile.membership.currentAvailablePoints,
+        ),
         icon: Sparkles,
         tone: "success" as const,
       },
@@ -720,7 +785,9 @@ export default function ClientProfilePage() {
       },
       {
         label: "Lượt đi",
-        value: formatNumber(profile.stats.totalTrips || profile.customer.totalTrips),
+        value: formatNumber(
+          profile.stats.totalTrips || profile.customer.totalTrips,
+        ),
         icon: Ticket,
         tone: "default" as const,
       },
@@ -737,7 +804,10 @@ export default function ClientProfilePage() {
   );
 
   const displayName =
-    profile.fullName || profile.customer.fullName || profile.email || "Tài khoản của bạn";
+    profile.fullName ||
+    profile.customer.fullName ||
+    profile.email ||
+    "Tài khoản của bạn";
   const avatarSrc = profile.avatarUrl;
 
   return (
@@ -784,8 +854,8 @@ export default function ClientProfilePage() {
                 {displayName}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-500 sm:text-base">
-                Đây là nơi bạn xem nhanh thông tin tài khoản, trạng thái xác thực và
-                số liệu khách hàng từ hồ sơ của bạn.
+                Đây là nơi bạn xem nhanh thông tin tài khoản, trạng thái xác
+                thực và số liệu khách hàng từ hồ sơ của bạn.
               </p>
             </div>
 
@@ -821,7 +891,7 @@ export default function ClientProfilePage() {
             </div>
           </div>
 
-          <div className="mt-8 rounded-[1.6rem] border border-brand-primary/10 bg-gradient-to-br from-brand-primary/5 via-white to-brand-accent/5 p-5 sm:p-6">
+          <div className="mt-8 rounded-[1.6rem] border border-brand-primary/10 bg-linear-to-br from-brand-primary/5 via-white to-brand-accent/5 p-5 sm:p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-[0.95rem] bg-white text-brand-primary shadow-sm">
                 <Award className="h-5 w-5" />
@@ -837,7 +907,8 @@ export default function ClientProfilePage() {
             </div>
 
             <p className="mt-3 text-xs leading-relaxed text-slate-500">
-              Dữ liệu được ghép từ membership và stats của hồ sơ, hiển thị gọn ngay dưới avatar.
+              Dữ liệu được ghép từ membership và stats của hồ sơ, hiển thị gọn
+              ngay dưới avatar.
             </p>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -867,7 +938,9 @@ export default function ClientProfilePage() {
             <div className="mt-5 rounded-[1.35rem] border border-white/80 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-bold text-slate-900">
-                  {profile.membership.status || profile.stats.badge || "Chưa cập nhật"}
+                  {profile.membership.status ||
+                    profile.stats.badge ||
+                    "Chưa cập nhật"}
                 </div>
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-brand-primary">
                   {membershipProgress}%
@@ -875,7 +948,7 @@ export default function ClientProfilePage() {
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-accent transition-all"
+                  className="h-full rounded-full bg-linear-to-r from-brand-primary to-brand-accent transition-all"
                   style={{ width: `${membershipProgress}%` }}
                 />
               </div>
@@ -961,7 +1034,6 @@ export default function ClientProfilePage() {
               ))}
             </div>
           </div>
-
         </div>
       </div>
     </div>

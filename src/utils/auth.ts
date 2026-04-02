@@ -43,10 +43,33 @@ export const getStoredRoles = () => {
   return Array.from(roles);
 };
 
+const isPermissionLikeRole = (role: string) => role.includes(":");
+
+const isDisplayRole = (role: string) => {
+  const normalized = normalizeRole(role);
+  return (
+    normalized === "ADMIN" ||
+    normalized.includes("ADMIN") ||
+    normalized.includes("STAFF") ||
+    normalized.includes("DRIVER") ||
+    normalized.includes("MANAGER") ||
+    normalized.includes("OPERATOR")
+  );
+};
+
+export const getPrimaryDisplayRole = () => {
+  const roles = getStoredRoles();
+  const preferred = roles.find(isDisplayRole);
+  if (preferred) return preferred;
+
+  const nonPermissionRole = roles.find((role) => !isPermissionLikeRole(role));
+  return nonPermissionRole || roles[0] || "";
+};
+
 export const hasAdminRole = () =>
   getStoredRoles().some((role) => role === "ADMIN" || role.includes("ADMIN"));
 
-export const getPrimaryRole = () => getStoredRoles()[0] || "";
+export const getPrimaryRole = () => getPrimaryDisplayRole();
 
 export const getClientHomeRoute = () =>
   localStorage.getItem("isLoggedIn") === "true" ? "/home" : "/";

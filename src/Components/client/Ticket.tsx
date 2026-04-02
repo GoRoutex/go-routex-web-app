@@ -55,6 +55,16 @@ const formatVnd = (v?: number | null) => {
   return new Intl.NumberFormat("vi-VN").format(v) + " ₫"
 }
 
+const formatVehicleType = (value?: string | null) => {
+  if (!value) return "Xe khách"
+  const normalized = value.trim().toUpperCase()
+  if (normalized === "LIMOUSINE") return "Xe limousine"
+  if (normalized === "SLEEPER") return "Xe giường nằm"
+  if (normalized === "STANDARD" || normalized === "COACH") return "Xe tiêu chuẩn"
+  if (normalized === "PREMIUM") return "Xe cao cấp"
+  return value
+}
+
 export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => void }) => {
   const [expanded, setExpanded] = useState(false)
 
@@ -115,7 +125,7 @@ export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => voi
               <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
                 <Bus className="w-4 h-4 text-brand-primary" />
               </div>
-              <span className="text-[13px] font-bold text-slate-600 tracking-tight">{item.vehicleType || 'Limousine'} • {item.seatCapacity || 32} chỗ</span>
+              <span className="text-[13px] font-bold text-slate-600 tracking-tight">{formatVehicleType(item.vehicleType)} • {item.seatCapacity || 32} chỗ</span>
             </div>
             {item.pickupBranch && (
               <div className="flex items-center gap-2.5">
@@ -170,7 +180,7 @@ export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => voi
                   <div className="absolute top-1.5 left-[-6px] w-4 h-4 rounded-full bg-white border-2 border-slate-200 group-hover/stop:border-brand-primary group-hover/stop:scale-125 transition-all shadow-sm" />
                   <div className="flex justify-between items-start">
                     <div>
-                      <h6 className="font-black text-base text-slate-900 tracking-tight">{stop.note || `Trạm dừng ${stop.stopOrder}`}</h6>
+                      <h6 className="font-black text-base text-slate-900 tracking-tight">{stop.note || `Điểm dừng ${stop.stopOrder}`}</h6>
                       <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Đến lúc: {stop.plannedArrivalTime ? formatTimeHHmm(stop.plannedArrivalTime) : 'Dự kiến'}</p>
                     </div>
                   </div>

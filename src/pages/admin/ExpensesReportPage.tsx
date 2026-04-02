@@ -6,39 +6,39 @@ import {
 
 export function ExpensesReportPage() {
   const expenseData = [
-    { name: 'Jan', fuel: 4000, maintenance: 2400 },
-    { name: 'Feb', fuel: 3000, maintenance: 1398 },
-    { name: 'Mar', fuel: 2000, maintenance: 9800 },
-    { name: 'Apr', fuel: 2780, maintenance: 3908 },
-    { name: 'May', fuel: 1890, maintenance: 4800 },
-    { name: 'Jun', fuel: 2390, maintenance: 3800 },
+    { name: 'T1', fuel: 4000, maintenance: 2400 },
+    { name: 'T2', fuel: 3000, maintenance: 1398 },
+    { name: 'T3', fuel: 2000, maintenance: 9800 },
+    { name: 'T4', fuel: 2780, maintenance: 3908 },
+    { name: 'T5', fuel: 1890, maintenance: 4800 },
+    { name: 'T6', fuel: 2390, maintenance: 3800 },
   ]
 
   const expenseBreakdown = [
-    { name: 'Fuel Costs', value: 45 },
-    { name: 'Routine Maintenance', value: 30 },
-    { name: 'Emergency Repairs', value: 15 },
-    { name: 'Spare Parts', value: 10 },
+    { name: 'Chi phí nhiên liệu', value: 45 },
+    { name: 'Bảo trì định kỳ', value: 30 },
+    { name: 'Sửa chữa khẩn cấp', value: 15 },
+    { name: 'Phụ tùng', value: 10 },
   ]
   const COLORS = ['#1C1C1C', '#A1A7FF', '#B1E3FF', '#A8FFD2']
 
   const kpis = [
-    { label: 'Total Expenses (YTD)', value: '$84.5K', icon: CircleDollarSign, bg: 'bg-[#F7F9FB]' },
-    { label: 'Avg Fuel / Month', value: '$12.4K', icon: BusFront, bg: 'bg-[#E3F5FF]' },
-    { label: 'Maintenance Costs', value: '$34.2K', icon: Wrench, bg: 'bg-[#E5ECF6]' },
+    { label: 'Tổng chi phí (từ đầu năm)', value: '$84.5K', icon: CircleDollarSign, bg: 'bg-[#F7F9FB]' },
+    { label: 'Nhiên liệu trung bình / tháng', value: '$12.4K', icon: BusFront, bg: 'bg-[#E3F5FF]' },
+    { label: 'Chi phí bảo trì', value: '$34.2K', icon: Wrench, bg: 'bg-[#E5ECF6]' },
   ]
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Fleet Expenses Reports</h2>
-          <span className="text-[12px] text-gray-400 font-medium">Tracking fuel and maintenance costs</span>
+          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Báo cáo chi phí đội xe</h2>
+          <span className="text-[12px] text-gray-400 font-medium">Theo dõi chi phí nhiên liệu và bảo trì</span>
         </div>
         <div className="flex items-center gap-3">
            <select className="bg-white border border-gray-200 text-gray-700 text-[12px] font-semibold rounded-xl px-4 py-2 outline-none cursor-pointer">
-             <option>Current Year</option>
-             <option>Previous Year</option>
+             <option>Năm hiện tại</option>
+             <option>Năm trước</option>
            </select>
         </div>
       </div>
@@ -61,16 +61,16 @@ export function ExpensesReportPage() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-[14px] font-semibold flex items-center gap-2">
               <Wrench size={16} className="text-gray-400" />
-              Fuel vs Maintenance Comparison
+              So sánh nhiên liệu và bảo trì
             </h3>
             <div className="flex items-center gap-4 text-[11px]">
                <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                  <span className="text-gray-900 font-medium">Fuel</span>
+                  <span className="text-gray-900 font-medium">Nhiên liệu</span>
                </div>
                <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                  <span className="text-gray-400">Maintenance</span>
+                  <span className="text-gray-400">Bảo trì</span>
                </div>
             </div>
           </div>
@@ -95,7 +95,7 @@ export function ExpensesReportPage() {
         <div className="bg-[#F7F9FB] rounded-3xl p-8">
           <h3 className="text-[14px] font-semibold mb-8 flex items-center gap-2">
             <PieChartIcon size={16} className="text-gray-400" />
-            Cost Distribution
+            Cơ cấu chi phí
           </h3>
           <div className="flex flex-col items-center justify-center gap-8 h-[280px]">
             <div className="w-full h-full max-h-[180px]">

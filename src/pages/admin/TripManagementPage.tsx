@@ -183,7 +183,7 @@ export function TripManagementPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-brand-primary">
             <Route className="h-4 w-4" />
-            Routes Management
+            Quản lý tuyến xe
           </div>
           <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
             Quản lý chuyến xe
@@ -317,9 +317,9 @@ export function TripManagementPage() {
 
             <div className="mt-6 space-y-4">
               {[
-                "ACTIVE sẽ xuất hiện trên UI khách hàng.",
+                "ACTIVE sẽ xuất hiện trên giao diện khách hàng.",
                 "DRAFT chỉ dùng nội bộ để chuẩn bị lịch khai thác.",
-                "PAUSED giữ lịch sử nhưng không cho đặt vé.",
+                "PAUSED vẫn giữ lịch sử nhưng không cho đặt vé.",
               ].map((rule) => (
                 <div key={rule} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <div className="mt-1 h-2.5 w-2.5 rounded-full bg-brand-primary" />

@@ -1,26 +1,26 @@
 import { AlertTriangle, UserCheck, Wrench } from 'lucide-react'
 
 const notifications = [
-  { icon: AlertTriangle, title: 'Bus #104: Engine Temp Warning', time: 'Just now', bg: 'bg-red-50', color: 'text-red-500' },
-  { icon: UserCheck, title: 'Driver Alex shift started', time: '14 minutes ago', bg: 'bg-green-50', color: 'text-green-500' },
-  { icon: AlertTriangle, title: 'Route B5: 15min delay expected', time: '42 minutes ago', bg: 'bg-orange-50', color: 'text-orange-500' },
-  { icon: Wrench, title: 'Maintenance scheduled: Bus #208', time: 'Today, 08:30 AM', bg: 'bg-blue-50', color: 'text-blue-500' },
+  { icon: AlertTriangle, title: 'Xe buýt #104: cảnh báo nhiệt độ động cơ', time: 'Vừa xong', bg: 'bg-red-50', color: 'text-red-500' },
+  { icon: UserCheck, title: 'Tài xế Alex đã bắt đầu ca làm', time: '14 phút trước', bg: 'bg-green-50', color: 'text-green-500' },
+  { icon: AlertTriangle, title: 'Tuyến B5: dự kiến trễ 15 phút', time: '42 phút trước', bg: 'bg-orange-50', color: 'text-orange-500' },
+  { icon: Wrench, title: 'Đã lên lịch bảo trì: xe #208', time: 'Hôm nay, 08:30', bg: 'bg-blue-50', color: 'text-blue-500' },
 ]
 
 const activities = [
-  { icon: '🚍', title: 'New route Airport-Exp added', time: 'Just now' },
-  { icon: '🛠️', title: 'Bus #082 maintenance completed', time: '59 minutes ago' },
-  { icon: '📝', title: 'Shift schedule Q2 published', time: '12 hours ago' },
-  { icon: '⛽', title: 'Fuel report for Feb generated', time: 'Today, 11:59 AM' },
-  { icon: '👨‍✈️', title: 'New driver "John Smith" approved', time: 'Feb 2, 2026' },
+  { icon: '🚍', title: 'Đã thêm tuyến mới Airport-Exp', time: 'Vừa xong' },
+  { icon: '🛠️', title: 'Đã hoàn tất bảo trì xe #082', time: '59 phút trước' },
+  { icon: '📝', title: 'Đã công bố lịch ca quý 2', time: '12 giờ trước' },
+  { icon: '⛽', title: 'Đã tạo báo cáo nhiên liệu tháng 2', time: 'Hôm nay, 11:59' },
+  { icon: '👨‍✈️', title: 'Đã duyệt tài xế mới "John Smith"', time: '02/02/2026' },
 ]
 
 const team = [
-  { name: 'Michael Chen', role: 'Operations Mgr', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { name: 'Sarah Miller', role: 'Dispatch Lead', avatar: 'https://i.pravatar.cc/150?u=2' },
-  { name: 'Robert King', role: 'Fleet Maintenance', avatar: 'https://i.pravatar.cc/150?u=3' },
-  { name: 'Linda Wilson', role: 'HR Coordinator', avatar: 'https://i.pravatar.cc/150?u=4' },
-  { name: 'David Lee', role: 'Safety Officer', avatar: 'https://i.pravatar.cc/150?u=5' },
+  { name: 'Michael Chen', role: 'Quản lý vận hành', avatar: 'https://i.pravatar.cc/150?u=1' },
+  { name: 'Sarah Miller', role: 'Trưởng điều phối', avatar: 'https://i.pravatar.cc/150?u=2' },
+  { name: 'Robert King', role: 'Bảo trì đội xe', avatar: 'https://i.pravatar.cc/150?u=3' },
+  { name: 'Linda Wilson', role: 'Điều phối nhân sự', avatar: 'https://i.pravatar.cc/150?u=4' },
+  { name: 'David Lee', role: 'Cán bộ an toàn', avatar: 'https://i.pravatar.cc/150?u=5' },
 ]
 
 interface RightSidebarProps {

@@ -5,11 +5,11 @@ import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
 import { getClientHomeRoute, hasAdminRole } from '../../utils/auth'
 
 const SCHEDULES = [
-  { id: 'TRP-1001', route: 'Hà Nội → Hải Phòng', type: 'Limousine', time: '08:00 AM', arrival: '10:30 AM', duration: '2h 30m', seats: 4, price: '320,000 ₫', status: 'On Time' },
-  { id: 'TRP-1002', route: 'Hà Nội → Hải Phòng', type: 'Standard Coach', time: '10:00 AM', arrival: '12:30 PM', duration: '2h 30m', seats: 12, price: '250,000 ₫', status: 'Boarding' },
-  { id: 'TRP-1003', route: 'Sài Gòn → Nha Trang', type: 'Sleeper Bus', time: '08:00 PM', arrival: '04:00 AM', duration: '8h 00m', seats: 2, price: '280,000 ₫', status: 'Scheduled' },
-  { id: 'TRP-1004', route: 'Sài Gòn → Đà Lạt', type: 'Premium Coach', time: '06:30 AM', arrival: '01:00 PM', duration: '6h 30m', seats: 8, price: '300,000 ₫', status: 'Scheduled' },
-  { id: 'TRP-1005', route: 'Đà Nẵng → Huế', type: 'Limousine', time: '02:00 PM', arrival: '04:00 PM', duration: '2h 00m', seats: 6, price: '120,000 ₫', status: 'On Time' },
+  { id: 'TRP-1001', route: 'Hà Nội → Hải Phòng', type: 'Xe limousine', time: '08:00', arrival: '10:30', duration: '2h 30m', seats: 4, price: '320,000 ₫', status: 'Đúng giờ' },
+  { id: 'TRP-1002', route: 'Hà Nội → Hải Phòng', type: 'Xe tiêu chuẩn', time: '10:00', arrival: '12:30', duration: '2h 30m', seats: 12, price: '250,000 ₫', status: 'Đang đón khách' },
+  { id: 'TRP-1003', route: 'Sài Gòn → Nha Trang', type: 'Xe giường nằm', time: '20:00', arrival: '04:00', duration: '8h 00m', seats: 2, price: '280,000 ₫', status: 'Đã lên lịch' },
+  { id: 'TRP-1004', route: 'Sài Gòn → Đà Lạt', type: 'Xe cao cấp', time: '06:30', arrival: '13:00', duration: '6h 30m', seats: 8, price: '300,000 ₫', status: 'Đã lên lịch' },
+  { id: 'TRP-1005', route: 'Đà Nẵng → Huế', type: 'Xe limousine', time: '14:00', arrival: '16:00', duration: '2h 00m', seats: 6, price: '120,000 ₫', status: 'Đúng giờ' },
 ]
 
 export default function ClientSchedulesPage() {
@@ -171,12 +171,12 @@ export default function ClientSchedulesPage() {
                     <td className="py-8 px-8 border-b border-slate-50">
                       <div className="flex flex-col gap-2">
                         <span className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-[0.1em] w-max flex items-center gap-2 uppercase
-                          ${trip.status === 'On Time' ? 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20' : 
-                            trip.status === 'Boarding' ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' : 
+                          ${trip.status === 'Đúng giờ' ? 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20' : 
+                            trip.status === 'Đang đón khách' ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' : 
                             'bg-slate-100 text-slate-400 border border-slate-200'}
                         `}>
-                          {trip.status === 'On Time' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                          {trip.status === 'On Time' ? 'Đúng giờ' : trip.status === 'Boarding' ? 'Đang đón khách' : 'Chưa chạy'}
+                          {trip.status === 'Đúng giờ' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                          {trip.status}
                         </span>
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 opacity-70">Hành trình {trip.duration}</span>
                       </div>

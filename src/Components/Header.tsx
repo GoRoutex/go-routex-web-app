@@ -13,10 +13,10 @@ export function Header({ title, subtitle }: HeaderProps) {
 
       <div className="header-actions">
         <button className="ghost-btn" type="button">
-          Filter
+          Bộ lọc
         </button>
         <button className="primary-btn" type="button">
-          Export Report
+          Xuất báo cáo
         </button>
       </div>
     </header>

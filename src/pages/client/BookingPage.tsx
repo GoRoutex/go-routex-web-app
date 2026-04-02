@@ -62,9 +62,19 @@ const formatVnd = (v?: number | null) => {
   return new Intl.NumberFormat("vi-VN").format(v) + " ₫";
 };
 
+const formatVehicleType = (value?: string | null) => {
+  if (!value) return "Xe khách";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "LIMOUSINE") return "Xe limousine";
+  if (normalized === "SLEEPER") return "Xe giường nằm";
+  if (normalized === "STANDARD" || normalized === "COACH") return "Xe tiêu chuẩn";
+  if (normalized === "PREMIUM") return "Xe cao cấp";
+  return value;
+};
+
 const mockRouteData: RouteItem = {
   id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-  pickupBranch: "233 Dien Bien Phu",
+  pickupBranch: "233 Điện Biên Phủ",
   origin: "Hà Nội",
   destination: "Hải Phòng",
   availableSeats: 32,
@@ -295,7 +305,7 @@ export default function BookingPage() {
                 <div className="flex items-center gap-2">
                   <Bus className="w-4 h-4 text-brand-secondary" />
                   <span className="font-black text-slate-900 text-sm tracking-tight">
-                    {routeData.vehicleType || "—"} •{" "}
+                    {formatVehicleType(routeData.vehicleType)} •{" "}
                     {routeData.vehiclePlate || "—"}
                   </span>
                 </div>

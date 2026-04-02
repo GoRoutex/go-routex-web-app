@@ -1,4 +1,4 @@
-export type RequestChannel = "OFF";
+export type RequestChannel = "ONL" | "OFF";
 
 export type RequestMeta = {
   requestId: string;
@@ -20,5 +20,11 @@ export const createRequestDateTime = () => {
 export const createRequestMeta = (): RequestMeta => ({
   requestId: crypto.randomUUID(),
   requestDateTime: createRequestDateTime(),
-  channel: "OFF",
+  channel: "ONL",
+});
+
+export const createRequestEnvelopeHeaders = (meta = createRequestMeta()) => ({
+  "RT-REQUEST-ID": meta.requestId,
+  "RT-REQUEST_DATE_TIME": meta.requestDateTime,
+  "RT-CHANNEL": meta.channel,
 });

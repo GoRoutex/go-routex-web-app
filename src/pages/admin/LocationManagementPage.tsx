@@ -194,7 +194,7 @@ export function LocationManagementPage() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
             <MapPinned className="h-3.5 w-3.5" />
-            Location Management
+            Quản lý địa điểm
           </div>
             <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
                 Quản lý tỉnh thành khai thác
@@ -210,7 +210,7 @@ export function LocationManagementPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
         >
           <Plus className="h-3.5 w-3.5" />
-          Thêm location
+          Thêm địa điểm
         </button>
       </div>
 

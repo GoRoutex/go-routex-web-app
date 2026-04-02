@@ -24,39 +24,39 @@ const POPULAR_ROUTES = [
   {
     from: "Hà Nội",
     to: "Hải Phòng",
-    info: "Limousine • Up to 8 trips/day",
+    info: "Xe limousine • Tối đa 8 chuyến/ngày",
     price: "320,000 ₫",
   },
   {
     from: "Sài Gòn",
     to: "Nha Trang",
-    info: "Sleeper bus • Overnight route",
+    info: "Xe giường nằm • Tuyến đêm",
     price: "280,000 ₫",
   },
   {
     from: "Đà Lạt",
     to: "Sài Gòn",
-    info: "Premium coach • Morning departures",
+    info: "Xe cao cấp • Giờ khởi hành buổi sáng",
     price: "240,000 ₫",
   },
   {
     from: "Hà Nội",
     to: "Đà Nẵng",
-    info: "Express • Limited seats",
+    info: "Tuyến nhanh • Số chỗ có hạn",
     price: "450,000 ₫",
   },
 ];
 
 const GUIDELINES = [
-  "Selected seats are held for 15 minutes before payment confirmation.",
-  "Seat availability is synchronized in real time across all platforms.",
-  "Vehicle assignment is managed automatically based on trip demand.",
+  "Ghế đã chọn được giữ trong 15 phút trước khi xác nhận thanh toán.",
+  "Số chỗ trống được đồng bộ theo thời gian thực trên toàn hệ thống.",
+  "Việc phân xe được tự động điều phối theo nhu cầu chuyến đi.",
 ];
 
 const STATS = [
-  { value: "120+", label: "Active Routes" },
-  { value: "24/7", label: "Live Monitoring" },
-  { value: "50k+", label: "Trips Completed" },
+  { value: "120+", label: "Tuyến đang hoạt động" },
+  { value: "24/7", label: "Giám sát liên tục" },
+  { value: "50k+", label: "Chuyến đã hoàn tất" },
 ];
 
 type FieldProps = {
@@ -386,7 +386,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-6 relative z-10">
                     <div className="bg-slate-50 px-4 py-1.5 rounded-full">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Premium trip
+                        Chuyến cao cấp
                       </span>
                     </div>
                     <span className="text-2xl font-black text-slate-900 group-hover:text-brand-primary transition-colors">
@@ -625,7 +625,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <p className="text-[10px] text-white/50 font-bold leading-none mb-1">
-                      Download on the
+                      Tải trên
                     </p>
                     <p className="text-sm text-white font-black leading-none">
                       App Store
@@ -638,7 +638,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <p className="text-[10px] text-white/50 font-bold leading-none mb-1">
-                      GET IT ON
+                      Tải trên
                     </p>
                     <p className="text-sm text-white font-black leading-none">
                       Google Play
@@ -650,7 +650,7 @@ export default function HomePage() {
           </div>
           <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
             <span className="text-slate-400 text-sm font-medium">
-              © 2026 Go Routex JSC. All rights reserved.
+              © 2026 Go Routex JSC. Mọi quyền được bảo lưu.
             </span>
             <div className="flex gap-8">
               {["Facebook", "LinkedIn", "Instagram"].map((s) => (

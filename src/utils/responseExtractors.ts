@@ -26,6 +26,40 @@ const collectCandidateValues = (
   return results;
 };
 
+const collectArrayCandidates = (
+  input: unknown,
+  keys: string[],
+  seen = new Set<object>(),
+  depth = 0,
+): unknown[][] => {
+  if (!input || typeof input !== "object" || depth > 5) return [];
+  if (seen.has(input)) return [];
+  seen.add(input);
+
+  const record = input as Record<string, unknown>;
+  const results: unknown[][] = [];
+
+  if (Array.isArray(input)) {
+    results.push(input);
+  }
+
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
+    const value = record[key];
+    if (Array.isArray(value)) {
+      results.push(value);
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    if (value && typeof value === "object") {
+      results.push(...collectArrayCandidates(value, keys, seen, depth + 1));
+    }
+  }
+
+  return results;
+};
+
 const findObjectWithAnyKey = (
   input: unknown,
   keys: string[],
@@ -108,6 +142,31 @@ export const extractStringArrayValue = (body: unknown, keys: string[]) => {
   });
 
   return values.map((item) => item.trim()).filter(Boolean);
+};
+
+export const extractNumberValue = (body: unknown, keys: string[]) => {
+  const candidates = collectCandidateValues(body, keys);
+  const value = candidates.find((candidate) => {
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return true;
+    if (typeof candidate === "string") {
+      const parsed = Number(candidate.trim());
+      return Number.isFinite(parsed);
+    }
+    return false;
+  });
+
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
+export const extractArrayValue = (body: unknown, keys: string[]) => {
+  const candidates = collectArrayCandidates(body, keys);
+  return candidates.find((candidate) => Array.isArray(candidate)) ?? [];
 };
 
 export const extractNullableStringValue = (body: unknown, keys: string[]) => {
