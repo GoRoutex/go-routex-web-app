@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Ticket, Search, CheckCircle2, XCircle, ArrowRight, Eye, RefreshCw } from 'lucide-react'
-import type { SVGProps } from 'react'
+
 
 const initialTickets = [
-  { id: 'TKT-99201', passName: 'Michael Corleone', route: 'Tuyến trung tâm', date: '2026-03-20', time: '08:00', seat: '12A', price: '$24.00', status: 'Đã đặt' },
-  { id: 'TKT-99202', passName: 'Vito Spatafore', route: 'Xe trung chuyển sân bay', date: '2026-03-20', time: '10:30', seat: '4C', price: '$45.00', status: 'Đã đặt' },
-  { id: 'TKT-99182', passName: 'Paulie Gualtieri', route: 'Tuyến ven biển', date: '2026-03-19', time: '14:00', seat: '18D', price: '$35.00', status: 'Đã hoàn thành' },
-  { id: 'TKT-99153', passName: 'Christopher Moltisanti', route: 'Vòng lặp thành phố', date: '2026-03-18', time: '09:00', seat: '2B', price: '$12.00', status: 'Đã huỷ' },
-  { id: 'TKT-99205', passName: 'Tony Soprano', route: 'Xe trung chuyển sân bay', date: '2026-03-20', time: '10:30', seat: '4D', price: '$45.00', status: 'Đã hoàn tiền' },
+  { id: 'TKT-99201', passName: 'Michael Corleone', merchant: 'Phương Trang', route: 'TP.HCM - Đà Lạt', date: '2026-03-20', time: '08:00', seat: '12A', price: '240.000 ₫', status: 'Đã đặt' },
+  { id: 'TKT-99202', passName: 'Vito Spatafore', merchant: 'Thành Bưởi', route: 'TP.HCM - Cần Thơ', date: '2026-03-20', time: '10:30', seat: '4C', price: '180.000 ₫', status: 'Đã đặt' },
+  { id: 'TKT-99182', passName: 'Hoa Mai', merchant: 'Hoa Mai', route: 'Vũng Tàu - TP.HCM', date: '2026-03-19', time: '14:00', seat: '18D', price: '160.000 ₫', status: 'Đã hoàn thành' },
+  { id: 'TKT-99153', passName: 'Christopher Moltisanti', merchant: 'Toàn Thắng', route: 'Bà Rịa - TP.HCM', date: '2026-03-18', time: '09:00', seat: '2B', price: '120.000 ₫', status: 'Đã huỷ' },
+  { id: 'TKT-99205', passName: 'Tony Soprano', merchant: 'Phương Trang', route: 'TP.HCM - Đà Nẵng', date: '2026-03-20', time: '10:30', seat: '4D', price: '450.000 ₫', status: 'Đã hoàn tiền' },
 ]
 
 export function TicketingPage() {
@@ -27,15 +27,9 @@ export function TicketingPage() {
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Quản lý vé</h2>
-          <span className="text-[12px] text-gray-400 font-medium">Theo dõi đặt chỗ, huỷ vé và thông tin hành khách</span>
+          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Theo dõi vé toàn hệ thống</h2>
+          <span className="text-[12px] text-gray-400 font-medium">Giám sát các giao dịch vé, tình trạng đặt chỗ và hỗ trợ đối soát từ tất cả nhà xe.</span>
         </div>
-        <button 
-          className="bg-[#1C1C1C] text-white px-5 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 hover:bg-black/80 transition-all"
-        >
-          <Plus size={16} />
-          Tạo đặt chỗ
-        </button>
       </div>
 
       <div className="bg-[#F7F9FB] rounded-3xl p-8 overflow-hidden">
@@ -63,8 +57,8 @@ export function TicketingPage() {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Mã vé / Hành khách</th>
-                <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Chi tiết chuyến</th>
-                <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Ghế & Giá</th>
+                <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Nhà xe / Chuyến</th>
+                <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Chi tiết suất</th>
                 <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Trạng thái</th>
                 <th className="pb-4 text-[12px] font-semibold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
               </tr>
@@ -80,14 +74,15 @@ export function TicketingPage() {
                   </td>
                   <td className="py-5">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[13px] font-semibold text-gray-900">{tkt.route}</span>
-                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                        {tkt.date} <ArrowRight size={10} /> {tkt.time}
-                      </div>
+                      <span className="text-[13px] font-bold text-brand-primary">{tkt.merchant}</span>
+                      <span className="text-[12px] font-medium text-gray-600">{tkt.route}</span>
                     </div>
                   </td>
                   <td className="py-5">
                     <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                        {tkt.date} <ArrowRight size={10} /> {tkt.time}
+                      </div>
                       <div className="flex items-center gap-2">
                          <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Ghế:</span>
                          <span className="text-[13px] font-bold text-gray-900 bg-gray-200 px-2 rounded-md">{tkt.seat}</span>
@@ -129,22 +124,4 @@ export function TicketingPage() {
   )
 }
 
-function Plus(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-    </svg>
-  )
-}
+

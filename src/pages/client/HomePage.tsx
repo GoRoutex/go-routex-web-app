@@ -97,6 +97,7 @@ export default function HomePage() {
     originCity: "",
     destinationCity: "",
     departureDate: "",
+    returnDate: "",
     seats: 1,
   });
 
@@ -104,12 +105,13 @@ export default function HomePage() {
     if (
       !searchData.originCity ||
       !searchData.destinationCity ||
-      !searchData.departureDate
+      !searchData.departureDate ||
+      (tripType === "round-trip" && !searchData.returnDate)
     ) {
       alert("Hãy nhập đủ thông tin tìm kiếm.");
       return;
     }
-    navigate("/search-results", { state: { searchData } });
+    navigate("/search-results", { state: { searchData, tripType } });
   };
 
   const patchRoute = (from: string, to: string) => {
@@ -135,7 +137,7 @@ export default function HomePage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-10">
-            {["Trang chủ", "Tuyến đường", "Lịch trình", "Hỗ trợ"].map(
+            {["Trang chủ", "Tuyến đường", "Lịch trình", "Hỗ trợ", "Đối tác"].map(
               (l, i) => (
                 <button
                   key={l}
@@ -144,6 +146,7 @@ export default function HomePage() {
                     if (i === 1) navigate("/routes");
                     if (i === 2) navigate("/schedules");
                     if (i === 3) navigate("/support");
+                    if (i === 4) navigate("/partner");
                   }}
                   className={`text-sm font-semibold transition-all relative py-2 ${i === 0 ? "text-brand-primary" : "text-slate-500 hover:text-slate-900"}`}
                 >
@@ -220,18 +223,15 @@ export default function HomePage() {
             </h1>
 
             <p className="text-slate-500 text-lg lg:text-xl max-w-2xl leading-relaxed">
-              Dịch vụ đặt vé xe liên tỉnh hiện đại nhất.{" "}
-              <br className="hidden md:block" />
-              Nhanh chóng - Tiện lợi - An toàn trong từng chuyến đi.
+              Dịch vụ đặt vé xe liên tỉnh hiện đại, tiện lợi và an toàn hàng đầu Việt Nam.
             </p>
-          </div>
 
-          {/* ─── MODERN SEARCH BAR ─── */}
-          <div className="relative max-w-6xl mx-auto">
-            <div className="bg-white p-2 rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100">
-              <div className="flex flex-col md:flex-row gap-2 p-4">
+            <div className="bg-white border border-slate-100 rounded-[2.5rem] p-4 lg:p-6 shadow-2xl shadow-slate-200/60 relative z-20">
+              <div className="flex flex-col lg:flex-row gap-4">
                 {/* Search Inputs Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-[4]">
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${
+                  tripType === "round-trip" ? "lg:grid-cols-5" : "lg:grid-cols-4"
+                } gap-4 flex-1`}>
                   <Field label="Điểm đi" icon={Bus}>
                     <input
                       type="text"
@@ -239,10 +239,7 @@ export default function HomePage() {
                       className="bg-transparent border-none focus:outline-none text-base font-bold text-slate-900 w-full placeholder:text-slate-300 placeholder:font-normal"
                       value={searchData.originCity}
                       onChange={(e) =>
-                        setSearchData((s) => ({
-                          ...s,
-                          originCity: e.target.value,
-                        }))
+                        setSearchData((s) => ({ ...s, originCity: e.target.value }))
                       }
                     />
                   </Field>
@@ -254,10 +251,7 @@ export default function HomePage() {
                       className="bg-transparent border-none focus:outline-none text-base font-bold text-slate-900 w-full placeholder:text-slate-300 placeholder:font-normal"
                       value={searchData.destinationCity}
                       onChange={(e) =>
-                        setSearchData((s) => ({
-                          ...s,
-                          destinationCity: e.target.value,
-                        }))
+                        setSearchData((s) => ({ ...s, destinationCity: e.target.value }))
                       }
                     />
                   </Field>
@@ -268,13 +262,24 @@ export default function HomePage() {
                       className="bg-transparent border-none focus:outline-none text-base font-bold text-slate-900 w-full"
                       value={searchData.departureDate}
                       onChange={(e) =>
-                        setSearchData((s) => ({
-                          ...s,
-                          departureDate: e.target.value,
-                        }))
+                        setSearchData((s) => ({ ...s, departureDate: e.target.value }))
                       }
                     />
                   </Field>
+
+                  {tripType === "round-trip" && (
+                    <Field label="Ngày về" icon={Calendar}>
+                      <input
+                        type="date"
+                        className="bg-transparent border-none focus:outline-none text-base font-bold text-slate-900 w-full"
+                        value={searchData.returnDate}
+                        min={searchData.departureDate}
+                        onChange={(e) =>
+                          setSearchData((s) => ({ ...s, returnDate: e.target.value }))
+                        }
+                      />
+                    </Field>
+                  )}
 
                   <Field label="Hành khách" icon={Users}>
                     <input
@@ -283,26 +288,24 @@ export default function HomePage() {
                       className="bg-transparent border-none focus:outline-none text-base font-bold text-slate-900 w-full"
                       value={searchData.seats}
                       onChange={(e) =>
-                        setSearchData((s) => ({
-                          ...s,
-                          seats: parseInt(e.target.value) || 1,
-                        }))
+                        setSearchData((s) => ({ ...s, seats: parseInt(e.target.value) || 1 }))
                       }
                     />
                   </Field>
                 </div>
 
-                {/* Submt Button */}
-                <div className="flex items-end flex-1">
+                {/* Submit Button */}
+                <div className="flex items-end lg:w-48">
                   <button
                     onClick={handleSearch}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white h-[66px] rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-slate-200 group active:scale-[0.98]"
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white h-[66px] px-8 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-slate-200 group active:scale-[0.98]"
                   >
                     <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                    <span>Tìm chuyến</span>
+                    <span>Tìm</span>
                   </button>
                 </div>
               </div>
+            </div>
 
               {/* Trip Types toggle */}
               <div className="flex items-center gap-8 px-8 py-3 bg-slate-50/50 rounded-b-[22px] border-t border-slate-50">
@@ -349,8 +352,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* ══════════════════  MAIN CONTENT  ══════════════════ */}
       <main className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-4 gap-12">

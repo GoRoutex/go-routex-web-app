@@ -47,10 +47,12 @@ export default function SearchResultPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const searchData = location.state?.searchData
+  const tripType = location.state?.tripType || "one-way"
 
   const origin = searchData?.originCity || "Điểm đi"
   const destination = searchData?.destinationCity || "Điểm đến"
   const date = searchData?.departureDate || "Hôm nay"
+  const returnDate = searchData?.returnDate
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans">
@@ -103,9 +105,18 @@ export default function SearchResultPage() {
 
               <div className="h-12 w-px bg-white/10" />
 
-              <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày khởi hành</p>
-                <p className="text-white font-black text-xl mt-2 tracking-tight">{date}</p>
+              <div className="text-right flex items-center gap-12">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày đi</p>
+                  <p className="text-white font-black text-xl mt-1 tracking-tight">{date}</p>
+                </div>
+                {tripType === "round-trip" && (
+                  <div className="border-l border-white/10 pl-12 text-left">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày về</p>
+                    <p className="text-white font-black text-xl mt-1 tracking-tight">{returnDate}</p>
+                  </div>
+                )}
+
               </div>
             </div>
           </div>

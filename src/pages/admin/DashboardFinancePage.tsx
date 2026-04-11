@@ -15,25 +15,25 @@ export function DashboardFinancePage() {
     { name: 'CN', revenue: 26800, target: 20000 },
   ]
 
-  const revenueByRoute = [
-    { name: 'Xe trung tâm', value: 45000 },
-    { name: 'Xe trung chuyển sân bay', value: 38000 },
-    { name: 'Tuyến ven biển', value: 25000 },
-    { name: 'Vòng lặp thành phố', value: 18000 },
+  const revenueByMerchant = [
+    { name: 'Phương Trang', value: 45000 },
+    { name: 'Thành Bưởi', value: 38000 },
+    { name: 'Hoa Mai', value: 25000 },
+    { name: 'Toàn Thắng', value: 18000 },
   ]
 
   const kpis = [
-    { label: 'Doanh thu tuần', value: '$134.5K', delta: '+12.4%', positive: true, bg: 'bg-[#E5ECF6]' },
-    { label: 'Doanh thu trung bình / ngày', value: '$19.2K', delta: '+8.1%', positive: true, bg: 'bg-[#E3F5FF]' },
-    { label: 'Doanh thu / km', value: '$3.45', delta: '-1.2%', positive: false, bg: 'bg-red-50' },
+    { label: 'Doanh thu sàn (Tuần)', value: '134,5tr VND', delta: '+12.4%', positive: true, bg: 'bg-[#E5ECF6]' },
+    { label: 'Merchant mới phát sinh GD', value: '18', delta: '+2', positive: true, bg: 'bg-[#E3F5FF]' },
+    { label: 'Tỉ suất hoa hồng TB', value: '8.5%', delta: '+0.2%', positive: true, bg: 'bg-emerald-50' },
   ]
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Phân tích doanh thu</h2>
-          <span className="text-[12px] text-gray-400 font-medium">Theo dõi và dự báo doanh thu</span>
+          <h2 className="text-[14px] font-semibold text-gray-900 uppercase tracking-wider">Đối soát & Tài chính Sàn</h2>
+          <span className="text-[12px] text-gray-400 font-medium">Theo dõi doanh thu toàn hệ thống, đối soát hoa hồng và hiệu quả kinh doanh của đối tác.</span>
         </div>
         <div className="flex items-center gap-3">
            <select className="bg-white border border-gray-200 text-gray-700 text-[12px] font-semibold rounded-xl px-4 py-2 outline-none cursor-pointer">
@@ -88,7 +88,7 @@ export function DashboardFinancePage() {
               <AreaChart data={revenueTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="#E5E7EB" strokeDasharray="3 3" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={15} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `$${val/1000}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `${val.toLocaleString()}tr`} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px' }}
                   itemStyle={{ fontWeight: 'bold' }}
@@ -102,19 +102,19 @@ export function DashboardFinancePage() {
 
         {/* Breakdown */}
         <div className="bg-[#F7F9FB] rounded-3xl p-8">
-          <h3 className="text-[14px] font-semibold mb-8">Doanh thu theo tuyến</h3>
+          <h3 className="text-[14px] font-semibold mb-8">Doanh thu theo Nhà xe</h3>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={revenueByRoute} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <BarChart layout="vertical" data={revenueByMerchant} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <CartesianGrid horizontal={false} stroke="#E5E7EB" strokeDasharray="3 3" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `$${val/1000}k`} />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `${val.toLocaleString()}tr`} />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#4B5563' }} width={90} />
                 <Tooltip 
                    cursor={{fill: '#F3F4F6'}}
                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px' }}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                  {revenueByRoute.map((_, index) => (
+                  {revenueByMerchant.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#1C1C1C' : '#9CA3AF'} />
                   ))}
                 </Bar>

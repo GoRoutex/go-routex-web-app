@@ -24,7 +24,15 @@ export const createRequestMeta = (): RequestMeta => ({
 });
 
 export const createRequestEnvelopeHeaders = (meta = createRequestMeta()) => ({
-  "RT-REQUEST-ID": meta.requestId,
-  "RT-REQUEST_DATE_TIME": meta.requestDateTime,
-  "RT-CHANNEL": meta.channel,
+  "rt-request-id": meta.requestId,
+  "rt-request-date-time": meta.requestDateTime,
+  "rt-channel": meta.channel,
 });
+
+export const createAuthorizedEnvelopeHeaders = (meta = createRequestMeta()) => {
+  const token = localStorage.getItem("token");
+  return {
+    ...createRequestEnvelopeHeaders(meta),
+    Authorization: token ? `Bearer ${token}` : "",
+  };
+};

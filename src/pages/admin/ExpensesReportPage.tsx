@@ -23,9 +23,9 @@ export function ExpensesReportPage() {
   const COLORS = ['#1C1C1C', '#A1A7FF', '#B1E3FF', '#A8FFD2']
 
   const kpis = [
-    { label: 'Tổng chi phí (từ đầu năm)', value: '$84.5K', icon: CircleDollarSign, bg: 'bg-[#F7F9FB]' },
-    { label: 'Nhiên liệu trung bình / tháng', value: '$12.4K', icon: BusFront, bg: 'bg-[#E3F5FF]' },
-    { label: 'Chi phí bảo trì', value: '$34.2K', icon: Wrench, bg: 'bg-[#E5ECF6]' },
+    { label: 'Tổng chi phí (từ đầu năm)', value: '84,5tr VND', icon: CircleDollarSign, bg: 'bg-[#F7F9FB]' },
+    { label: 'Nhiên liệu trung bình / tháng', value: '12,4tr VND', icon: BusFront, bg: 'bg-[#E3F5FF]' },
+    { label: 'Chi phí bảo trì', value: '34,2tr VND', icon: Wrench, bg: 'bg-[#E5ECF6]' },
   ]
 
   return (
@@ -79,7 +79,7 @@ export function ExpensesReportPage() {
                <BarChart data={expenseData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="#E5E7EB" strokeDasharray="3 3" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={15} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `$${val/1000}k`} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `${(val/1000).toLocaleString()}tr`} />
                   <Tooltip 
                      cursor={{fill: '#F3F4F6'}}
                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px' }}

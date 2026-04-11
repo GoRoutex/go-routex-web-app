@@ -9,8 +9,16 @@ import {
   UserRound,
 } from "lucide-react";
 import { AuthLayout } from "../../Components/client/AuthLayout";
-import { API_BASE_URL, COMPLETE_PROFILE_URL } from "../../utils/api";
-import { createRequestMeta } from "../../utils/requestMeta";
+import {
+  API_BASE_URL,
+  COMPLETE_PROFILE_URL,
+  UPLOAD_AVATAR_URL,
+} from "../../utils/api";
+import {
+  createRequestEnvelopeHeaders,
+  createRequestMeta,
+} from "../../utils/requestMeta";
+import { extractStringValue } from "../../utils/responseExtractors";
 
 type GenderValue = "MALE" | "FEMALE" | "LGBT" | "OTHER";
 
@@ -25,10 +33,14 @@ const extractErrorMessage = async (response: Response, fallback: string) => {
   }
 };
 
+const extractUploadedAvatarUrl = (body: unknown) =>
+  extractStringValue(body, ["avatarUrl", "imageUrl", "url"]);
+
 export default function CompleteProfilePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewObjectUrlRef = useRef<string | null>(null);
   const [userId, setUserId] = useState(
     () => localStorage.getItem("userId") || "",
   );
@@ -45,6 +57,9 @@ export default function CompleteProfilePage() {
       "",
   );
   const [avatarUrl, setAvatarUrl] = useState(
+    () => localStorage.getItem("profileAvatarUrl") || "",
+  );
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(
     () => localStorage.getItem("profileAvatarUrl") || "",
   );
   const [avatarFileName, setAvatarFileName] = useState("");
@@ -65,6 +80,16 @@ export default function CompleteProfilePage() {
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  useEffect(
+    () => () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const queryUserId = searchParams.get("userId");
@@ -86,21 +111,90 @@ export default function CompleteProfilePage() {
     }
 
     setError("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      setAvatarUrl(result);
-      setAvatarFileName(file.name);
-    };
-    reader.onerror = () => {
-      setError("Không thể đọc file ảnh đã chọn. Vui lòng thử lại.");
-    };
-    reader.readAsDataURL(file);
+
+    if (!userId.trim()) {
+      setError(
+        "Thiếu userId. Vui lòng đăng nhập hoặc đăng ký lại để tải ảnh đại diện.",
+      );
+      event.target.value = "";
+      setAvatarPreviewUrl(avatarUrl.trim());
+      return;
+    }
+
+    setAvatarFileName(file.name);
+
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+    }
+    const previewUrl = URL.createObjectURL(file);
+    previewObjectUrlRef.current = previewUrl;
+    setAvatarPreviewUrl(previewUrl);
+
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(
+        `${API_BASE_URL}${UPLOAD_AVATAR_URL}?userId=${encodeURIComponent(userId.trim())}`,
+        {
+          method: "POST",
+          headers: {
+            ...createRequestEnvelopeHeaders(),
+          },
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const message = await extractErrorMessage(
+          response,
+          `Tải ảnh đại diện thất bại (${response.status})`,
+        );
+        throw new Error(message);
+      }
+
+      const responseBody: unknown = await response.json().catch(() => null);
+      const uploadedAvatarUrl = extractUploadedAvatarUrl(responseBody).trim();
+      if (!uploadedAvatarUrl) {
+        throw new Error("Máy chủ không trả về avatarUrl sau khi tải ảnh.");
+      }
+
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+      setAvatarUrl(uploadedAvatarUrl);
+      setAvatarPreviewUrl(uploadedAvatarUrl);
+      localStorage.setItem("profileAvatarUrl", uploadedAvatarUrl);
+      setError("");
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Không thể tải ảnh đại diện. Vui lòng thử lại.";
+      setError(message);
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+      setAvatarPreviewUrl(avatarUrl.trim());
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const handleClearAvatar = () => {
-    setAvatarUrl("");
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
+    setAvatarPreviewUrl(avatarUrl.trim());
     setAvatarFileName("");
+    setError("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -111,7 +205,8 @@ export default function CompleteProfilePage() {
     fullName.trim().length > 0 &&
     nationalId.trim().length > 0 &&
     address.trim().length > 0 &&
-    gender !== "";
+    gender !== "" &&
+    !isUploadingAvatar;
 
   const handleSubmit = async () => {
     setError("");
@@ -245,9 +340,9 @@ export default function CompleteProfilePage() {
           <div className="rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 p-4 transition-all duration-300 focus-within:border-brand-primary/35 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-brand-primary/10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] border border-slate-200 bg-white">
-                {avatarUrl.trim() ? (
+                {avatarPreviewUrl.trim() ? (
                   <img
-                    src={avatarUrl.trim()}
+                    src={avatarPreviewUrl.trim()}
                     alt="Ảnh đại diện đã chọn"
                     className="h-full w-full object-cover"
                   />
@@ -259,17 +354,18 @@ export default function CompleteProfilePage() {
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-[0.95rem] bg-brand-primary px-4 py-2.5 text-sm font-black text-white transition-all hover:bg-brand-dark">
-                    Chọn ảnh
+                    {isUploadingAvatar ? "Đang tải..." : "Chọn ảnh"}
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={handleAvatarChange}
+                      disabled={isUploadingAvatar}
                     />
                   </label>
 
-                  {avatarUrl && (
+                  {avatarPreviewUrl && (
                     <button
                       type="button"
                       onClick={handleClearAvatar}
@@ -283,8 +379,12 @@ export default function CompleteProfilePage() {
 
                 <div className="space-y-1">
                   <div className="text-sm font-semibold text-slate-700">
-                    {avatarFileName ||
-                      (avatarUrl ? "Đã chọn ảnh đại diện" : "Chưa chọn ảnh")}
+                    {isUploadingAvatar
+                      ? "Đang tải ảnh đại diện lên máy chủ..."
+                      : avatarFileName ||
+                        (avatarPreviewUrl
+                          ? "Đã chọn ảnh đại diện"
+                          : "Chưa chọn ảnh")}
                   </div>
                 </div>
               </div>
@@ -342,14 +442,18 @@ export default function CompleteProfilePage() {
 
         <button
           onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
+          disabled={!canSubmit || isSubmitting || isUploadingAvatar}
           className={`w-full rounded-[1.25rem] py-[1.05rem] text-lg font-black transition-all shadow-xl ${
-            canSubmit && !isSubmitting
+            canSubmit && !isSubmitting && !isUploadingAvatar
               ? "bg-brand-primary text-white shadow-brand-primary/30 hover:-translate-y-1 hover:bg-brand-dark hover:shadow-brand-dark/30"
               : "cursor-not-allowed bg-slate-200 text-slate-400 shadow-none"
           }`}
         >
-          {isSubmitting ? "Đang lưu..." : "Hoàn thiện hồ sơ"}
+          {isSubmitting
+            ? "Đang lưu..."
+            : isUploadingAvatar
+              ? "Đang tải ảnh..."
+              : "Hoàn thiện hồ sơ"}
         </button>
 
         <button

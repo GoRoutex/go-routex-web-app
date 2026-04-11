@@ -14,10 +14,8 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
+import { API_BASE_URL, VERIFY_URL } from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
-
-const VERIFY_ENDPOINT =
-  "http://localhost:8080/api/v1/user-service/authentication/verify";
 
 const OTP_LENGTH = 6;
 const DEFAULT_MESSAGE =
@@ -69,7 +67,7 @@ export default function VerifyEmailPage() {
       setMessage("Đang xác minh mã OTP...");
 
       try {
-        const response = await fetch(VERIFY_ENDPOINT, {
+        const response = await fetch(`${API_BASE_URL}${VERIFY_URL}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

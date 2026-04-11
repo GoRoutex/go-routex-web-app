@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Plus, Wrench, Calendar as CalendarIcon, CheckCircle2, AlertTriangle, PenTool, Trash2 } from 'lucide-react'
 
 const initialMaintenance = [
-  { id: 'MNT-0092', vehicle: 'Xe buýt-01', mechanic: 'Bob Smith', type: 'Thay dầu', cost: '$120.00', date: '2026-03-15', status: 'Hoàn thành' },
-  { id: 'MNT-0104', vehicle: 'Xe van-05', mechanic: 'Jim Taylor', type: 'Thay má phanh', cost: '$350.00', date: '2026-03-18', status: 'Đang thực hiện' },
+  { id: 'MNT-0092', vehicle: 'Xe buýt-01', mechanic: 'Bob Smith', type: 'Thay dầu', cost: '1.200.000 ₫', date: '2026-03-15', status: 'Hoàn thành' },
+  { id: 'MNT-0104', vehicle: 'Xe van-05', mechanic: 'Jim Taylor', type: 'Thay má phanh', cost: '3.500.000 ₫', date: '2026-03-18', status: 'Đang thực hiện' },
   { id: 'MNT-0112', vehicle: 'Xe buýt-02', mechanic: 'Đang chờ', type: 'Kiểm tra động cơ', cost: 'Chờ xử lý', date: '2026-03-21', status: 'Chờ xử lý' },
-  { id: 'MNT-0115', vehicle: 'Xe minivan-01', mechanic: 'Bob Smith', type: 'Đảo lốp', cost: '$80.00', date: '2026-03-22', status: 'Chờ xử lý' },
+  { id: 'MNT-0115', vehicle: 'Xe minivan-01', mechanic: 'Bob Smith', type: 'Đảo lốp', cost: '800.000 ₫', date: '2026-03-22', status: 'Chờ xử lý' },
 ]
 
 export function MaintenancePage() {

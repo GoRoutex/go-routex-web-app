@@ -4,7 +4,6 @@ import {
   MapPinned,
   Calendar,
   Users,
-  Wrench,
   Ticket,
   ClipboardList,
   Settings,
@@ -12,8 +11,7 @@ import {
   ChevronRight,
   type LucideIcon,
   Navigation,
-  Route,
-  Bus,
+  Store,
 } from "lucide-react";
 
 interface NavItem {
@@ -30,49 +28,49 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    title: "Vận hành",
+    title: "Hệ sinh thái",
     items: [
-      { label: "Tổng quan trực tiếp", to: "/admin/dashboard", icon: Navigation },
-      { label: "Xe", to: "/admin/vehicles", icon: Bus },
-      { label: "Tuyến", to: "/admin/routes", icon: Route },
-      { label: "Địa điểm", to: "/admin/locations", icon: MapPinned },
+      { label: "Tổng quan nền tảng", to: "/admin/dashboard", icon: Navigation },
+      { 
+        label: "Nhà xe đối tác", 
+        to: "/admin/merchants", 
+        icon: Store,
+        subItems: [
+          { label: "Danh sách đối tác", to: "/admin/merchants" },
+          { label: "Đơn đăng ký mới", to: "/admin/merchants/applications" },
+        ]
+      },
     ],
   },
   {
-    title: "Quản lý",
-    items: [
-      { label: "Lịch chuyến", to: "/admin/schedules", icon: Calendar },
-      { label: "Vé & Đặt chỗ", to: "/admin/tickets", icon: Ticket },
-      { label: "Tài xế & Nhân sự", to: "/admin/staff", icon: Users },
-      { label: "Bảo trì", to: "/admin/maintenance", icon: Wrench },
-    ],
-  },
-  {
-    title: "Hiệu quả",
+    title: "Tài chính",
     items: [
       {
-        label: "Báo cáo",
+        label: "Đối soát & Báo cáo",
         to: "/admin/reports/revenue",
         icon: ClipboardList,
         subItems: [
-          { label: "Phân tích doanh thu", to: "/admin/reports/revenue" },
-          { label: "Chi phí đội xe", to: "/admin/reports/expenses" },
-          { label: "Lương & Bảng lương", to: "/admin/reports/salaries" },
+          { label: "Đối soát doanh thu", to: "/admin/reports/revenue" },
+          { label: "Phân tích chiết khấu", to: "/admin/reports/expenses" },
+          { label: "Lương & Thưởng", to: "/admin/reports/salaries" },
         ],
       },
-      { label: "Tình trạng hệ thống", to: "/admin/health", icon: Settings },
-      { label: "Phản hồi", to: "/admin/feedback", icon: MessageSquare },
+      { label: "Vé & Đặt chỗ", to: "/admin/tickets", icon: Ticket },
     ],
   },
   {
-    title: "Hồ sơ",
+    title: "Vận hành nền tảng",
     items: [
-      {
-        label: "Hồ sơ người dùng",
-        to: "/admin/profile/overview",
-        icon: Users,
-        subItems: [{ label: "Tổng quan", to: "/admin/profile/overview" }],
-      },
+      { label: "Mạng lưới lịch trình", to: "/admin/schedules", icon: Calendar },
+      { label: "Quản lý Địa điểm", to: "/admin/locations", icon: MapPinned },
+      { label: "Tình trạng hệ thống", to: "/admin/health", icon: Settings },
+    ],
+  },
+  {
+    title: "Hỗ trợ & Giao tiếp",
+    items: [
+      { label: "Khiếu nại & Hỗ trợ", to: "/admin/feedback", icon: MessageSquare },
+      { label: "Hồ sơ cá nhân", to: "/admin/profile/overview", icon: Users },
     ],
   },
 ];

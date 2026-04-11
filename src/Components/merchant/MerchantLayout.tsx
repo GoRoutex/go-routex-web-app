@@ -1,31 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
-import { RightSidebar } from './RightSidebar';
-import { TopNav } from './TopNav';
+import { MerchantSidebar } from './MerchantSidebar'
+import { RightSidebar } from '../RightSidebar';
+import { TopNav } from '../TopNav';
 
-export function AdminLayout() {
+export function MerchantLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(true)
+  const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('admin-theme')
+    const savedTheme = localStorage.getItem('merchant-theme')
     if (savedTheme === 'dark') return true
     if (savedTheme === 'light') return false
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
   })
 
   useEffect(() => {
-    document.documentElement.dataset.adminTheme = isDarkMode ? 'dark' : 'light'
-    localStorage.setItem('admin-theme', isDarkMode ? 'dark' : 'light')
+    document.documentElement.dataset.merchantTheme = isDarkMode ? 'dark' : 'light'
+    localStorage.setItem('merchant-theme', isDarkMode ? 'dark' : 'light')
   }, [isDarkMode])
 
   return (
     <div
-      data-admin-theme={isDarkMode ? 'dark' : 'light'}
-      className={`admin-shell flex h-screen overflow-hidden font-sans transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'}`}
+      data-merchant-theme={isDarkMode ? 'dark' : 'light'}
+      className={`merchant-shell flex h-screen overflow-hidden font-sans transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'}`}
     >
       {/* Left Sidebar */}
-      <Sidebar collapsed={isSidebarCollapsed} isDarkMode={isDarkMode} />
+      <MerchantSidebar collapsed={isSidebarCollapsed} isDarkMode={isDarkMode} />
 
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col min-w-0 h-full transition-colors duration-300 ${isDarkMode ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>

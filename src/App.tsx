@@ -4,19 +4,32 @@ import { AdminLayout } from './Components/AdminLayout'
 import { DashboardAnalyticsPage } from './pages/admin/DashboardAnalyticsPage'
 import { DashboardFinancePage } from './pages/admin/DashboardFinancePage'
 import { DashboardOverviewPage } from './pages/admin/DashboardOverviewPage'
-import { UserProfileOverviewPage } from './pages/admin/UserProfileOverviewPage'
-import { RouteManagementPage } from './pages/admin/RouteManagementPage'
 import { FleetManagementPage } from './pages/admin/FleetManagementPage'
 import { LocationManagementPage } from './pages/admin/LocationManagementPage'
+import { OperationPointManagementPage } from './pages/admin/OperationPointManagementPage'
 import { VehicleManagementPage } from './pages/admin/VehicleManagementPage'
 import { ExpensesReportPage } from './pages/admin/ExpensesReportPage'
 import { SalaryReportPage } from './pages/admin/SalaryReportPage'
-import { SchedulesPage } from './pages/admin/SchedulesPage'
 import { TicketingPage } from './pages/admin/TicketingPage'
 import { MaintenancePage } from './pages/admin/MaintenancePage'
 import { AdminSystemHealthPage } from './pages/admin/AdminSystemHealthPage'
 import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage'
 import { AdminProfileOverviewPage } from './pages/admin/AdminProfileOverviewPage'
+import { RouteManagementPage } from './pages/admin/RouteManagementPage'
+import AdminMerchantManagementPage from './pages/admin/AdminMerchantManagementPage'
+import MerchantApplicationFormsPage from './pages/admin/MerchantApplicationFormsPage'
+import { MerchantLayout } from './Components/merchant/MerchantLayout'
+import { MerchantPortalPage } from './pages/merchant/MerchantPortalPage'
+import { MerchantVehicleManagementPage } from './pages/merchant/MerchantVehicleManagementPage'
+import { MerchantScheduleManagementPage } from './pages/merchant/MerchantScheduleManagementPage'
+import { MerchantTicketManagementPage } from './pages/merchant/MerchantTicketManagementPage'
+import { MerchantRevenueReportPage } from './pages/merchant/MerchantRevenueReportPage'
+import { MerchantFeedbackPage } from './pages/merchant/MerchantFeedbackPage'
+import { MerchantStaffManagementPage } from './pages/merchant/MerchantStaffManagementPage'
+import { MerchantLocationManagementPage } from './pages/merchant/MerchantLocationManagementPage'
+import { MerchantMaintenancePage } from './pages/merchant/MerchantMaintenancePage'
+import { MerchantProfilePage } from './pages/merchant/MerchantProfilePage'
+import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
 
 // Client pages
 import LandingPage from './pages/client/LandingPage'
@@ -41,18 +54,17 @@ import PaymentPage from './pages/client/PaymentPage'
 import PrivacyPolicyPage from './pages/client/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/client/TermsOfServicePage'
 import ContactUsPage from './pages/client/ContactUsPage'
-import { hasAdminRole } from './utils/auth'
+import PartnerProgramPage from './pages/client/PartnerProgramPage'
+import PartnerRegisterPage from './pages/client/PartnerRegisterPage'
+// import { hasAdminRole, hasMerchantRole } from './utils/auth'
 
 function AdminRouteGuard({ children }: { children: ReactNode }) {
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
-  if (!isLoggedIn) {
-    return <Navigate to="/login" replace />
-  }
+  // Tạm thời bỏ qua kiểm tra đăng nhập để làm giao diện
+  return children
+}
 
-  if (!hasAdminRole()) {
-    return <Navigate to="/home" replace />
-  }
-
+function MerchantRouteGuard({ children }: { children: ReactNode }) {
+  // Tạm thời bỏ qua kiểm tra đăng nhập để làm giao diện
   return children
 }
 
@@ -82,6 +94,8 @@ function App() {
       <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
       <Route path="/dieu-khoan-dich-vu" element={<TermsOfServicePage />} />
       <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
+      <Route path="/partner" element={<PartnerProgramPage />} />
+      <Route path="/partner/register" element={<PartnerRegisterPage />} />
 
       {/* ─── Admin Routes ─── */}
       <Route
@@ -96,24 +110,48 @@ function App() {
         <Route path="dashboard" element={<DashboardOverviewPage />} />
         <Route path="fleet" element={<FleetManagementPage />} />
         <Route path="vehicles" element={<VehicleManagementPage />} />
-        <Route path="routes" element={<RouteManagementPage />} />
-        <Route path="trips" element={<Navigate to="routes" replace />} />
+        <Route path="schedules" element={<RouteManagementPage />} />
+        <Route path="routes" element={<Navigate to="schedules" replace />} />
+        <Route path="trips" element={<Navigate to="schedules" replace />} />
         <Route path="locations" element={<LocationManagementPage />} />
-
-        <Route path="schedules" element={<SchedulesPage />} />
+        <Route path="operation-points" element={<OperationPointManagementPage />} />
         <Route path="tickets" element={<TicketingPage />} />
+        <Route path="merchants" element={<AdminMerchantManagementPage />} />
+        <Route path="merchants/applications" element={<MerchantApplicationFormsPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
 
         <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
         <Route path="reports/revenue" element={<DashboardFinancePage />} />
         <Route path="reports/expenses" element={<ExpensesReportPage />} />
         <Route path="reports/salaries" element={<SalaryReportPage />} />
-
-        <Route path="staff" element={<UserProfileOverviewPage />} />
         <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
         <Route path="health" element={<AdminSystemHealthPage />} />
         <Route path="feedback" element={<AdminFeedbackPage />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Route>
+
+      {/* ─── Merchant Routes ─── */}
+      <Route
+        path="/merchant"
+        element={
+          <MerchantRouteGuard>
+            <MerchantLayout />
+          </MerchantRouteGuard>
+        }
+      >
+        <Route index element={<Navigate to="portal" replace />} />
+        <Route path="portal" element={<MerchantPortalPage />} />
+        <Route path="vehicles" element={<MerchantVehicleManagementPage />} />
+        <Route path="schedules" element={<MerchantScheduleManagementPage />} />
+        <Route path="tickets" element={<MerchantTicketManagementPage />} />
+        <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
+        <Route path="feedback" element={<MerchantFeedbackPage />} />
+        <Route path="staff" element={<MerchantStaffManagementPage />} />
+        <Route path="locations" element={<MerchantLocationManagementPage />} />
+        <Route path="maintenance" element={<MerchantMaintenancePage />} />
+        <Route path="profile" element={<MerchantProfilePage />} />
+        <Route path="settings" element={<MerchantSettingsPage />} />
+        <Route path="*" element={<Navigate to="portal" replace />} />
       </Route>
 
       {/* ─── Fallback ─── */}

@@ -42,7 +42,7 @@ export default function ClientSupportPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-10">
-           {['Trang chủ', 'Tuyến đường', 'Lịch trình', 'Hỗ trợ'].map((l, i) => (
+           {['Trang chủ', 'Tuyến đường', 'Lịch trình', 'Hỗ trợ', 'Đối tác'].map((l, i) => (
               <button 
                 key={l}
                 onClick={() => {
@@ -50,6 +50,7 @@ export default function ClientSupportPage() {
                   if (i === 1) navigate('/routes')
                   if (i === 2) navigate('/schedules')
                   if (i === 3) navigate('/support')
+                  if (i === 4) navigate('/partner')
                 }}
                 className={`text-sm font-semibold transition-all relative py-2 ${i === 3 ? 'text-brand-primary' : 'text-slate-500 hover:text-slate-900'}`}>
                 {l}

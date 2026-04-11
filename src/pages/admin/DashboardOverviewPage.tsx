@@ -5,44 +5,43 @@ import {
 } from 'recharts'
 
 const kpis = [
-  { label: 'Hành khách hôm nay', value: '12.8K', delta: '+8.2%', positive: true, bg: 'bg-brand-primary/10' },
-  { label: 'Đội xe đang chạy', value: '86/92', delta: '93.4%', positive: true, bg: 'bg-brand-secondary/10' },
-  { label: 'Tỉ lệ đúng giờ', value: '96.2%', delta: '+1.5%', positive: true, bg: 'bg-brand-accent/10' },
-  { label: 'Doanh thu ngày', value: '$24.6K', delta: '+12.4%', positive: true, bg: 'bg-orange-50' },
+  { label: 'Doanh thu toàn sàn', value: '142,8tr VND', delta: '+12.5%', positive: true, bg: 'bg-brand-primary/10' },
+  { label: 'Đối tác hoạt động', value: '115/128', delta: '+4 mới', positive: true, bg: 'bg-brand-secondary/10' },
+  { label: 'Tỉ lệ lấp đầy TB', value: '88.4%', delta: '+2.1%', positive: true, bg: 'bg-brand-accent/10' },
+  { label: 'Khiếu nại đang xử lý', value: '12', delta: '-15%', positive: true, bg: 'bg-rose-50' },
 ]
 
 const occupancyData = [
-  { name: '06:00', current: 420, capacity: 500 },
-  { name: '08:00', current: 890, capacity: 950 },
-  { name: '10:00', current: 650, capacity: 800 },
-  { name: '12:00', current: 720, capacity: 900 },
-  { name: '14:00', current: 580, capacity: 850 },
-  { name: '16:00', current: 950, capacity: 1000 },
-  { name: '18:00', current: 1100, capacity: 1200 },
-  { name: '20:00', current: 450, capacity: 600 },
+  { name: 'Thứ 2', current: 14200, capacity: 16000 },
+  { name: 'Thứ 3', current: 15900, capacity: 18000 },
+  { name: 'Thứ 4', current: 16500, capacity: 18000 },
+  { name: 'Thứ 5', current: 17200, capacity: 19000 },
+  { name: 'Thứ 6', current: 21800, capacity: 22000 },
+  { name: 'Thứ 7', current: 24500, capacity: 25000 },
+  { name: 'CN', current: 19500, capacity: 22000 },
 ]
 
-const routeEfficiency = [
-  { name: 'Tuyến A1 (Bắc)', value: 94 },
-  { name: 'Tuyến B5 (Trung tâm)', value: 82 },
-  { name: 'Tuyến sân bay', value: 98 },
-  { name: 'Tuyến liên quận 10', value: 76 },
-  { name: 'Tuyến ven biển', value: 89 },
-  { name: 'Tuyến ngoại ô', value: 65 },
+const merchantPerformance = [
+  { name: 'Phương Trang', value: 94 },
+  { name: 'Thành Bưởi', value: 92 },
+  { name: 'Hoa Mai', value: 88 },
+  { name: 'Toàn Thắng', value: 85 },
+  { name: 'Kumho Samco', value: 82 },
+  { name: 'Hải Vân', value: 78 },
 ]
 
-const fleetStatus = [
-  { name: 'Đang hoạt động', value: 780 },
-  { name: 'Bảo trì', value: 45 },
-  { name: 'Đang chờ', value: 62 },
-  { name: 'Ngừng hoạt động', value: 12 },
+const merchantDistribution = [
+  { name: 'Đang hoạt động', value: 115 },
+  { name: 'Đang thử nghiệm', value: 8 },
+  { name: 'Tạm dừng', value: 3 },
+  { name: 'Mới đăng ký', value: 2 },
 ]
 
 const regionalDemand = [
-  { name: 'Trung tâm thành phố', value: 45.2, color: '#1C1C1C' },
-  { name: 'Ngoại ô phía Bắc', value: 24.8, color: '#B1E3FF' },
-  { name: 'Khu công nghiệp phía Đông', value: 18.2, color: '#A1A7FF' },
-  { name: 'Sân bay / trung chuyển', value: 11.8, color: '#A8FFD2' },
+  { name: 'TP. Hồ Chí Minh', value: 45.2, color: '#0EA5E9' },
+  { name: 'Hà Nội', value: 24.8, color: '#6366F1' },
+  { name: 'Đà Nẵng', value: 18.2, color: '#A1A7FF' },
+  { name: 'Khác', value: 11.8, color: '#CBD5E1' },
 ]
 
 export function DashboardOverviewPage() {
@@ -156,11 +155,11 @@ export function DashboardOverviewPage() {
           </div>
         </div>
 
-        {/* Route Efficiency */}
+        {/* Merchant Performance */}
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Hiệu suất tuyến đường</h3>
+          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Hiệu suất Nhà xe đối tác</h3>
           <div className="space-y-7">
-            {routeEfficiency.map((item) => (
+            {merchantPerformance.map((item) => (
               <div key={item.name} className="flex flex-col gap-2.5">
                 <div className="flex justify-between text-[11px] font-black uppercase tracking-wider">
                   <span className="text-slate-500">{item.name}</span>
@@ -179,12 +178,12 @@ export function DashboardOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Fleet Distribution */}
+        {/* Merchant Distribution */}
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Trạng thái đội xe</h3>
+          <h3 className="text-base font-bold text-slate-900 mb-6 tracking-tight">Phân bổ trạng thái Đối tác</h3>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={fleetStatus} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={merchantDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="name"
@@ -199,10 +198,10 @@ export function DashboardOverviewPage() {
                    tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                 />
                 <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
-                  {fleetStatus.map((entry, index) => (
+                  {merchantDistribution.map((entry, index) => (
                     <Cell
                        key={`cell-${index}`}
-                       fill={entry.name === 'Active' ? '#0EA5E9' : entry.name === 'Maintenance' ? '#6366F1' : '#CBD5E1'}
+                       fill={entry.name === 'Đang hoạt động' ? '#0EA5E9' : entry.name === 'Tạm dừng' ? '#F43F5E' : '#6366F1'}
                        fillOpacity={0.9}
                     />
                   ))}
@@ -230,7 +229,7 @@ export function DashboardOverviewPage() {
                     stroke="none"
                   >
                     {regionalDemand.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color === '#1C1C1C' ? '#0EA5E9' : entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -241,7 +240,7 @@ export function DashboardOverviewPage() {
               {regionalDemand.map((item) => (
                 <div key={item.name} className="flex items-center justify-between gap-12 text-[13px] font-bold">
                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color === '#1C1C1C' ? '#0EA5E9' : item.color }} />
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                       <span className="text-slate-500">{item.name}</span>
                    </div>
                    <span className="text-slate-900">{item.value}%</span>

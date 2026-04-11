@@ -69,6 +69,17 @@ export const getPrimaryDisplayRole = () => {
 export const hasAdminRole = () =>
   getStoredRoles().some((role) => role === "ADMIN" || role.includes("ADMIN"));
 
+export const hasMerchantRole = () => {
+  const roles = getStoredRoles();
+  return roles.some((role) => 
+    role === "ADMIN" || 
+    role === "MERCHANT" || 
+    role.includes("MERCHANT") || 
+    role.includes("MANAGER") || 
+    role.includes("OPERATOR")
+  );
+};
+
 export const getPrimaryRole = () => getPrimaryDisplayRole();
 
 export const getClientHomeRoute = () =>

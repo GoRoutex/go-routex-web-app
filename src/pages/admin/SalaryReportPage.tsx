@@ -22,8 +22,8 @@ export function SalaryReportPage() {
   ]
 
   const kpis = [
-    { label: 'Tổng quỹ lương (tháng 6)', value: '$64.5K', icon: Users, bg: 'bg-[#F7F9FB]' },
-    { label: 'Lương trung bình / tài xế', value: '$3.2K', icon: UserCheck, bg: 'bg-[#E3F5FF]' },
+    { label: 'Tổng quỹ lương (tháng 6)', value: '64,5tr VND', icon: Users, bg: 'bg-[#F7F9FB]' },
+    { label: 'Lương trung bình / tài xế', value: '3,2tr VND', icon: UserCheck, bg: 'bg-[#E3F5FF]' },
     { label: 'Nhân sự mới trong năm', value: '14', icon: UserPlus, bg: 'bg-[#E5ECF6]' },
   ]
 
@@ -82,7 +82,7 @@ export function SalaryReportPage() {
               <AreaChart data={salaryData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="#E5E7EB" strokeDasharray="3 3" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={15} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `$${val/1000}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `${(val/1000).toLocaleString()}tr`} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px' }}
                   itemStyle={{ fontWeight: 'bold' }}
