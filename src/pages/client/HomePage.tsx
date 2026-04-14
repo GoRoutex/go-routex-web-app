@@ -18,7 +18,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ClientAccountMenu } from "../../Components/client/ClientAccountMenu";
-import { getClientHomeRoute, hasAdminRole } from "../../utils/auth";
+import { RoleBasedNav } from "../../Components/client/RoleBasedNav";
+import { getClientHomeRoute } from "../../utils/auth";
 
 const POPULAR_ROUTES = [
   {
@@ -84,7 +85,6 @@ const Field = ({ label, icon: Icon, children }: FieldProps) => (
 export default function HomePage() {
   const navigate = useNavigate();
   const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
-  const canAccessAdmin = hasAdminRole();
   const [userName] = useState(
     () => localStorage.getItem("profileFullName") || localStorage.getItem("userName") || "",
   );
@@ -163,14 +163,7 @@ export default function HomePage() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
-                {canAccessAdmin && (
-                  <button
-                    onClick={() => navigate("/admin/dashboard")}
-                    className="hidden lg:flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-brand-primary transition-colors px-4 py-2 rounded-xl hover:bg-slate-50"
-                  >
-                    <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
-                  </button>
-                )}
+                <RoleBasedNav />
                 <ClientAccountMenu
                   fullName={userName || "Chào bạn"}
                   avatarUrl={userAvatarUrl}

@@ -99,7 +99,7 @@ export function Sidebar({
       } ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}
     >
       <Link
-        to="/admin/dashboard"
+        to="/home"
         className={`flex items-center hover:opacity-80 transition-opacity group ${
           collapsed ? "justify-center mb-10 px-0" : "gap-3 mb-12 px-2"
         }`}

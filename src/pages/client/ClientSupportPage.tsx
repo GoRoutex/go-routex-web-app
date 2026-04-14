@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bus, LayoutDashboard, Send, Phone, Mail, HelpCircle, ChevronDown, CheckCircle2 } from 'lucide-react'
+import { Bus, Send, Phone, Mail, HelpCircle, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
-import { getClientHomeRoute, hasAdminRole } from '../../utils/auth'
+import { RoleBasedNav } from '../../Components/client/RoleBasedNav'
+import { getClientHomeRoute } from '../../utils/auth'
 
 const FAQS = [
   { question: 'Làm thế nào để hủy hoặc hoàn vé?', answer: 'Bạn có thể hủy vé trực tiếp trên bảng điều khiển trong mục "Vé của tôi" tối đa 24 giờ trước khi khởi hành để được hoàn tiền đầy đủ. Tiền hoàn lại thường được xử lý trong 3-5 ngày làm việc.' },
@@ -14,7 +15,6 @@ const FAQS = [
 export default function ClientSupportPage() {
   const navigate = useNavigate()
   const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
-  const canAccessAdmin = hasAdminRole()
   const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '')
   const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
   const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '')
@@ -62,13 +62,7 @@ export default function ClientSupportPage() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
-                {canAccessAdmin && (
-                  <button
-                    onClick={() => navigate('/admin/dashboard')}
-                    className="hidden lg:flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-brand-primary transition-colors px-4 py-2 rounded-xl hover:bg-slate-50">
-                    <LayoutDashboard className="w-4 h-4" /> Quản lý hệ thống
-                  </button>
-                )}
+                <RoleBasedNav />
                 <ClientAccountMenu
                   fullName={userName || 'Chào bạn'}
                   avatarUrl={userAvatarUrl}

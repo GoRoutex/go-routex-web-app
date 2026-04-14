@@ -339,7 +339,7 @@ export const extractMyProfileSnapshot = (
   phoneVerified: extractBooleanValue(body, ["phoneVerified"]) ?? null,
   createdAt: extractDateTimeValue(body, ["createdAt"]),
   updatedAt: extractDateTimeValue(body, ["updatedAt"]),
-  authorities: extractStringArrayValue(body, ["authorities"]),
+  authorities: extractStringArrayValue(body, ["authorities", "roles"]),
   dob: extractDateTimeValue(body, ["dob", "dateOfBirth", "birthday"]),
   phoneNumber: extractStringValue(body, ["phone"]),
   membership: (() => {

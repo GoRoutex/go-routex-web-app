@@ -484,6 +484,12 @@ export default function ClientProfilePage() {
             apiProfile.emailVerified ?? cachedProfile.emailVerified ?? null,
           phoneVerified:
             apiProfile.phoneVerified ?? cachedProfile.phoneVerified ?? null,
+          authorities:
+            apiProfile.authorities.length > 0
+              ? apiProfile.authorities
+              : cachedProfile.authorities.length > 0
+                ? cachedProfile.authorities
+                : apiProfile.authorities,
           createdAt: apiProfile.createdAt || cachedProfile.createdAt,
           updatedAt: apiProfile.updatedAt || cachedProfile.updatedAt,
           membership: {

@@ -89,7 +89,7 @@ export function MerchantSidebar({
     >
       {/* Branding - Consistent with user request */}
       <Link
-        to="/merchant/portal"
+        to="/home"
         className={`flex items-center hover:opacity-80 transition-opacity group ${
           collapsed ? "justify-center mb-10 px-0" : "gap-3 mb-10 px-2"
         }`}

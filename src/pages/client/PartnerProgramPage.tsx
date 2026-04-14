@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu';
+import { RoleBasedNav } from '../../Components/client/RoleBasedNav';
 import { 
   Bus, 
   TrendingUp, 
@@ -11,6 +14,10 @@ import {
 
 export default function PartnerProgramPage() {
   const navigate = useNavigate();
+  const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
+  const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '');
+  const [userEmail] = useState(() => localStorage.getItem('userEmail') || '');
+  const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans">
@@ -48,12 +55,25 @@ export default function PartnerProgramPage() {
             ))}
           </nav>
 
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-black px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-slate-200 active:scale-95"
-          >
-            Đăng nhập
-          </button>
+          <div className="flex items-center gap-4">
+            {isLoggedIn ? (
+              <div className="flex items-center gap-4">
+                <RoleBasedNav />
+                <ClientAccountMenu
+                  fullName={userName || 'Chào bạn'}
+                  avatarUrl={userAvatarUrl}
+                  email={userEmail}
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-black px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-slate-200 active:scale-95"
+              >
+                Đăng nhập
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

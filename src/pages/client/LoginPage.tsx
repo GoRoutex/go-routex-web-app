@@ -9,8 +9,9 @@ import {
   extractDisplayName,
   extractProfileCompleted,
   extractRefreshToken,
-  extractMyProfileSnapshot,
+   extractMyProfileSnapshot,
   extractStringArrayValue,
+  extractStringValue,
   extractUserId,
 } from "../../utils/responseExtractors";
 
@@ -107,7 +108,8 @@ export default function LoginPage() {
       const userId = extractUserId(responseBody);
       const fallbackDisplayName = extractDisplayName(responseBody, email.trim());
       const profileCompleted = extractProfileCompleted(responseBody);
-      const roles = extractStringArrayValue(responseBody, ["authorities", "roles"]);
+       const roles = extractStringArrayValue(responseBody, ["authorities", "roles"]);
+      const avatarUrl = extractStringValue(responseBody, ["avatarUrl", "profileAvatarUrl", "avatar"]);
       const shouldCompleteProfile = profileCompleted === false;
       const displayName = await resolveDisplayNameFromProfile(
         authToken,
@@ -131,9 +133,12 @@ export default function LoginPage() {
       if (refreshToken) {
         localStorage.setItem("refreshToken", refreshToken);
       }
-      if (roles.length > 0) {
+       if (roles.length > 0) {
         localStorage.setItem("userRoles", JSON.stringify(roles));
         localStorage.setItem("userRole", roles[0]);
+      }
+      if (avatarUrl) {
+        localStorage.setItem("profileAvatarUrl", avatarUrl);
       }
 
       if (shouldCompleteProfile) {

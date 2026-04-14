@@ -12,7 +12,7 @@ import { AuthLayout } from "../../Components/client/AuthLayout";
 import {
   API_BASE_URL,
   COMPLETE_PROFILE_URL,
-  UPLOAD_AVATAR_URL,
+  MEDIA_UPLOAD_URL,
 } from "../../utils/api";
 import {
   createRequestEnvelopeHeaders,
@@ -132,19 +132,31 @@ export default function CompleteProfilePage() {
 
     setIsUploadingAvatar(true);
     try {
+      const meta = createRequestMeta();
       const formData = new FormData();
+      formData.append("requestId", meta.requestId);
+      formData.append("requestDateTime", meta.requestDateTime);
+      formData.append("channel", meta.channel);
+
+      formData.append(
+        "data",
+        JSON.stringify({
+          folder: "avatars",
+          publicId: `user_${userId.trim()}_${Date.now()}`,
+        }),
+      );
+
       formData.append("file", file);
 
-      const response = await fetch(
-        `${API_BASE_URL}${UPLOAD_AVATAR_URL}?userId=${encodeURIComponent(userId.trim())}`,
-        {
-          method: "POST",
-          headers: {
-            ...createRequestEnvelopeHeaders(),
-          },
-          body: formData,
+      const authToken = localStorage.getItem("authToken") || "";
+      const response = await fetch(API_BASE_URL + MEDIA_UPLOAD_URL, {
+        method: "POST",
+        headers: {
+          ...createRequestEnvelopeHeaders(),
+          ...(authToken.trim() ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
         },
-      );
+        body: formData,
+      });
 
       if (!response.ok) {
         const message = await extractErrorMessage(
@@ -157,7 +169,7 @@ export default function CompleteProfilePage() {
       const responseBody: unknown = await response.json().catch(() => null);
       const uploadedAvatarUrl = extractUploadedAvatarUrl(responseBody).trim();
       if (!uploadedAvatarUrl) {
-        throw new Error("Máy chủ không trả về avatarUrl sau khi tải ảnh.");
+        throw new Error("Máy chủ không trả về URL ảnh sau khi tải.");
       }
 
       if (previewObjectUrlRef.current) {
@@ -225,10 +237,12 @@ export default function CompleteProfilePage() {
 
     setIsSubmitting(true);
     try {
+      const authToken = localStorage.getItem("authToken") || "";
       const response = await fetch(API_BASE_URL + COMPLETE_PROFILE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(authToken.trim() ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
         },
         body: JSON.stringify({
           ...createRequestMeta(),

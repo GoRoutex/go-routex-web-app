@@ -30,7 +30,7 @@ export const createRequestEnvelopeHeaders = (meta = createRequestMeta()) => ({
 });
 
 export const createAuthorizedEnvelopeHeaders = (meta = createRequestMeta()) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("authToken") || localStorage.getItem("token");
   return {
     ...createRequestEnvelopeHeaders(meta),
     Authorization: token ? `Bearer ${token}` : "",

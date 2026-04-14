@@ -72,7 +72,6 @@ export const hasAdminRole = () =>
 export const hasMerchantRole = () => {
   const roles = getStoredRoles();
   return roles.some((role) => 
-    role === "ADMIN" || 
     role === "MERCHANT" || 
     role.includes("MERCHANT") || 
     role.includes("MANAGER") || 
@@ -80,7 +79,24 @@ export const hasMerchantRole = () => {
   );
 };
 
+export const hasMerchantOwnerRole = () => {
+  const roles = getStoredRoles();
+  return roles.some(role => 
+    role === "ROLE_MERCHANT_OWNER" || 
+    role === "MERCHANT_OWNER"
+  );
+};
+
+export const isBothAdminAndMerchant = () => {
+  return hasAdminRole() && hasMerchantOwnerRole();
+};
+
 export const getPrimaryRole = () => getPrimaryDisplayRole();
 
 export const getClientHomeRoute = () =>
   localStorage.getItem("isLoggedIn") === "true" ? "/home" : "/";
+
+export const logout = () => {
+  localStorage.clear();
+  window.location.href = "/";
+};

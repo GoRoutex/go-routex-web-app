@@ -2,23 +2,31 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  Camera,
   CircleAlert,
   Loader2,
   Mail,
   MapPin,
   Phone,
   Save,
+  Upload,
   UserRound,
 } from "lucide-react";
+import { useRef } from "react";
 import { ClientAvatar } from "../../Components/client/ClientAvatar";
-import { API_BASE_URL, PROFILE_ME_URL, PROFILE_UPDATE_URL } from "../../utils/api";
+import {
+  API_BASE_URL,
+  MEDIA_UPLOAD_URL,
+  PROFILE_ME_URL,
+  PROFILE_UPDATE_URL,
+} from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
 import {
   extractMyProfileSnapshot,
   type GetMyProfileSnapshot,
 } from "../../utils/responseExtractors";
 
-type EditableField = "fullName" | "email" | "phoneNumber" | "address";
+type EditableField = "fullName" | "email" | "phoneNumber" | "address" | "avatarUrl";
 
 const emptyProfile = (): GetMyProfileSnapshot => ({
   userId: "",
@@ -190,9 +198,12 @@ export default function UpdateProfilePage() {
   const [email, setEmail] = useState(profile.email || "");
   const [phoneNumber, setPhoneNumber] = useState(profile.phoneNumber || profile.phone || "");
   const [address, setAddress] = useState(profile.address || "");
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl || "");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId") || "";
@@ -299,6 +310,13 @@ export default function UpdateProfilePage() {
             nextTierName:
               apiProfile.stats.nextTierName || cachedProfile.stats.nextTierName,
           },
+          authorities:
+            apiProfile.authorities.length > 0
+              ? apiProfile.authorities
+              : cachedProfile.authorities.length > 0
+                ? cachedProfile.authorities
+                : apiProfile.authorities,
+          dob: apiProfile.dob || cachedProfile.dob,
           customer: {
             customerId:
               apiProfile.customer.customerId ||
@@ -330,6 +348,7 @@ export default function UpdateProfilePage() {
         setEmail(resolvedProfile.email || "");
         setPhoneNumber(resolvedProfile.phoneNumber || resolvedProfile.phone || "");
         setAddress(resolvedProfile.address || "");
+        setAvatarUrl(resolvedProfile.avatarUrl || "");
         writeBackProfile(resolvedProfile);
       } catch (fetchError) {
         if (controller.signal.aborted) return;
@@ -361,6 +380,7 @@ export default function UpdateProfilePage() {
       email: normalize(email),
       phoneNumber: normalize(phoneNumber),
       address: normalize(address),
+      avatarUrl: normalize(avatarUrl),
     };
 
     const initialValues = {
@@ -368,12 +388,66 @@ export default function UpdateProfilePage() {
       email: normalize(initialProfile.email || ""),
       phoneNumber: normalize(initialProfile.phoneNumber || initialProfile.phone || ""),
       address: normalize(initialProfile.address || ""),
+      avatarUrl: normalize(initialProfile.avatarUrl || ""),
     };
 
     return (Object.keys(nextValues) as EditableField[]).some(
       (field) => nextValues[field] !== initialValues[field],
     );
-  }, [address, email, fullName, initialProfile, phoneNumber]);
+  }, [address, avatarUrl, email, fullName, initialProfile, phoneNumber]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError("");
+    setIsUploading(true);
+
+    try {
+      const meta = createRequestMeta();
+      const formData = new FormData();
+      formData.append("requestId", meta.requestId);
+      formData.append("requestDateTime", meta.requestDateTime);
+      formData.append("channel", meta.channel);
+
+      formData.append(
+        "data",
+        JSON.stringify({
+          folder: "avatars",
+          publicId: `user_${localStorage.getItem("userId") || "unknown"}_${Date.now()}`,
+        }),
+      );
+
+      formData.append("file", file);
+
+      const authToken = localStorage.getItem("authToken") || "";
+      const response = await fetch(API_BASE_URL + MEDIA_UPLOAD_URL, {
+        method: "POST",
+        headers: {
+          ...(authToken.trim() ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = await extractErrorMessage(response, "Không thể tải lên ảnh đại diện.");
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+      const uploadedUrl = result.data?.url || "";
+      if (uploadedUrl) {
+        setAvatarUrl(uploadedUrl);
+      } else {
+        throw new Error("Không tìm thấy URL sau khi tải ảnh lên.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Lỗi tải ảnh đại diện.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -403,6 +477,7 @@ export default function UpdateProfilePage() {
       changes.phoneNumber = nextPhoneNumber;
     }
     if (nextAddress !== initialValues.address) changes.address = nextAddress;
+    if (avatarUrl !== initialProfile.avatarUrl) changes.avatarUrl = avatarUrl;
 
     if (Object.keys(changes).length === 0) {
       setError("Bạn chưa thay đổi thông tin nào để cập nhật.");
@@ -459,6 +534,8 @@ export default function UpdateProfilePage() {
           initialProfile.phoneNumber,
         address:
           changes.address ?? updatedProfile.address ?? nextAddress ?? initialProfile.address,
+        avatarUrl:
+          changes.avatarUrl ?? updatedProfile.avatarUrl ?? avatarUrl ?? initialProfile.avatarUrl,
         membership: {
           ...initialProfile.membership,
           ...updatedProfile.membership,
@@ -471,6 +548,10 @@ export default function UpdateProfilePage() {
           ...initialProfile.stats,
           ...updatedProfile.stats,
         },
+        authorities:
+          updatedProfile.authorities.length > 0
+            ? updatedProfile.authorities
+            : initialProfile.authorities,
         customer: {
           ...initialProfile.customer,
           ...updatedProfile.customer,
@@ -487,8 +568,9 @@ export default function UpdateProfilePage() {
       setInitialProfile(resolvedProfile);
       setFullName(resolvedProfile.fullName || "");
       setEmail(resolvedProfile.email || "");
-      setPhoneNumber(resolvedProfile.phoneNumber || resolvedProfile.phone || "");
+      setPhoneNumber(resolvedProfile.phoneNumber || "");
       setAddress(resolvedProfile.address || "");
+      setAvatarUrl(resolvedProfile.avatarUrl || "");
       writeBackProfile(resolvedProfile);
 
       navigate("/profile", { replace: true });
@@ -553,23 +635,72 @@ export default function UpdateProfilePage() {
             </div>
           </div>
 
-          <div className="mt-8 flex items-center gap-4 rounded-[1.4rem] border border-slate-100 bg-slate-50 p-4">
-            <ClientAvatar
-              name={displayName}
-              avatarUrl={profile.avatarUrl}
-              size="lg"
-              className="border-slate-200 shadow-sm"
-              textClassName="text-lg"
-            />
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-                Thông tin hiện tại
+          <div className="mt-8 flex items-center gap-6 rounded-[1.4rem] border border-slate-100 bg-slate-50 p-6">
+            <div className="relative group">
+              <ClientAvatar
+                name={displayName}
+                avatarUrl={avatarUrl || profile.avatarUrl}
+                size="lg"
+                className="border-white shadow-xl ring-4 ring-slate-100/50"
+                textClassName="text-2xl"
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                disabled={isUploading}
+                className={`absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-2xl border border-white bg-slate-900 text-white shadow-lg transition-all hover:scale-110 active:scale-95 ${
+                  isUploading ? "cursor-wait opacity-50" : ""
+                }`}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    Ảnh đại diện
+                  </div>
+                  <div className="mt-1 text-sm font-bold text-slate-900">
+                    {profile.email || "Chào bạn!"}
+                  </div>
+                </div>
+                {avatarUrl !== profile.avatarUrl && (
+                  <div className="rounded-lg bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Ảnh mới chờ lưu
+                  </div>
+                )}
               </div>
-              <div className="mt-1 text-sm font-bold text-slate-900">
-                {profile.email || "Chưa có email"}
-              </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Dữ liệu bên dưới đã được nạp sẵn từ hồ sơ hiện có của bạn.
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-700 shadow-sm border border-slate-100 hover:bg-slate-50 transition-all"
+                >
+                  <Upload className="h-3 w-3" />
+                  Tải ảnh lên
+                </button>
+                {avatarUrl && avatarUrl !== initialProfile.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl(initialProfile.avatarUrl || "")}
+                    className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-rose-600 transition-all hover:bg-rose-100"
+                  >
+                    Khôi phục
+                  </button>
+                )}
               </div>
             </div>
           </div>
