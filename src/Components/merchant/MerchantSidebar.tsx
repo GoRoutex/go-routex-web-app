@@ -38,6 +38,7 @@ const merchantNavGroups: NavGroup[] = [
     title: "Management",
     items: [
       { label: "Đội xe của tôi", to: "/merchant/vehicles", icon: Bus },
+      { label: "Điểm đón/trả", to: "/merchant/operation-points", icon: MapPin },
       { label: "Lịch trình chạy", to: "/merchant/schedules", icon: Calendar },
       { label: "Quản lý vé", to: "/merchant/tickets", icon: Ticket },
     ],
@@ -47,7 +48,6 @@ const merchantNavGroups: NavGroup[] = [
     items: [
       { label: "Phản hồi khách hàng", to: "/merchant/feedback", icon: MessageSquare },
       { label: "Tài xế & Phụ xe", to: "/merchant/staff", icon: Users },
-      { label: "Điểm đón/trả", to: "/merchant/locations", icon: MapPin },
       { label: "Bảo trì xe", to: "/merchant/maintenance", icon: Wrench },
     ],
   },
@@ -70,11 +70,15 @@ const merchantNavGroups: NavGroup[] = [
 interface MerchantSidebarProps {
   collapsed?: boolean;
   isDarkMode?: boolean;
+  merchantName?: string;
+  merchantLogo?: string;
 }
 
 export function MerchantSidebar({
   collapsed = false,
   isDarkMode = false,
+  merchantName,
+  merchantLogo,
 }: MerchantSidebarProps) {
   const location = useLocation();
 
@@ -94,8 +98,18 @@ export function MerchantSidebar({
           collapsed ? "justify-center mb-10 px-0" : "gap-3 mb-10 px-2"
         }`}
       >
-        <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-primary/10 shadow-sm flex items-center justify-center p-2">
-          <Store className="w-full h-full text-brand-primary" />
+        <div className={`rounded-2xl overflow-hidden flex items-center justify-center transition-all ${
+          collapsed ? "w-12 h-12" : "w-14 h-14"
+        } ${!merchantLogo ? "bg-brand-primary/10 p-2.5 shadow-sm" : ""}`}>
+          {merchantLogo ? (
+            <img 
+              src={merchantLogo} 
+              alt="Logo" 
+              className="w-full h-full object-contain filter drop-shadow-sm" 
+            />
+          ) : (
+            <Store className="w-full h-full text-brand-primary" />
+          )}
         </div>
         {!collapsed && (
           <div className="flex flex-col">
@@ -103,7 +117,7 @@ export function MerchantSidebar({
               Merchant Hub
             </span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-              Phương Trang
+              {merchantName || "Đang tải..."}
             </span>
           </div>
         )}

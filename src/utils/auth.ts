@@ -1,4 +1,68 @@
+import { API_BASE_URL, REFRESH_TOKEN_URL } from "./api";
+import { createRequestMeta } from "./requestMeta";
+
 const normalizeRole = (value: string) => value.trim().toUpperCase();
+
+export const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
+export const isTokenExpired = (token: string | null) => {
+  if (!token) return true;
+  const decoded = parseJwt(token);
+  if (!decoded || !decoded.exp) return true;
+  
+  // Check if token expires in less than 30 seconds
+  const currentTime = Math.floor(Date.now() / 1000);
+  return decoded.exp < currentTime + 30;
+};
+
+export const getAccessToken = () => localStorage.getItem("authToken");
+export const getRefreshToken = () => localStorage.getItem("refreshToken");
+
+export const refreshTokens = async () => {
+  const refresh = getRefreshToken();
+  if (!refresh) {
+    logout();
+    return null;
+  }
+
+  try {
+    const response = await fetch(API_BASE_URL + REFRESH_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...createRequestMeta(),
+        channel: "OFF",
+        data: { refreshToken: refresh }
+      }),
+    });
+
+    if (!response.ok) throw new Error("Refresh failed");
+
+    const body = await response.json();
+    const { accessToken, refreshToken, userId } = body.data || {};
+
+    if (accessToken) localStorage.setItem("authToken", accessToken);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    if (userId) localStorage.setItem("userId", userId);
+
+    return accessToken;
+  } catch (error) {
+    logout();
+    return null;
+  }
+};
 
 const readStoredStringArray = (key: string) => {
   const raw = localStorage.getItem(key);
@@ -97,6 +161,13 @@ export const getClientHomeRoute = () =>
   localStorage.getItem("isLoggedIn") === "true" ? "/home" : "/";
 
 export const logout = () => {
-  localStorage.clear();
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("userRoles");
+  localStorage.removeItem("userRole");
+  localStorage.removeItem("userName");
+  localStorage.removeItem("userEmail");
+  localStorage.removeItem("userId");
   window.location.href = "/";
 };

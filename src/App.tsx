@@ -30,6 +30,11 @@ import { MerchantLocationManagementPage } from './pages/merchant/MerchantLocatio
 import { MerchantMaintenancePage } from './pages/merchant/MerchantMaintenancePage'
 import { MerchantProfilePage } from './pages/merchant/MerchantProfilePage'
 import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
+import { MerchantOperationPointPage } from './pages/merchant/MerchantOperationPointPage'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import { useEffect } from 'react'
+import { isTokenExpired, getAccessToken, refreshTokens } from './utils/auth'
 
 // Client pages
 import LandingPage from './pages/client/LandingPage'
@@ -69,94 +74,119 @@ function MerchantRouteGuard({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = getAccessToken();
+      if (token && isTokenExpired(token)) {
+        await refreshTokens();
+      }
+    };
+    initAuth();
+  }, []);
+
   return (
-    <Routes>
-      {/* ─── Client / Public Routes ─── */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/reset-password-success" element={<ResetPasswordSuccessPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/complete-profile" element={<CompleteProfilePage />} />
-      <Route path="/profile" element={<ClientProfilePage />} />
-      <Route path="/profile/update" element={<UpdateProfilePage />} />
-      <Route path="/settings" element={<ClientSettingsPage />} />
-      <Route path="/home" element={<HomePage />} />
-      <Route path="/search-results" element={<SearchResultPage />} />
-      <Route path="/route-detail" element={<SeatSelectionPage />} />
-      <Route path="/booking" element={<BookingPage />} />
-      <Route path="/payment" element={<PaymentPage />} />
-      <Route path="/routes" element={<ClientRoutesPage />} />
-      <Route path="/schedules" element={<ClientSchedulesPage />} />
-      <Route path="/support" element={<ClientSupportPage />} />
-      <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
-      <Route path="/dieu-khoan-dich-vu" element={<TermsOfServicePage />} />
-      <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
-      <Route path="/partner" element={<PartnerProgramPage />} />
-      <Route path="/partner/register" element={<PartnerRegisterPage />} />
+    <>
+      <Routes>
+        {/* ─── Client / Public Routes ─── */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/reset-password-success" element={<ResetPasswordSuccessPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/complete-profile" element={<CompleteProfilePage />} />
+        <Route path="/profile" element={<ClientProfilePage />} />
+        <Route path="/profile/update" element={<UpdateProfilePage />} />
+        <Route path="/settings" element={<ClientSettingsPage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/search-results" element={<SearchResultPage />} />
+        <Route path="/route-detail" element={<SeatSelectionPage />} />
+        <Route path="/booking" element={<BookingPage />} />
+        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/routes" element={<ClientRoutesPage />} />
+        <Route path="/schedules" element={<ClientSchedulesPage />} />
+        <Route path="/support" element={<ClientSupportPage />} />
+        <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
+        <Route path="/dieu-khoan-dich-vu" element={<TermsOfServicePage />} />
+        <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
+        <Route path="/partner" element={<PartnerProgramPage />} />
+        <Route path="/partner/register" element={<PartnerRegisterPage />} />
 
-      {/* ─── Admin Routes ─── */}
-      <Route
-        path="/admin"
-        element={
-          <AdminRouteGuard>
-            <AdminLayout />
-          </AdminRouteGuard>
-        }
-      >
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardOverviewPage />} />
-        <Route path="fleet" element={<FleetManagementPage />} />
-        <Route path="vehicles" element={<VehicleManagementPage />} />
-        <Route path="schedules" element={<RouteManagementPage />} />
-        <Route path="routes" element={<Navigate to="schedules" replace />} />
-        <Route path="trips" element={<Navigate to="schedules" replace />} />
-        <Route path="locations" element={<LocationManagementPage />} />
-        <Route path="operation-points" element={<OperationPointManagementPage />} />
-        <Route path="tickets" element={<TicketingPage />} />
-        <Route path="merchants" element={<AdminMerchantManagementPage />} />
-        <Route path="merchants/applications" element={<MerchantApplicationFormsPage />} />
-        <Route path="maintenance" element={<MaintenancePage />} />
+        {/* ─── Admin Routes ─── */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRouteGuard>
+              <AdminLayout />
+            </AdminRouteGuard>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardOverviewPage />} />
+          <Route path="fleet" element={<FleetManagementPage />} />
+          <Route path="vehicles" element={<VehicleManagementPage />} />
+          <Route path="schedules" element={<RouteManagementPage />} />
+          <Route path="routes" element={<Navigate to="schedules" replace />} />
+          <Route path="trips" element={<Navigate to="schedules" replace />} />
+          <Route path="locations" element={<LocationManagementPage />} />
+          <Route path="operation-points" element={<OperationPointManagementPage />} />
+          <Route path="tickets" element={<TicketingPage />} />
+          <Route path="merchants" element={<AdminMerchantManagementPage />} />
+          <Route path="merchants/applications" element={<MerchantApplicationFormsPage />} />
+          <Route path="maintenance" element={<MaintenancePage />} />
 
-        <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
-        <Route path="reports/revenue" element={<DashboardFinancePage />} />
-        <Route path="reports/expenses" element={<ExpensesReportPage />} />
-        <Route path="reports/salaries" element={<SalaryReportPage />} />
-        <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
-        <Route path="health" element={<AdminSystemHealthPage />} />
-        <Route path="feedback" element={<AdminFeedbackPage />} />
-        <Route path="*" element={<Navigate to="dashboard" replace />} />
-      </Route>
+          <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
+          <Route path="reports/revenue" element={<DashboardFinancePage />} />
+          <Route path="reports/expenses" element={<ExpensesReportPage />} />
+          <Route path="reports/salaries" element={<SalaryReportPage />} />
+          <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
+          <Route path="health" element={<AdminSystemHealthPage />} />
+          <Route path="feedback" element={<AdminFeedbackPage />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
 
-      {/* ─── Merchant Routes ─── */}
-      <Route
-        path="/merchant"
-        element={
-          <MerchantRouteGuard>
-            <MerchantLayout />
-          </MerchantRouteGuard>
-        }
-      >
-        <Route index element={<Navigate to="portal" replace />} />
-        <Route path="portal" element={<MerchantPortalPage />} />
-        <Route path="vehicles" element={<MerchantVehicleManagementPage />} />
-        <Route path="schedules" element={<MerchantScheduleManagementPage />} />
-        <Route path="tickets" element={<MerchantTicketManagementPage />} />
-        <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
-        <Route path="feedback" element={<MerchantFeedbackPage />} />
-        <Route path="staff" element={<MerchantStaffManagementPage />} />
-        <Route path="locations" element={<MerchantLocationManagementPage />} />
-        <Route path="maintenance" element={<MerchantMaintenancePage />} />
-        <Route path="profile" element={<MerchantProfilePage />} />
-        <Route path="settings" element={<MerchantSettingsPage />} />
-        <Route path="*" element={<Navigate to="portal" replace />} />
-      </Route>
+        {/* ─── Merchant Routes ─── */}
+        <Route
+          path="/merchant"
+          element={
+            <MerchantRouteGuard>
+              <MerchantLayout />
+            </MerchantRouteGuard>
+          }
+        >
+          <Route index element={<Navigate to="portal" replace />} />
+          <Route path="portal" element={<MerchantPortalPage />} />
+          <Route path="vehicles" element={<MerchantVehicleManagementPage />} />
+          <Route path="schedules" element={<MerchantScheduleManagementPage />} />
+          <Route path="tickets" element={<MerchantTicketManagementPage />} />
+          <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
+          <Route path="feedback" element={<MerchantFeedbackPage />} />
+          <Route path="staff" element={<MerchantStaffManagementPage />} />
+          <Route path="locations" element={<MerchantLocationManagementPage />} />
+          <Route path="operation-points" element={<MerchantOperationPointPage />} />
+          <Route path="maintenance" element={<MerchantMaintenancePage />} />
+          <Route path="profile" element={<MerchantProfilePage />} />
+          <Route path="settings" element={<MerchantSettingsPage />} />
+          <Route path="*" element={<Navigate to="portal" replace />} />
+        </Route>
 
-      {/* ─── Fallback ─── */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ─── Fallback ─── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
   )
 }
 

@@ -13,6 +13,7 @@ export const RECENT_ACTIVITIES_URL = "management/recent-activities";
 
 export const REGISTER_URL = "user-service/authentication/register";
 export const LOGIN_URL = "user-service/authentication/login";
+export const REFRESH_TOKEN_URL = "user-service/refresh-token";
 export const FORGOT_PASSWORD_URL = "user-service/authentication/forgot-password";
 export const CHANGE_PASSWORD_URL = "user-service/authentication/change-password";
 export const RESET_PASSWORD_URL = "user-service/authentication/reset-password";

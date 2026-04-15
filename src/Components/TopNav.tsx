@@ -4,6 +4,11 @@ import { ChevronRight, Search } from "lucide-react";
 
 type TopNavProps = {
   isDarkMode: boolean;
+  onToggleSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  onToggleTheme?: () => void;
+  isSidebarCollapsed?: boolean;
+  isRightSidebarVisible?: boolean;
 };
 
 const searchTargets = [
@@ -26,6 +31,11 @@ const searchTargets = [
 
 export function TopNav({
   isDarkMode,
+  onToggleSidebar,
+  onToggleRightSidebar,
+  onToggleTheme,
+  isSidebarCollapsed,
+  isRightSidebarVisible
 }: TopNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -95,6 +105,14 @@ export function TopNav({
       }`}
     >
       <div className="flex items-center gap-6">
+        {onToggleSidebar && (
+          <button 
+            onClick={onToggleSidebar}
+            className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-brand-primary transition-all active:scale-95"
+          >
+            <Search size={16} className={isSidebarCollapsed ? "rotate-180" : ""} />
+          </button>
+        )}
         <div className="flex items-center gap-4 text-slate-300">
             <button onClick={() => navigate(-1)} className="hover:text-brand-primary transition-colors">
                 <ChevronRight size={14} className="rotate-180" />
@@ -106,30 +124,50 @@ export function TopNav({
         {breadcrumbs}
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && performSearch()}
-            placeholder="Search"
-            className={`rounded-xl pl-10 pr-12 py-1.5 text-[12px] w-64 outline-none transition-all border ${
-              isDarkMode
-                ? "bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
-                : "bg-slate-50 border-slate-100 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-200"
-            }`}
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none opacity-50">
-             <div className="w-4 h-4 rounded bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">⌘</div>
-             <div className="w-4 h-4 rounded bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">/</div>
+        <div className="flex items-center gap-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && performSearch()}
+              placeholder="Tìm kiếm..."
+              className={`rounded-xl pl-10 pr-12 py-1.5 text-[12px] w-64 outline-none transition-all border ${
+                isDarkMode
+                  ? "bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                  : "bg-slate-50 border-slate-100 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-200"
+              }`}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onToggleTheme && (
+              <button 
+                onClick={onToggleTheme}
+                className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-brand-primary transition-all active:scale-95"
+              >
+                <div className={`w-4 h-4 rounded-full border-2 ${isDarkMode ? 'bg-slate-900 border-white' : 'bg-white border-slate-900'}`} />
+              </button>
+            )}
+            {onToggleRightSidebar && (
+              <button 
+                onClick={onToggleRightSidebar}
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
+                  isRightSidebarVisible 
+                    ? "bg-black text-white border-black" 
+                    : "bg-slate-50 border-slate-100 text-slate-400 hover:text-brand-primary"
+                }`}
+              >
+                <Search size={16} />
+              </button>
+            )}
           </div>
         </div>
-      </div>
     </header>
   );
 }

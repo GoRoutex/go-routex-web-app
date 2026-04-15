@@ -1,3 +1,5 @@
+import { getAccessToken } from "./auth";
+
 export type RequestChannel = "ONL" | "OFF";
 
 export type RequestMeta = {
@@ -30,7 +32,7 @@ export const createRequestEnvelopeHeaders = (meta = createRequestMeta()) => ({
 });
 
 export const createAuthorizedEnvelopeHeaders = (meta = createRequestMeta()) => {
-  const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+  const token = getAccessToken();
   return {
     ...createRequestEnvelopeHeaders(meta),
     Authorization: token ? `Bearer ${token}` : "",
