@@ -61,6 +61,7 @@ import TermsOfServicePage from './pages/client/TermsOfServicePage'
 import ContactUsPage from './pages/client/ContactUsPage'
 import PartnerProgramPage from './pages/client/PartnerProgramPage'
 import PartnerRegisterPage from './pages/client/PartnerRegisterPage'
+import { ClientLayout } from './Components/client/ClientLayout'
 // import { hasAdminRole, hasMerchantRole } from './utils/auth'
 
 function AdminRouteGuard({ children }: { children: ReactNode }) {
@@ -88,7 +89,26 @@ function App() {
     <>
       <Routes>
         {/* ─── Client / Public Routes ─── */}
-        <Route path="/" element={<LandingPage />} />
+        <Route element={<ClientLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/profile" element={<ClientProfilePage />} />
+          <Route path="/profile/update" element={<UpdateProfilePage />} />
+          <Route path="/settings" element={<ClientSettingsPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/search-results" element={<SearchResultPage />} />
+          <Route path="/route-detail" element={<SeatSelectionPage />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/routes" element={<ClientRoutesPage />} />
+          <Route path="/schedules" element={<ClientSchedulesPage />} />
+          <Route path="/support" element={<ClientSupportPage />} />
+          <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
+          <Route path="/dieu-khoan-dich-vu" element={<TermsOfServicePage />} />
+          <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
+          <Route path="/partner" element={<PartnerProgramPage />} />
+          <Route path="/partner/register" element={<PartnerRegisterPage />} />
+        </Route>
+
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -96,22 +116,6 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/complete-profile" element={<CompleteProfilePage />} />
-        <Route path="/profile" element={<ClientProfilePage />} />
-        <Route path="/profile/update" element={<UpdateProfilePage />} />
-        <Route path="/settings" element={<ClientSettingsPage />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/search-results" element={<SearchResultPage />} />
-        <Route path="/route-detail" element={<SeatSelectionPage />} />
-        <Route path="/booking" element={<BookingPage />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/routes" element={<ClientRoutesPage />} />
-        <Route path="/schedules" element={<ClientSchedulesPage />} />
-        <Route path="/support" element={<ClientSupportPage />} />
-        <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
-        <Route path="/dieu-khoan-dich-vu" element={<TermsOfServicePage />} />
-        <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
-        <Route path="/partner" element={<PartnerProgramPage />} />
-        <Route path="/partner/register" element={<PartnerRegisterPage />} />
 
         {/* ─── Admin Routes ─── */}
         <Route

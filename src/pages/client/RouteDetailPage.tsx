@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Bus, MapPin, ChevronRight, Loader2 } from 'lucide-react'
+import { Bus, MapPin, ChevronRight, Loader2 } from 'lucide-react'
 
 type RouteSeatStatus = "AVAILABLE" | "HELD" | "SOLD" | "BLOCKED"
 
@@ -155,129 +155,112 @@ export default function RouteDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">
-      {/* Header */}
-      <div className="bg-brand-dark pt-14 pb-10 px-8 sticky top-0 z-50 shadow-xl"
-        style={{ borderBottomLeftRadius: 50, borderBottomRightRadius: 50 }}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button onClick={() => navigate(-1)}
-            className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all active:scale-90 border border-white/5 backdrop-blur-md">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-white font-black text-2xl tracking-tight">Chi tiết tuyến đường</h1>
-          <div className="w-12" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#FDFDFD] font-sans selection:bg-brand-primary/10">
 
-      <main className="max-w-5xl mx-auto px-8 py-12 pb-48 space-y-10">
-        {/* Route Info Card */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      <main className="max-w-3xl mx-auto px-6 py-4 pb-32 space-y-6">
+        {/* Route Info Card - Refined & Compact */}
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-brand-primary/5 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
           
-          <div className="flex flex-col md:flex-row md:items-start justify-between mb-10 gap-6">
-            <div className="flex-1">
-              <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">
-                {routeData.origin} <span className="text-brand-primary mx-2">→</span> {routeData.destination}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 mb-1.5 tracking-tight group">
+                {routeData.origin} <span className="text-brand-primary/40 mx-1 group-hover:mx-2 transition-all">→</span> {routeData.destination}
               </h2>
-              <div className="flex items-center gap-3">
-                <span className="px-4 py-1.5 rounded-xl bg-slate-900 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                  {routeData.routeCode}
-                </span>
-                <span className="text-slate-400 font-bold text-sm">Chuyến đi trong ngày</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.2em]">{routeData.routeCode}</span>
+                <div className="w-1 h-1 rounded-full bg-slate-200" />
+                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">Chuyến đi hằng ngày</span>
               </div>
             </div>
-            <div className="px-6 py-3 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl self-start">
-              <span className="text-brand-primary font-black text-base flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
-                Còn {routeData.availableSeats ?? 0} chỗ trống
+            <div className="px-4 py-2 bg-brand-primary/5 border border-brand-primary/10 rounded-xl self-start sm:self-center">
+              <span className="text-brand-primary font-black text-[11px] flex items-center gap-2 uppercase tracking-widest">
+                <div className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+                {routeData.availableSeats ?? 0} ghế trống
               </span>
             </div>
           </div>
 
-          {/* Time Row */}
-          <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
-            <div className="text-center md:text-left min-w-[120px]">
-              <div className="text-4xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedStartTime)}</div>
-              <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">Giờ xuất phát</div>
+          {/* Time Row - Slimmer */}
+          <div className="flex items-center gap-6 mb-10 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+            <div className="text-left">
+              <div className="text-2xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedStartTime)}</div>
+              <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">{routeData.origin}</div>
             </div>
             
-            <div className="flex-1 flex flex-col items-center w-full px-4">
-              <div className="text-xs font-black text-brand-primary uppercase tracking-[0.2em] mb-3 bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm">
+            <div className="flex-1 flex flex-col items-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3 py-1 bg-white rounded-full border border-slate-100/50 shadow-sm">
                 {durationText(routeData.plannedStartTime, routeData.plannedEndTime)}
               </div>
-              <div className="w-full h-[3px] bg-slate-200 rounded-full relative overflow-hidden">
-                <div className="absolute left-0 top-0 h-full w-1/3 bg-brand-primary rounded-full" />
-                <Bus className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 text-brand-primary bg-white rounded-full p-0.5" />
+              <div className="w-full h-1 bg-slate-200 rounded-full relative">
+                <div className="absolute left-0 top-0 h-full w-1/3 bg-brand-primary rounded-full shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.5)]" />
+                <Bus className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 text-brand-primary bg-white rounded-full p-0.5 border border-brand-primary/20 shadow-sm" />
               </div>
-              <div className="text-xs text-slate-500 font-bold mt-4 tracking-tight">
+              <div className="text-[10px] text-slate-400 font-bold mt-2.5">
                 {formatDateDDMMYYYY(routeData.plannedStartTime)}
               </div>
             </div>
 
-            <div className="text-center md:text-right min-w-[120px]">
-              <div className="text-4xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedEndTime)}</div>
-              <div className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">Giờ kết thúc</div>
+            <div className="text-right">
+              <div className="text-2xl font-black text-slate-900 tracking-tighter">{formatTimeHHmm(routeData.plannedEndTime)}</div>
+              <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">{routeData.destination}</div>
             </div>
           </div>
 
-          {/* Details */}
-          <div className="pt-10 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-10">
-            <div className="flex items-start gap-4 group/item">
-              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20 group-hover/item:scale-110 transition-transform">
-                <MapPin className="w-6 h-6 text-brand-primary" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Điểm đón khách</p>
-                <span className="font-bold text-slate-900 text-lg tracking-tight">{routeData.pickupBranch || '—'}</span>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+            <div className="flex items-center gap-4">
+               <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 text-slate-400">
+                  <MapPin size={18} />
+               </div>
+               <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Điểm đón</p>
+                  <p className="font-bold text-slate-950 text-sm tracking-tight">{routeData.pickupBranch || 'Liên hệ nhà xe'}</p>
+               </div>
             </div>
-            <div className="flex items-start gap-4 group/item">
-              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20 group-hover/item:scale-110 transition-transform">
-                <Bus className="w-6 h-6 text-brand-primary" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Phương tiện</p>
-                <span className="font-bold text-slate-900 text-lg tracking-tight">{formatVehicleType(routeData.vehicleType)} • {routeData.vehiclePlate || '—'}</span>
-              </div>
+            <div className="flex items-center gap-4">
+               <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 text-slate-400">
+                  <Bus size={18} />
+               </div>
+               <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Xe vận hành</p>
+                  <p className="font-bold text-slate-950 text-sm tracking-tight">{formatVehicleType(routeData.vehicleType)} • {routeData.vehiclePlate || '—'}</p>
+               </div>
             </div>
           </div>
         </div>
 
-        {/* Seat Map */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50">
-          <h3 className="text-2xl font-black text-slate-900 mb-10 tracking-tight flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center">
-              <ChevronRight className="w-6 h-6 text-white" />
+        {/* Improved Seat Selection Section */}
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/30">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">Sơ đồ chỗ ngồi</h3>
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Thời gian thực</span>
             </div>
-            Chọn chỗ ngồi của bạn
-          </h3>
+          </div>
 
-          {/* Legend */}
-          <div className="flex flex-wrap gap-8 mb-12 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+          {/* Minimalist Legend */}
+          <div className="flex flex-wrap gap-x-8 gap-y-4 mb-10 pb-8 border-b border-slate-50">
             {[
-              { color: 'bg-white border-2 border-slate-200', label: 'Còn trống', sub: 'Chưa có người đặt' },
-              { color: 'bg-brand-primary border-2 border-brand-primary', label: 'Đang chọn', sub: 'Chỗ bạn muốn đặt' },
-              { color: 'bg-slate-100 opacity-50 border-2 border-slate-100', label: 'Đã bán', sub: 'Không khả dụng' },
-              { color: 'bg-rose-50 border-2 border-rose-100', label: 'Đang giữ', sub: 'Khách đang thanh toán' },
-            ].map(({ color, label, sub }) => (
-              <div key={label} className="flex items-center gap-4">
-                <div className={`w-6 h-6 rounded-lg ${color}`} />
-                <div>
-                  <div className="text-xs font-black text-slate-900 leading-tight">{label}</div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{sub}</div>
-                </div>
+              { color: 'bg-white border-slate-200', label: 'Ghế trống' },
+              { color: 'bg-brand-primary border-brand-primary shadow-lg shadow-brand-primary/20', label: 'Đang chọn' },
+              { color: 'bg-slate-100 opacity-40 border-transparent', label: 'Đã bán' },
+              { color: 'bg-rose-50 border-rose-100', label: 'Đã đặt' },
+            ].map(({ color, label }) => (
+              <div key={label} className="flex items-center gap-2.5">
+                <div className={`w-4 h-4 rounded-md border ${color}`} />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
               </div>
             ))}
           </div>
 
-          {/* Seat Grid */}
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-10 gap-4 p-4">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
             {routeSeats.map((seat) => (
               <button
                 key={seat.seatNo}
                 onClick={() => toggleSeat(seat.seatNo)}
                 disabled={seat.status !== 'AVAILABLE' && !selectedSeats.includes(seat.seatNo)}
-                className={`h-16 rounded-2xl border-2 font-black text-lg transition-all active:scale-90 flex items-center justify-center ${seatColorClass(seat.seatNo)}`}
+                className={`h-10 rounded-xl border font-bold text-xs transition-all active:scale-95 flex items-center justify-center ${seatColorClass(seat.seatNo)}`}
               >
                 {seat.seatNo}
               </button>
@@ -285,32 +268,26 @@ export default function RouteDetailPage() {
           </div>
         </div>
 
-        {/* Stop Points */}
+        {/* Compact Timeline for Stops */}
         {stops.length > 0 && (
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/50">
-            <h3 className="text-2xl font-black text-slate-900 mb-10 tracking-tight flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-white" />
-              </div>
-              Lộ trình dừng nghỉ
-            </h3>
-            <div className="space-y-10 relative ml-6">
-              <div className="absolute top-2 bottom-2 left-0 w-0.5 bg-slate-100" />
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/30">
+            <h3 className="text-lg font-black text-slate-900 mb-8 tracking-tight">Lộ trình chi tiết</h3>
+            <div className="space-y-4">
               {stops.map((s, idx) => (
-                <div key={s.id} className="relative pl-10 group/stop">
-                  <div className="absolute top-1.5 left-[-8px] w-4 h-4 rounded-full bg-white border-4 border-brand-primary group-hover/stop:scale-125 transition-transform" />
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 p-6 rounded-3xl border border-slate-100 transition-colors">
+                <div key={s.id} className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-brand-primary border-2 border-white ring-1 ring-brand-primary/20 shadow-md translate-y-4 z-10" />
+                    {idx !== stops.length - 1 && <div className="w-0.5 flex-1 bg-slate-100 mt-4" />}
+                  </div>
+                  <div className="flex-1 bg-slate-50/50 rounded-2xl p-4 border border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <p className="font-black text-slate-900 text-lg">Điểm dừng {idx + 1}: {s.note || 'Trạm dừng chân'}</p>
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.1em] mt-1 italic">Vị trí trạm: {s.stopOrder}</p>
+                      <p className="font-bold text-slate-900 text-sm">Điểm {idx + 1}: {s.note || 'Trạm dừng chân'}</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Vị trí: {s.stopOrder}</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                       <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thời gian</p>
-                          <p className="font-black text-brand-primary bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm text-sm">
-                             {formatTimeHHmm(s.plannedArrivalTime)} - {formatTimeHHmm(s.plannedDepartureTime)}
-                          </p>
-                       </div>
+                    <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[10px] font-black text-brand-primary tracking-tight">
+                        {formatTimeHHmm(s.plannedArrivalTime)} — {formatTimeHHmm(s.plannedDepartureTime)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -320,43 +297,31 @@ export default function RouteDetailPage() {
         )}
       </main>
 
-      {/* Bottom Action Bar */}
-      <div
-        className="fixed bottom-0 left-0 right-0 px-8 py-8 border-t border-slate-100 z-[60]"
-        style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)' }}
-      >
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center gap-6">
-          {/* Summary */}
-          <div className="flex-1 w-full bg-slate-900 rounded-3xl px-8 py-6 flex justify-between items-center shadow-2xl shadow-slate-900/20">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Chỗ ngồi đã chọn</p>
-              <p className="text-white font-black text-xl tracking-tight">
-                {selectedSeats.length > 0 ? selectedSeats.sort().join(', ') : 'Chưa có chỗ được chọn'}
+      {/* Floating Action Bar - Most Important Transformation */}
+      {selectedSeats.length > 0 && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-50 animate-in slide-in-from-bottom-5 duration-700">
+          <div className="bg-slate-950/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-4 flex items-center justify-between shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+            <div className="px-6">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tổng cộng {selectedSeats.length} vé</p>
+              <p className="text-xl font-black text-white tracking-tighter">
+                {new Intl.NumberFormat('vi-VN').format(selectedSeats.length * (routeData.price || 320000))} <span className="text-xs text-slate-400">₫</span>
               </p>
             </div>
-            <div className="text-right pl-6 border-l border-white/10">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Số lượng</p>
-              <p className="text-brand-primary font-black text-3xl tracking-tighter">{selectedSeats.length}</p>
-            </div>
-          </div>
 
-          <button
-            onClick={handleContinue}
-            disabled={selectedSeats.length === 0 || holding}
-            className={`w-full sm:w-[300px] py-7 rounded-3xl font-black text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] ${
-              selectedSeats.length > 0
-                ? 'bg-brand-primary hover:bg-brand-primary shadow-[0_20px_40px_-15px_rgba(14,165,233,0.4)] text-white hover:scale-[1.02]'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-            }`}
-          >
-            {holding ? (
-              <><Loader2 className="w-7 h-7 animate-spin" /> Đang xử lý...</>
-            ) : (
-              <>Tiếp tục đặt vé <ChevronRight className="w-6 h-6" /></>
-            )}
-          </button>
+            <button
+              onClick={handleContinue}
+              disabled={holding}
+              className="bg-brand-primary hover:bg-brand-accent text-slate-950 h-14 px-8 rounded-2xl font-black text-sm flex items-center gap-3 transition-all active:scale-95 shadow-lg shadow-brand-primary/20"
+            >
+              {holding ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>Tiếp tục đặt chỗ <ChevronRight size={18} /></>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

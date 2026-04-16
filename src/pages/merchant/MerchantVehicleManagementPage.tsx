@@ -131,10 +131,13 @@ export function MerchantVehicleManagementPage() {
                     <td className="px-6 py-5 text-sm font-bold text-slate-600">{v.year}</td>
                     <td className="px-6 py-5 text-sm font-bold text-slate-500">{v.nextMaintenance}</td>
                     <td className="px-6 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        v.status === 'Hoạt động' || v.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 
-                        v.status === 'Đang chạy' || v.status === 'RUNNING' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
+                        v.status === 'Hoạt động' || v.status === 'ACTIVE' ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-400'
                       }`}>
+                         <div className={`w-1.5 h-1.5 rounded-full ${
+                          v.status === 'Hoạt động' || v.status === 'ACTIVE' ? 'bg-emerald-500' : 
+                          v.status === 'Đang chạy' || v.status === 'RUNNING' ? 'bg-blue-400' : 'bg-rose-400'
+                        }`} />
                         {v.status}
                       </span>
                     </td>

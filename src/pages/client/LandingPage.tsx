@@ -1,18 +1,15 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-    Bus,
     Search,
     Armchair,
     CalendarClock,
     TicketCheck,
     CheckCircle2,
     ArrowRight,
-    TrendingDown
+    TrendingDown,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { useState } from 'react'
-import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu'
-import { RoleBasedNav } from '../../Components/client/RoleBasedNav'
 
 const FeatureCard = ({
     icon: Icon,
@@ -41,60 +38,11 @@ const StatCard = ({ value, label }: { value: string, label: string }) => (
 
 export default function LandingPage() {
     const navigate = useNavigate()
-    const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true')
-    const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '')
-    const [userEmail] = useState(() => localStorage.getItem('userEmail') || '')
-    const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '')
+
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] text-slate-900 selection:bg-brand-primary/30 font-sans">
-            {/* Navigation */}
-            <nav className="max-w-7xl mx-auto px-8 py-8 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-brand-primary flex items-center justify-center shadow-2xl shadow-brand-primary/30">
-                        <Bus className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                        <div className="text-slate-900 text-2xl font-black tracking-tight leading-none group">GO <span className="text-brand-primary">ROUTEX</span></div>
-                        <div className="text-slate-400 text-[10px] font-black tracking-[0.3em] uppercase mt-1">Vận tải thông minh</div>
-                    </div>
-                </div>
 
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={() => navigate('/partner')}
-                        className="text-slate-500 font-black text-sm uppercase tracking-widest hover:text-brand-primary transition-colors"
-                    >
-                        Đối tác
-                    </button>
-                    
-                    {isLoggedIn ? (
-                        <div className="flex items-center gap-4">
-                            <RoleBasedNav />
-                            <ClientAccountMenu
-                                fullName={userName || 'Chào bạn'}
-                                avatarUrl={userAvatarUrl}
-                                email={userEmail}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="text-slate-500 font-black text-sm uppercase tracking-widest hover:text-brand-primary transition-colors"
-                            >
-                                Đăng nhập
-                            </button>
-                            <button
-                                onClick={() => navigate('/register')}
-                                className="bg-brand-dark hover:bg-brand-primary text-white px-8 py-3.5 rounded-2xl font-black text-sm transition-all shadow-xl shadow-brand-dark/10 hover:shadow-brand-primary/25 hover:-translate-y-1"
-                            >
-                                Đăng ký ngay
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </nav>
 
             {/* Hero Section */}
             <main className="max-w-7xl mx-auto px-8 pt-16 pb-32 grid lg:grid-cols-2 gap-20 items-center">
@@ -219,23 +167,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="bg-brand-dark py-20 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
-                    <div className="flex items-center gap-4 group cursor-pointer">
-                        <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
-                            <Bus className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="font-black text-slate-300 tracking-[0.2em] uppercase text-sm">Go Routex &copy; 2026</span>
-                    </div>
 
-                    <div className="flex flex-wrap justify-center gap-10 text-slate-500 text-sm font-black uppercase tracking-widest">
-                        <Link to="/chinh-sach-bao-mat" className="hover:text-brand-primary transition-colors">Chính sách bảo mật</Link>
-                        <Link to="/dieu-khoan-dich-vu" className="hover:text-brand-primary transition-colors">Điều khoản dịch vụ</Link>
-                        <Link to="/lien-he-chung-toi" className="hover:text-brand-primary transition-colors">Liên hệ chúng tôi</Link>
-                    </div>
-                </div>
-            </footer>
         </div>
     )
 }

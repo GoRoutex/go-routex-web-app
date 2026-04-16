@@ -3,11 +3,12 @@ import {
     Plus, MapPin, Clock, ArrowRight,
     Edit3, Trash2,
     ChevronLeft, ChevronRight, X, Loader2, Save,
-    Navigation, User, Building, Info, Search
+    Navigation, User, Building, Info, Search, Activity, MoreHorizontal
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
-import { createAuthorizedEnvelopeHeaders } from "../../utils/requestMeta";
+import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { getAccessToken, parseJwt } from "../../utils/auth";
 
 interface RoutePoint {
     id?: string;
@@ -60,6 +61,7 @@ export function MerchantScheduleManagementPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [fetchingDetail, setFetchingDetail] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
 
     // Form states matching create payload
@@ -115,12 +117,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/provinces/master/fetch?pageNumber=1&pageSize=100`,
                 {
-                    headers: {
-                        ...createAuthorizedEnvelopeHeaders(),
-                        'requestId': crypto.randomUUID(),
-                        'requestDateTime': formatWithOffset(new Date()),
-                        'channel': 'ONL'
-                    }
+                    headers: createAuthorizedEnvelopeHeaders()
                 }
             );
             const result = await response.json();
@@ -155,19 +152,89 @@ export function MerchantScheduleManagementPage() {
         setIsModalOpen(true);
     };
 
-    const handleOpenEdit = (route: RouteItem) => {
+    const handleOpenEdit = async (route: RouteItem) => {
         setIsEditing(true);
         setSelectedRoute(route);
-        setFormData({
-            creator: route.creator || "",
-            pickupBranch: route.pickupBranch || "",
-            origin: route.origin,
-            destination: route.destination,
-            plannedStartTime: route.plannedStartTime || "",
-            plannedEndTime: route.plannedEndTime || "",
-            operationPoints: route.operationPoints || route.routePoints || []
-        });
         setIsModalOpen(true);
+        setFetchingDetail(true);
+
+        try {
+            const token = getAccessToken();
+            const decoded = token ? parseJwt(token) : null;
+            const merchantId = decoded?.merchantId;
+            const routeId = route.routeId || route.id;
+
+            if (!merchantId) {
+                toast.error("Không tìm thấy thông tin nhà xe trong phiên đăng nhập");
+                setFetchingDetail(false);
+                return;
+            }
+
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/routes/fetch/detail?routeId=${routeId}&merchantId=${merchantId}`,
+                {
+                    headers: createAuthorizedEnvelopeHeaders()
+                }
+            );
+
+            if (!response.ok) throw new Error("Không thể tải thông tin chi tiết tuyến đường");
+
+            const result = await response.json();
+            const detailedRoute = result.data;
+
+            if (detailedRoute) {
+                // Helper to format ISO date to YYYY-MM-DDTHH:mm
+                const formatToInputDate = (isoStr: string) => isoStr ? isoStr.slice(0, 16) : "";
+
+                setFormData({
+                    creator: detailedRoute.creator || "",
+                    pickupBranch: detailedRoute.pickupBranch || "",
+                    origin: detailedRoute.origin || "",
+                    destination: detailedRoute.destination || "",
+                    plannedStartTime: formatToInputDate(detailedRoute.plannedStartTime),
+                    plannedEndTime: formatToInputDate(detailedRoute.plannedEndTime),
+                    operationPoints: (detailedRoute.routePoints || detailedRoute.operationPoints || []).map((p: any) => ({
+                        ...p,
+                        // Ensure we have the real UUID for later update/save
+                        realOperationPointId: p.operationPointId || p.id,
+                        // Set formatted times for point inputs
+                        plannedArrivalTime: formatToInputDate(p.plannedArrivalTime),
+                        plannedDepartureTime: formatToInputDate(p.plannedDepartureTime)
+                    }))
+                });
+            } else {
+                // Fallback to list data if data is null but response was ok
+                const formatToInputDate = (isoStr: string) => isoStr ? isoStr.slice(0, 16) : "";
+                setFormData({
+                    creator: route.creator || "",
+                    pickupBranch: route.pickupBranch || "",
+                    origin: route.origin,
+                    destination: route.destination,
+                    plannedStartTime: formatToInputDate(route.plannedStartTime),
+                    plannedEndTime: formatToInputDate(route.plannedEndTime),
+                    operationPoints: (route.operationPoints || route.routePoints || []).map((p: any) => ({
+                        ...p,
+                        realOperationPointId: p.operationPointId || p.id,
+                        plannedArrivalTime: formatToInputDate(p.plannedArrivalTime),
+                        plannedDepartureTime: formatToInputDate(p.plannedDepartureTime)
+                    }))
+                });
+            }
+        } catch (err: any) {
+            toast.error("Lỗi khi tải chi tiết: " + err.message);
+            // Fallback to list data on error
+            setFormData({
+                creator: route.creator || "",
+                pickupBranch: route.pickupBranch || "",
+                origin: route.origin,
+                destination: route.destination,
+                plannedStartTime: route.plannedStartTime || "",
+                plannedEndTime: route.plannedEndTime || "",
+                operationPoints: route.operationPoints || route.routePoints || []
+            });
+        } finally {
+            setFetchingDetail(false);
+        }
     };
 
     const handleAddPoint = () => {
@@ -267,11 +334,10 @@ export function MerchantScheduleManagementPage() {
         e.preventDefault();
         setSubmitting(true);
         try {
+            const meta = createRequestMeta();
             const endpoint = isEditing ? "update" : "create";
             const body: any = {
-                requestId: crypto.randomUUID(),
-                requestDateTime: formatWithOffset(new Date()),
-                channel: "ONL",
+                ...meta,
                 data: {
                     creator: formData.creator,
                     pickupBranch: formData.pickupBranch,
@@ -299,7 +365,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/routes/${endpoint}`, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(),
+                    ...createAuthorizedEnvelopeHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -320,6 +386,42 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const handleDelete = async (route: RouteItem) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa tuyến đường ${route.routeCode || route.routeId || "này"}?`)) {
+            return;
+        }
+
+        try {
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                data: {
+                    creator: localStorage.getItem("userName") || "System",
+                    routeId: route.routeId || route.id
+                }
+            };
+
+            const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/routes/delete`, {
+                method: 'POST',
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success("Xóa tuyến đường thành công");
+                fetchRoutes(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi khi xóa tuyến đường");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        }
+    };
+
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
@@ -333,7 +435,7 @@ export function MerchantScheduleManagementPage() {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleOpenCreate}
-                        className="flex items-center gap-2 bg-black text-white px-8 py-4 rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all"
+                        className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] transition-all"
                     >
                         <Plus size={18} />
                         Tạo tuyến mới
@@ -341,14 +443,67 @@ export function MerchantScheduleManagementPage() {
                 </div>
             </div>
 
+            {/* KPI Panels Section */}
+            {!loading && routes.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Panel 1: Total Routes */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng tuyến đường</p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-900">{totalItems}</h3>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+                                <Navigation size={18} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Panel 2: Active Routes */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tuyến dự kiến</p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-700">
+                                {routes.filter(r => r.status === 'ACTIVE' || r.status === 'PLANNED').length}
+                            </h3>
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <Activity size={18} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Panel 3: Total Stops */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Trạm dừng</p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-700">
+                                {routes.reduce((acc, current) => acc + ((current.operationPoints || current.routePoints)?.length || 0), 0)}
+                            </h3>
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <MapPin size={18} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Panel 4: Daily Plan */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Chuyến xe hôm nay</p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-900">24</h3>
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <Clock size={18} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Content */}
             {loading ? (
-                <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 rounded-[3.5rem] border border-dashed border-slate-200">
+                <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 rounded-[2.5rem] border border-dashed border-slate-200">
                     <Loader2 className="animate-spin text-brand-primary" size={32} />
                     <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest">Đang kết nối cơ sở dữ liệu...</p>
                 </div>
             ) : routes.length === 0 ? (
-                <div className="h-[450px] flex flex-col items-center justify-center gap-6 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm">
+                <div className="h-[450px] flex flex-col items-center justify-center gap-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
                     <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 flex items-center justify-center text-slate-200">
                         <Navigation size={48} />
                     </div>
@@ -364,85 +519,72 @@ export function MerchantScheduleManagementPage() {
                     </button>
                 </div>
             ) : (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
+                        <table className="w-full text-left">
                             <thead>
-                                <tr className="border-b border-slate-50 bg-slate-50/30">
-                                    <th className="px-10 py-8 text-left text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Tuyến đường</th>
-                                    <th className="px-10 py-8 text-left text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Lộ trình</th>
-                                    <th className="px-10 py-8 text-left text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Thời gian</th>
-                                    <th className="px-10 py-8 text-left text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Hạ tầng</th>
-                                    <th className="px-10 py-8 text-left text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Trạng thái</th>
-                                    <th className="px-10 py-8 text-right text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Thao tác</th>
+                                <tr className="bg-slate-50/50">
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tuyến đường</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Thời gian</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Hạ tầng</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                    <th className="px-6 py-4 text-right"></th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-slate-50">
                                 {routes.map((route) => (
-                                    <tr key={route.id} className="group border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-10 py-8">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-slate-950 flex items-center justify-center text-white shadow-lg shadow-black/10 transition-transform group-hover:scale-105">
-                                                    <Navigation size={18} />
+                                    <tr 
+                                        key={route.id} 
+                                        onClick={() => handleOpenEdit(route)}
+                                        className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                                    >
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center text-white">
+                                                    <Navigation size={16} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Mã tuyến</p>
-                                                    <p className="text-sm font-black text-slate-950 tracking-tight">{route.routeCode || route.routeId || "N/A"}</p>
+                                                    <p className="text-sm font-black text-slate-900 leading-none mb-1">{route.routeCode || route.routeId || "N/A"}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã tuyến</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-10 py-8">
-                                            <div className="flex items-center gap-4">
-                                                <div className="px-4 py-2 bg-slate-50 rounded-xl">
-                                                    <span className="text-sm font-black text-slate-900">{route.origin}</span>
-                                                </div>
-                                                <ArrowRight size={14} className="text-slate-300" />
-                                                <div className="px-4 py-2 bg-slate-50 rounded-xl">
-                                                    <span className="text-sm font-black text-slate-900">{route.destination}</span>
-                                                </div>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-slate-700">{route.origin}</span>
+                                                <ArrowRight size={12} className="text-slate-300" />
+                                                <span className="text-sm font-bold text-slate-700">{route.destination}</span>
                                             </div>
                                         </td>
-                                        <td className="px-10 py-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
-                                                    <Clock size={14} />
-                                                </div>
-                                                <p className="text-sm font-black text-slate-900">
-                                                    {route.plannedStartTime ? route.plannedStartTime.split('T')[1]?.substring(0, 5) : 'N/A'}
-                                                </p>
+                                        <td className="px-6 py-5">
+                                            <div className="text-sm font-bold text-slate-600 flex items-center gap-1.5">
+                                                <Clock size={12} className="text-slate-300" />
+                                                {route.plannedStartTime ? route.plannedStartTime.split('T')[1]?.substring(0, 5) : 'N/A'}
                                             </div>
                                         </td>
-                                        <td className="px-10 py-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                                                    <MapPin size={14} />
-                                                </div>
-                                                <p className="text-[11px] font-black text-slate-600 uppercase tracking-widest">
-                                                    {(route.operationPoints || route.routePoints)?.length || 0} Trạm dừng
-                                                </p>
+                                        <td className="px-6 py-5">
+                                            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <MapPin size={12} className="text-slate-300" />
+                                                {(route.operationPoints || route.routePoints)?.length || 0} Trạm
                                             </div>
                                         </td>
-                                        <td className="px-10 py-8">
-                                            <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block ${
+                                        <td className="px-6 py-5">
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
                                                 route.status === 'ACTIVE' || route.status === 'PLANNED' 
-                                                ? 'bg-emerald-50 text-emerald-600' 
-                                                : 'bg-rose-50 text-rose-600'
+                                                ? 'bg-slate-100 text-slate-700' 
+                                                : 'bg-slate-50 text-slate-400'
                                             }`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                    route.status === 'ACTIVE' || route.status === 'PLANNED' ? 'bg-emerald-500' : 'bg-slate-300'
+                                                }`} />
                                                 {route.status || 'PLANNED'}
                                             </span>
                                         </td>
-                                        <td className="px-10 py-8">
-                                            <div className="flex items-center justify-end gap-3">
-                                                <button
-                                                    onClick={() => handleOpenEdit(route)}
-                                                    className="px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-                                                >
-                                                    Quản lý
-                                                </button>
-                                                <button className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
+                                        <td className="px-6 py-5 text-right">
+                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
+                                                <MoreHorizontal size={18} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -455,7 +597,7 @@ export function MerchantScheduleManagementPage() {
             {/* Creation/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 lg:p-12 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
-                    <div className="bg-white w-full max-w-7xl h-full max-h-[92vh] rounded-[4rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
+                    <div className="bg-white w-full max-w-7xl h-full max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
                         {/* Modal Header */}
                         <div className="p-8 md:p-12 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md relative z-10">
                             <div className="flex items-center gap-6">
@@ -486,7 +628,13 @@ export function MerchantScheduleManagementPage() {
                         </div>
 
                         {/* Form Content */}
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12 space-y-12 bg-white">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12 space-y-12 bg-white relative">
+                            {fetchingDetail && (
+                                <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+                                    <Loader2 className="animate-spin text-brand-primary" size={40} />
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Đang truy xuất dữ liệu chi tiết...</p>
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                                 {/* Section 1: Basic & Entity Info */}
                                 <div className="lg:col-span-4 space-y-12">

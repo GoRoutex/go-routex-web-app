@@ -1,102 +1,586 @@
-import { Users, Plus, Search, MoreHorizontal, UserCheck, ShieldCheck, Mail, Phone } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+    Users, Plus, Search, MoreHorizontal, UserCheck, ShieldCheck,
+    Phone, Loader2, X, Save, Edit3, Info,
+    AlertCircle
+} from "lucide-react";
+import { toast } from "react-toastify";
+import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
+import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+
+interface Driver {
+    id?: string;
+    driverId?: string;
+    userId: string;
+    employeeCode: string;
+    emergencyContactName: string;
+    emergencyContactPhone: string;
+    status: string;
+    operationStatus: string;
+    rating: string;
+    totalTrips: string;
+    licenseClass: string;
+    licenseNumber: string;
+    licenseIssueDate: string;
+    licenseExpiryDate: string;
+    pointsDelta?: string;
+    pointsReason?: string;
+    kycVerified: boolean;
+    trainingCompleted: boolean;
+    note: string;
+    userName?: string; // Additional field for display
+    email?: string; // Additional field for display
+    phone?: string; // Additional field for display
+}
 
 export function MerchantStaffManagementPage() {
-  const staff = [
-    { id: 1, name: "Trần Thế Vinh", role: "Tài xế chính", email: "vinh.tt@phuongtrang.com", phone: "0901234xxx", status: "Đang làm việc", vehicle: "51B-123.45" },
-    { id: 2, name: "Nguyễn Văn Hùng", role: "Tài xế phụ", email: "hung.nv@phuongtrang.com", phone: "0905555xxx", status: "Nghỉ phép", vehicle: "51B-678.90" },
-    { id: 3, name: "Lê Thị Lan", role: "Nhân viên phòng vé", email: "lan.lt@phuongtrang.com", phone: "0908888xxx", status: "Đang làm việc", vehicle: "-" },
-  ];
+    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
 
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">Tài xế & Nhân sự</h2>
-          <p className="text-sm text-slate-500 font-medium mt-1">Quản lý đội ngũ nhân viên, tài xế và phân quyền hệ thống.</p>
-        </div>
-        <button className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all self-start">
-          <Plus size={18} />
-          Thêm nhân sự
-        </button>
-      </div>
+    // Modal states
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 flex items-center gap-5 shadow-sm">
-            <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary"><Users size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng nhân sự</p>
-                <p className="text-2xl font-black text-slate-900">45</p>
-            </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 flex items-center gap-5 shadow-sm">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500"><UserCheck size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đang trực</p>
-                <p className="text-2xl font-black text-slate-900">28</p>
-            </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 flex items-center gap-5 shadow-sm">
-            <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-500"><ShieldCheck size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quản lý</p>
-                <p className="text-2xl font-black text-slate-900">4</p>
-            </div>
-        </div>
-      </div>
+    // Form states
+    const [formData, setFormData] = useState<Partial<Driver>>({
+        userId: "",
+        employeeCode: "",
+        emergencyContactName: "",
+        emergencyContactPhone: "",
+        status: "ACTIVE",
+        operationStatus: "AVAILABLE",
+        rating: "5.0",
+        totalTrips: "0",
+        licenseClass: "",
+        licenseNumber: "",
+        licenseIssueDate: "",
+        licenseExpiryDate: "",
+        kycVerified: false,
+        trainingCompleted: false,
+        note: ""
+    });
 
-      <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-50">
-            <div className="relative max-w-sm">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="text" placeholder="Tìm theo tên, email, số điện thoại..." className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-primary/20" />
+    const fetchDrivers = async (pageNumber: number) => {
+        setLoading(true);
+        try {
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+                {
+                    headers: createAuthorizedEnvelopeHeaders()
+                }
+            );
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setDrivers(result.data.items);
+                setTotalItems(result.data.totalItems || result.data.totalCount || 0);
+            }
+        } catch (err: any) {
+            toast.error("Không thể tải danh sách tài xế: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDrivers(page);
+    }, [page]);
+
+    const handleOpenCreate = () => {
+        setIsEditing(false);
+        setSelectedDriver(null);
+        setFormData({
+            userId: "",
+            employeeCode: "",
+            emergencyContactName: "",
+            emergencyContactPhone: "",
+            status: "ACTIVE",
+            operationStatus: "AVAILABLE",
+            rating: "5.0",
+            totalTrips: "0",
+            licenseClass: "",
+            licenseNumber: "",
+            licenseIssueDate: "",
+            licenseExpiryDate: "",
+            kycVerified: false,
+            trainingCompleted: false,
+            note: ""
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEdit = (driver: Driver) => {
+        setIsEditing(true);
+        setSelectedDriver(driver);
+        setFormData({
+            ...driver,
+            licenseIssueDate: driver.licenseIssueDate ? driver.licenseIssueDate.split('T')[0] : "",
+            licenseExpiryDate: driver.licenseExpiryDate ? driver.licenseExpiryDate.split('T')[0] : "",
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const meta = createRequestMeta();
+            const endpoint = isEditing ? "update" : "create";
+            const body = {
+                ...meta,
+                data: {
+                    ...formData,
+                    creator: localStorage.getItem("userName") || "System",
+                    ...(isEditing && { driverId: selectedDriver?.driverId || selectedDriver?.id })
+                }
+            };
+
+            const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success(isEditing ? "Cập nhật thành công" : "Thêm tài xế thành công");
+                setIsModalOpen(false);
+                fetchDrivers(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi hệ thống");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const statusColors: Record<string, string> = {
+        'ACTIVE': 'bg-slate-100 text-slate-700 border-slate-200',
+        'SUSPENDED': 'bg-slate-50 text-slate-500 border-slate-100',
+        'DELETED': 'bg-slate-50 text-slate-400 border-slate-100',
+        'INACTIVE': 'bg-slate-50 text-slate-300 border-slate-100'
+    };
+
+    return (
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h2 className="text-[1.75rem] font-black tracking-tight text-slate-900 leading-tight">Tài xế & Nhân sự</h2>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 bg-slate-100 w-fit px-3 py-1 rounded-lg">
+                        Đội ngũ vận hành · Merchant Staff
+                    </p>
+                </div>
+                <button
+                    onClick={handleOpenCreate}
+                    className="flex items-center gap-2 bg-black text-white px-8 py-4 rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                    <Plus size={18} />
+                    Thêm nhân sự
+                </button>
             </div>
-        </div>
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead>
-                    <tr className="bg-slate-50/50">
-                        <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nhân viên</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Vai trò</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Xe đảm nhận</th>
-                        <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                        <th className="px-6 py-4"></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                    {staff.map((s) => (
-                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-5">
-                                <span className="text-sm font-black text-slate-900">{s.name}</span>
-                            </td>
-                            <td className="px-6 py-5">
-                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">{s.role}</span>
-                            </td>
-                            <td className="px-6 py-5">
-                                <div className="space-y-0.5">
-                                    <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5"><Mail size={12} className="text-slate-300" /> {s.email}</div>
-                                    <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5"><Phone size={12} className="text-slate-300" /> {s.phone}</div>
+
+            {/* KPI Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-slate-50/50 transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-950">
+                        <Users size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tổng nhân sự</p>
+                        <p className="text-xl font-black text-slate-950">{totalItems}</p>
+                    </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-slate-50/50 transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
+                        <UserCheck size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Sẵn sàng</p>
+                        <p className="text-xl font-black text-slate-950">
+                            {drivers.filter(d => d.operationStatus === 'AVAILABLE').length}
+                        </p>
+                    </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-slate-50/50 transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
+                        <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Xác minh KYC</p>
+                        <p className="text-xl font-black text-slate-950">
+                            {drivers.filter(d => d.kycVerified).length}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Table */}
+            <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="relative max-w-md w-full">
+                        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
+                        <input
+                            type="text"
+                            placeholder="Tìm theo mã, tên hoặc số điện thoại..."
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-[1.5rem] text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all"
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50/50">
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nhân sự</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Bằng lái</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Kinh nghiệm</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                <th className="px-6 py-4 text-right"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-20 text-center text-slate-300">
+                                        <Loader2 className="animate-spin text-brand-primary mx-auto mb-4" size={24} />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Đang tải...</p>
+                                    </td>
+                                </tr>
+                            ) : drivers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-32 text-center text-slate-300">
+                                        <AlertCircle className="mx-auto mb-2 opacity-20" size={32} />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Chưa có dữ liệu</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                drivers.map((d) => (
+                                    <tr key={d.id || d.driverId} onClick={() => handleOpenEdit(d)} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+                                                    <Users size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900">{d.userName || d.employeeCode}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{d.employeeCode}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="space-y-1">
+                                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-wider">Hạng {d.licenseClass}</span>
+                                                <p className="text-[11px] font-bold text-slate-500">Số: {d.licenseNumber}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[11px] font-bold text-slate-500">{d.email || "N/A"}</p>
+                                                <p className="text-[11px] font-bold text-slate-400">{d.phone || "N/A"}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-black text-slate-700">{d.totalTrips} chuyến</p>
+                                                <p className="text-[11px] font-black text-amber-500">★ {d.rating}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusColors[d.status] || statusColors['INACTIVE']}`}>
+                                                {d.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
+                                                <MoreHorizontal size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Creation/Edit Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="bg-white w-full max-w-5xl h-full max-h-[90vh] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative border border-white/50">
+                        {/* Modal Header */}
+                        <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-white relative z-10">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-[2rem] bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
+                                    {isEditing ? <Edit3 size={24} /> : <Plus size={24} />}
                                 </div>
-                            </td>
-                            <td className="px-6 py-5">
-                                <span className="text-xs font-bold text-slate-600">{s.vehicle}</span>
-                            </td>
-                            <td className="px-6 py-5">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'Đang làm việc' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                                    {s.status}
-                                </span>
-                            </td>
-                            <td className="px-6 py-5 text-right">
-                                <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
-                                    <MoreHorizontal size={18} />
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-950 tracking-tight">
+                                        {isEditing ? "Hồ sơ Nhân sự" : "Thêm Nhân sự mới"}
+                                    </h3>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Cấu hình thông tin đội ngũ vận hành</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Form Content */}
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-12">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                {/* Section 1: Basic Info */}
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
+                                        <Users size={16} className="text-slate-400" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Thông tin cơ bản</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="col-span-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tài khoản hệ thống (User ID)</label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                value={formData.userId}
+                                                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                                                placeholder="UUID của tài khoản người dùng"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Mã nhân viên</label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                value={formData.employeeCode}
+                                                onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
+                                                placeholder="VD: NV-001"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Xếp hạng (Rating)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                value={formData.rating}
+                                                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 2: Contact Info */}
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
+                                        <Phone size={16} className="text-slate-400" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Liên hệ khẩn cấp</h4>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tên người thân</label>
+                                            <input
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                value={formData.emergencyContactName}
+                                                onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số điện thoại khẩn</label>
+                                            <input
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                value={formData.emergencyContactPhone}
+                                                onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 3: Driver License */}
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
+                                        <ShieldCheck size={16} className="text-slate-400" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Giấy phép lái xe</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Hạng bằng</label>
+                                            <input
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                value={formData.licenseClass}
+                                                onChange={(e) => setFormData({ ...formData, licenseClass: e.target.value })}
+                                                placeholder="E, D, FC..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số hiệu bằng</label>
+                                            <input
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                value={formData.licenseNumber}
+                                                onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Ngày cấp</label>
+                                            <input
+                                                type="date"
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                value={formData.licenseIssueDate}
+                                                onChange={(e) => setFormData({ ...formData, licenseIssueDate: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Ngày hết hạn</label>
+                                            <input
+                                                type="date"
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                value={formData.licenseExpiryDate}
+                                                onChange={(e) => setFormData({ ...formData, licenseExpiryDate: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 4: Operational Status */}
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
+                                        <AlertCircle size={16} className="text-slate-400" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Trạng thái vận hành</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái hồ sơ</label>
+                                            <select
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                            >
+                                                <option value="ACTIVE">Hoạt động</option>
+                                                <option value="SUSPENDED">Tạm đình chỉ</option>
+                                                <option value="DELETED">Đã xóa</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái công việc</label>
+                                            <select
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                value={formData.operationStatus}
+                                                onChange={(e) => setFormData({ ...formData, operationStatus: e.target.value })}
+                                            >
+                                                <option value="AVAILABLE">Sẵn sàng</option>
+                                                <option value="BUSY">Đang bận</option>
+                                                <option value="OFFLINE">Ngoại tuyến</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-span-2 flex gap-8 pt-4">
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-6 h-6 rounded-lg border-2 border-slate-200 checked:bg-brand-primary transition-all"
+                                                    checked={formData.kycVerified}
+                                                    onChange={(e) => setFormData({ ...formData, kycVerified: e.target.checked })}
+                                                />
+                                                <span className="text-xs font-black text-slate-600 uppercase tracking-widest group-hover:text-brand-primary">Xác minh KYC</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-6 h-6 rounded-lg border-2 border-slate-200 checked:bg-brand-primary transition-all"
+                                                    checked={formData.trainingCompleted}
+                                                    onChange={(e) => setFormData({ ...formData, trainingCompleted: e.target.checked })}
+                                                />
+                                                <span className="text-xs font-black text-slate-600 uppercase tracking-widest group-hover:text-brand-primary">Đã qua đào tạo</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Ghi chú nội bộ</label>
+                                <textarea
+                                    rows={3}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold outline-none focus:bg-white focus:border-brand-primary/20 transition-all resize-none"
+                                    value={formData.note}
+                                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                                    placeholder="Nhập ghi chú thêm về nhân sự này..."
+                                />
+                            </div>
+                        </form>
+
+                        {/* Modal Footer */}
+                        <div className="p-10 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-400">
+                                <Info size={16} />
+                                <p className="text-[9px] font-black uppercase tracking-widest">Toàn bộ hồ sơ nhân sự được bảo mật theo chuẩn dữ liệu Routex</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-10 py-4 bg-white border border-slate-200 rounded-2xl font-black text-xs text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
+                                >
+                                    Hủy bỏ
                                 </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting}
+                                    className="px-12 py-4 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                                >
+                                    {submitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                    {isEditing ? "Lưu hồ sơ" : "Tạo nhân sự"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Pagination Container */}
+            {!loading && drivers.length > 0 && (
+                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Trang hệ thống: <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-lg">
+                            {page}
+                        </div>
+                        <button
+                            disabled={page * pageSize >= totalItems}
+                            onClick={() => setPage(page + 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
-      </div>
-    </div>
-  );
+    );
+}
+
+function ChevronLeft({ size }: { size: number }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
+}
+
+function ChevronRight({ size }: { size: number }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

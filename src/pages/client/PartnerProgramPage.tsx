@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu';
-import { RoleBasedNav } from '../../Components/client/RoleBasedNav';
+
 import { 
   Bus, 
   TrendingUp, 
@@ -14,68 +12,9 @@ import {
 
 export default function PartnerProgramPage() {
   const navigate = useNavigate();
-  const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
-  const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '');
-  const [userEmail] = useState(() => localStorage.getItem('userEmail') || '');
-  const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans">
-      {/* ══════════════════  NAV BAR  ══════════════════ */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div 
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => navigate('/home')}
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
-              <Bus className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-brand-primary transition-colors">
-              GO <span className="text-brand-primary">ROUTEX</span>
-            </span>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-10">
-            {["Trang chủ", "Tuyến đường", "Lịch trình", "Hỗ trợ", "Đối tác"].map((l, i) => (
-              <button
-                key={l}
-                onClick={() => {
-                  if (i === 0) navigate('/home');
-                  if (i === 1) navigate('/routes');
-                  if (i === 2) navigate('/schedules');
-                  if (i === 3) navigate('/support');
-                  if (i === 4) navigate('/partner');
-                }}
-                className={`text-sm font-semibold transition-all relative py-2 ${i === 4 ? "text-brand-primary" : "text-slate-500 hover:text-slate-900"}`}
-              >
-                {l}
-                {i === 4 && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-primary rounded-full" />}
-              </button>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-4">
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <RoleBasedNav />
-                <ClientAccountMenu
-                  fullName={userName || 'Chào bạn'}
-                  avatarUrl={userAvatarUrl}
-                  email={userEmail}
-                />
-              </div>
-            ) : (
-              <button
-                onClick={() => navigate('/login')}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-black px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-slate-200 active:scale-95"
-              >
-                Đăng nhập
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
 
       {/* ══════════════════  HERO SECTION  ══════════════════ */}
       <section className="relative pt-20 pb-32 px-6 overflow-hidden bg-brand-dark text-white">
@@ -248,25 +187,6 @@ export default function PartnerProgramPage() {
         </div>
       </section>
 
-      {/* ══════════════════  FOOTER  ══════════════════ */}
-      <footer className="bg-white border-t border-slate-100 py-16 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center">
-              <Bus className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-black tracking-tight text-slate-900">
-              GO ROUTEX
-            </span>
-          </div>
-          <p className="text-slate-500 text-sm max-w-md mx-auto mb-10 leading-relaxed">© 2026 Go Routex JSC. Hệ thống quản lý vận tải thông minh hàng đầu Việt Nam.</p>
-          <div className="flex justify-center gap-10">
-            {["Facebook", "LinkedIn", "Instagram"].map(s => (
-              <a key={s} href="#" className="text-slate-400 hover:text-brand-primary transition-colors text-sm font-bold">{s}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

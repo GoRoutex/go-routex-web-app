@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { Bus, FileBadge2, Scale, ClipboardCheck, Ban, Ticket, ArrowLeft, CalendarDays } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { FileBadge2, Scale, ClipboardCheck, Ban, Ticket, CalendarDays } from 'lucide-react'
 
 const terms = [
   {
@@ -21,42 +21,10 @@ const terms = [
 ]
 
 export default function TermsOfServicePage() {
-  const navigate = useNavigate()
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 selection:bg-brand-primary/20">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-3 group text-left"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
-              <Bus className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tight text-slate-900">
-              GO <span className="text-brand-primary">ROUTEX</span>
-            </span>
-          </button>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/chinh-sach-bao-mat"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-brand-primary hover:bg-slate-50 transition-colors"
-            >
-              <FileBadge2 className="w-4 h-4" />
-              Chính sách bảo mật
-            </Link>
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Quay lại
-            </button>
-          </div>
-        </div>
-      </header>
 
       <main className="max-w-7xl mx-auto px-8 py-16 lg:py-20">
         <section className="relative overflow-hidden rounded-[3rem] bg-slate-900 text-white p-10 lg:p-16 shadow-2xl shadow-slate-200/50">

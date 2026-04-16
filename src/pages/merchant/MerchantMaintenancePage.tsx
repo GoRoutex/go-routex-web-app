@@ -20,26 +20,37 @@ export function MerchantMaintenancePage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-orange-50 border border-orange-100 p-6 rounded-3xl flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-orange-500 shadow-sm"><AlertCircle size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-orange-600/60 uppercase tracking-widest">Cần bảo trì</p>
-                <p className="text-2xl font-black text-orange-700">3 xe</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Panel 1: Need Maintenance */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cần bảo trì</p>
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-slate-900">3 xe</h3>
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                    <AlertCircle size={18} />
+                </div>
             </div>
         </div>
-        <div className="bg-blue-50 border border-blue-100 p-6 rounded-3xl flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-blue-500 shadow-sm"><Wrench size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-blue-600/60 uppercase tracking-widest">Đang sửa chữa</p>
-                <p className="text-2xl font-black text-blue-700">1 xe</p>
+
+        {/* Panel 2: Under Repair */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Đang sửa chữa</p>
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-slate-700">1 xe</h3>
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                    <Wrench size={18} />
+                </div>
             </div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-emerald-500 shadow-sm"><CheckCircle size={28} /></div>
-            <div>
-                <p className="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest">Hoàn thành tháng này</p>
-                <p className="text-2xl font-black text-emerald-700">12 xe</p>
+
+        {/* Panel 3: Completed */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hoàn thành tháng này</p>
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-slate-900">12 xe</h3>
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                    <CheckCircle size={18} />
+                </div>
             </div>
         </div>
       </div>
@@ -70,10 +81,14 @@ export function MerchantMaintenancePage() {
                             <td className="px-6 py-5 text-sm font-bold text-slate-600 max-w-md truncate">{r.description}</td>
                             <td className="px-6 py-5 text-sm font-black text-slate-900">{r.cost}</td>
                             <td className="px-6 py-5">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                    r.status === 'Hoàn thành' ? 'bg-emerald-50 text-emerald-600' : 
-                                    r.status === 'Sắp tới' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
+                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
+                                    r.status === 'Hoàn thành' ? 'bg-slate-100 text-slate-700' : 
+                                    'bg-slate-50 text-slate-400'
                                 }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${
+                                        r.status === 'Hoàn thành' ? 'bg-emerald-500' : 
+                                        r.status === 'Sắp tới' ? 'bg-blue-400' : 'bg-orange-400'
+                                    }`} />
                                     {r.status}
                                 </span>
                             </td>

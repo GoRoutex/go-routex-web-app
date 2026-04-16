@@ -54,7 +54,6 @@ export default function PaymentPage() {
     },
     selectedSeats = ["A1"],
     customerName = "Khách hàng",
-    customerPhone = "",
     totalAmount = 320000,
   } = location.state || {};
 
@@ -153,125 +152,100 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans pb-40">
-      {/* ══════════════════  HEADER  ══════════════════ */}
-      <header
-        className="bg-brand-dark pt-8 pb-20 px-8 relative overflow-hidden"
-        style={{ borderBottomLeftRadius: 60, borderBottomRightRadius: 60 }}
+    <div className="min-h-screen bg-[#FDFDFD] font-sans pb-40">
+      {/* Header - Refined & Slimmer */}
+      <div
+        className="bg-slate-950 pt-4 pb-10 px-6 relative overflow-hidden"
+        style={{ borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
       >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
-        <div className="max-w-screen-md mx-auto relative z-10 flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
-          >
-            <ArrowLeft className="w-6 h-6 text-white" />
-          </button>
-          <div className="text-center">
-            <h1 className="text-white font-black text-2xl tracking-tight">
-              Thanh toán
-            </h1>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1 opacity-70">
-              Xác nhận đơn hàng
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-brand-primary/20 flex items-center justify-center border border-brand-primary/20">
-            <ShieldCheck className="w-6 h-6 text-brand-primary" />
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-screen-md mx-auto px-6 -mt-10 grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left: Payment Methods */}
-        <div className="md:col-span-12 lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                Phương thức thanh toán
-              </h2>
-              <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
-                <Clock className="w-4 h-4 text-brand-primary animate-pulse" />
-                <span className="text-[12px] font-black text-slate-600 font-mono tracking-tighter">
-                  {formatTime(timeLeft)}
-                </span>
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-primary/10 rounded-full -mr-32 -mt-32 blur-[100px] opacity-40 translate-x-1/4 -translate-y-1/4" />
+        <div className="max-w-screen-lg mx-auto relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => navigate(-1)}
+                className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/5 group backdrop-blur-md"
+              >
+                <ArrowLeft className="w-5 h-5 text-white group-hover:-translate-x-1 transition-transform" />
+              </button>
+              <div>
+                <h1 className="text-white font-black text-2xl tracking-tight">Thanh toán</h1>
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Bước cuối: Xác nhận & Trả tiền</p>
               </div>
             </div>
+            <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-md">
+              <Clock className="w-4 h-4 text-brand-primary animate-pulse" />
+              <span className="text-[12px] font-black text-white font-mono tracking-tighter">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-screen-lg mx-auto px-6 -mt-10 grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
+        {/* Left: Payment Methods */}
+        <div className="md:col-span-12 lg:col-span-7 space-y-8">
+          <div className="bg-white rounded-[3rem] p-10 shadow-2xl shadow-slate-200/20 border border-slate-100">
+            <h2 className="text-xl font-black text-slate-950 tracking-tight mb-8">Phương thức thanh toán</h2>
 
             <div className="space-y-4">
               {paymentMethods.map((method) => (
                 <button
                   key={method.id}
                   onClick={() => setPaymentMethod(method.id)}
-                  className={`w-full flex items-center gap-5 p-6 rounded-[28px] border-2 transition-all duration-300 ${
+                  className={`w-full flex items-center gap-5 p-5 rounded-[2rem] border-2 transition-all duration-300 ${
                     paymentMethod === method.id
                       ? "border-brand-primary bg-brand-primary/5 shadow-inner"
-                      : "border-slate-50 hover:border-slate-200 bg-white"
+                      : "border-slate-50 hover:border-slate-100 bg-white"
                   }`}
                 >
-                  <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                      paymentMethod === method.id
-                        ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-110"
-                        : "bg-slate-100 text-slate-400"
-                    }`}
-                  >
-                    <method.icon className="w-7 h-7" />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    paymentMethod === method.id
+                      ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-110"
+                      : "bg-slate-100 text-slate-400"
+                  }`}>
+                    <method.icon className="w-6 h-6" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p
-                      className={`font-black tracking-tight text-base ${paymentMethod === method.id ? "text-slate-900" : "text-slate-500"}`}
-                    >
+                    <p className={`font-black tracking-tight text-sm ${paymentMethod === method.id ? "text-slate-950" : "text-slate-500"}`}>
                       {method.label}
                     </p>
-                    <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wider">
-                      {method.sub}
-                    </p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{method.sub}</p>
                   </div>
-                  <div
-                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                      paymentMethod === method.id
-                        ? "border-brand-primary bg-brand-primary"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    {paymentMethod === method.id && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />
-                    )}
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                    paymentMethod === method.id ? "border-brand-primary bg-brand-primary" : "border-slate-200"
+                  }`}>
+                    {paymentMethod === method.id && <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />}
                   </div>
                 </button>
               ))}
             </div>
 
             {paymentMethod === "card" && (
-              <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 bg-slate-50 rounded-[2rem] p-8 border border-white">
+              <div className="mt-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 bg-slate-50 rounded-[2rem] p-8 border border-white">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                    Số thẻ
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Số thẻ tín dụng</label>
                   <input
                     type="text"
-                    className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 font-black outline-none focus:border-brand-primary/30 focus:shadow-lg focus:shadow-brand-primary/5 transition-all font-mono"
+                    className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 font-black outline-none focus:border-brand-primary/30 transition-all font-mono text-sm"
                     placeholder="•••• •••• •••• ••••"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                      Ngày hết hạn
-                    </label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Hết hạn</label>
                     <input
                       type="text"
-                      className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 font-black outline-none focus:border-brand-primary/30 transition-all font-mono"
+                      className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 font-black outline-none focus:border-brand-primary/30 transition-all font-mono text-sm"
                       placeholder="MM / YY"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                      Mã CVV
-                    </label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CVC/CVV</label>
                     <input
                       type="text"
-                      className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 font-black outline-none focus:border-brand-primary/30 transition-all font-mono"
+                      className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 font-black outline-none focus:border-brand-primary/30 transition-all font-mono text-sm"
                       placeholder="•••"
                     />
                   </div>
@@ -283,97 +257,71 @@ export default function PaymentPage() {
 
         {/* Right: Summary Sidebar */}
         <div className="md:col-span-12 lg:col-span-5 space-y-8">
-          <div className="bg-brand-dark rounded-[2.5rem] p-10 text-white shadow-2xl shadow-brand-dark/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/20 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-primary/30 transition-colors" />
-            <h3 className="text-xl font-black mb-10 tracking-tight">
-              Tóm tắt đơn hàng
-            </h3>
+          <div className="bg-slate-950 rounded-[3rem] p-10 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/10 rounded-full blur-2xl" />
+            <h3 className="text-lg font-black mb-10 tracking-tight">Chi tiết đơn hàng</h3>
 
-            <div className="space-y-8">
-              <div className="flex items-start gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5">
-                  <User className="w-6 h-6 text-brand-primary" />
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+                  <User className="w-5 h-5 text-brand-primary" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Hành khách
-                  </p>
-                  <p className="font-black text-base mt-0.5">{customerName}</p>
-                  <p className="text-slate-400 text-xs font-bold tracking-tight">
-                    {customerPhone}
-                  </p>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Khách hàng</p>
+                  <p className="font-black text-sm mt-0.5">{customerName}</p>
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-white/10">
-                <div className="flex justify-between items-center mb-5">
-                  <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">
-                    Số ghế
-                  </span>
-                  <span className="font-black text-base">
-                    {selectedSeats.length} Ghế
-                  </span>
+              <div className="pt-6 border-t border-white/5 space-y-4">
+                <div className="flex justify-between items-center text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <span>Chuyến đi</span>
+                  <span className="text-white">{routeData.routeCode}</span>
                 </div>
-                <div className="flex justify-between items-start mb-5">
-                  <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-1">
-                    Vị trí ghế
-                  </span>
-                  <div className="flex flex-wrap justify-end gap-1.5 max-w-[150px]">
-                    {selectedSeats.map((s: string) => (
-                      <span
-                        key={s}
-                        className="px-3 py-1.5 bg-white/10 rounded-xl text-[11px] font-black border border-white/5"
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
+                <div className="flex justify-between items-center text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <span>Số ghế ({selectedSeats.length})</span>
+                  <span className="text-brand-primary">{selectedSeats.join(", ")}</span>
                 </div>
-                <div className="flex justify-between items-center pt-8 border-t border-white/10">
-                  <span className="text-xl font-black text-brand-primary tracking-tight">
-                    Tổng tiền
-                  </span>
-                  <span className="text-3xl font-black tracking-tighter">
-                    {new Intl.NumberFormat("vi-VN").format(totalAmount)} ₫
+                <div className="pt-6 border-t border-white/5 flex justify-between items-end">
+                  <span className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mb-1.5">Tổng thanh toán</span>
+                  <span className="text-3xl font-black text-brand-primary tracking-tighter">
+                    {new Intl.NumberFormat("vi-VN").format(totalAmount)} <span className="text-xs">₫</span>
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-[2rem] p-8 border border-slate-100 flex items-center gap-5 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-brand-secondary/10 flex items-center justify-center text-brand-secondary border border-brand-secondary/10">
-              <ShieldCheck className="w-7 h-7" />
+          <div className="bg-white rounded-[2rem] p-6 border border-slate-100 flex items-center gap-4 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100">
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <p className="text-[12px] text-slate-400 font-bold leading-relaxed">
-              Giao dịch của bạn được bảo mật bằng mã hóa SSL. Chúng tôi không
-              bao giờ lưu trữ chi tiết thẻ tín dụng của bạn.
+            <p className="text-[10px] text-slate-400 font-bold leading-relaxed">
+              Dữ liệu của bạn được bảo mật tuyệt đối. Chúng tôi không lưu trữ thông tin thẻ.
             </p>
           </div>
         </div>
       </main>
 
-      {/* Bottom Fixed Pay Button */}
-      <div className="fixed bottom-0 left-0 right-0 px-8 py-8 border-t border-slate-100 z-50 bg-white/80 backdrop-blur-2xl">
-        <div className="max-w-screen-md mx-auto">
-          <button
-            onClick={handlePay}
-            disabled={isProcessing}
-            className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 transition-all shadow-2xl ${
-              isProcessing
-                ? "bg-slate-800 text-white cursor-wait"
-                : "bg-brand-primary hover:bg-brand-accent text-white shadow-brand-primary/30 hover:shadow-brand-accent/30 hover:-translate-y-1"
-            }`}
-          >
-            {isProcessing ? (
-              <>Vui lòng đợi...</>
-            ) : (
-              <>
-                Xác nhận Thanh toán <ChevronRight className="w-6 h-6" />
-              </>
-            )}
-          </button>
-        </div>
+      {/* Floating Bottom Pay Button */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-screen-md z-50 animate-in slide-in-from-bottom-5 duration-700">
+        <button
+          onClick={handlePay}
+          disabled={isProcessing}
+          className={`w-full md:h-16 py-5 md:py-0 rounded-[2rem] font-black text-lg flex items-center justify-center gap-4 transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] ${
+            isProcessing
+              ? "bg-slate-800 text-white cursor-wait"
+              : "bg-brand-primary hover:bg-brand-accent text-slate-950 shadow-brand-primary/20 hover:scale-[1.02]"
+          }`}
+        >
+          {isProcessing ? (
+             <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span>Đang xử lý...</span>
+             </div>
+          ) : (
+            <>Xác nhận Thanh toán <ChevronRight size={22} /></>
+          )}
+        </button>
       </div>
     </div>
   );

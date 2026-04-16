@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Bus,
     ArrowLeft,
     User,
     Store,
@@ -18,8 +17,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ClientAccountMenu } from '../../Components/client/ClientAccountMenu';
-import { RoleBasedNav } from '../../Components/client/RoleBasedNav';
+
 import { createRequestMeta, createAuthorizedEnvelopeHeaders, createRequestEnvelopeHeaders } from '../../utils/requestMeta';
 import { logout } from '../../utils/auth';
 import { API_BASE_URL, MEDIA_UPLOAD_URL, ADMIN_MERCHANT_ACTION_BASE_URL } from '../../utils/api';
@@ -33,11 +31,6 @@ export default function PartnerRegisterPage() {
     const [step, setStep] = useState(1);
     const [submitted, setSubmitted] = useState(false);
 
-    // Auth state for standard navbar
-    const [isLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
-    const [userName] = useState(() => localStorage.getItem('profileFullName') || localStorage.getItem('userName') || '');
-    const [userEmail] = useState(() => localStorage.getItem('userEmail') || '');
-    const [userAvatarUrl] = useState(() => localStorage.getItem('profileAvatarUrl') || '');
 
     const [formData, setFormData] = useState({
         fullName: '',
@@ -238,61 +231,6 @@ export default function PartnerRegisterPage() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
-            {/* ══════════════════  STANDARD NAV BAR  ══════════════════ */}
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div
-                        className="flex items-center gap-3 cursor-pointer group"
-                        onClick={() => navigate('/home')}
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
-                            <Bus className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-brand-primary transition-colors">
-                            GO <span className="text-brand-primary">ROUTEX</span>
-                        </span>
-                    </div>
-
-                    <nav className="hidden md:flex items-center gap-10">
-                        {["Trang chủ", "Tuyến đường", "Lịch trình", "Hỗ trợ", "Đối tác"].map((l, i) => (
-                            <button
-                                key={l}
-                                onClick={() => {
-                                    if (i === 0) navigate('/home');
-                                    if (i === 1) navigate('/routes');
-                                    if (i === 2) navigate('/schedules');
-                                    if (i === 3) navigate('/support');
-                                    if (i === 4) navigate('/partner');
-                                }}
-                                className={`text-sm font-semibold transition-all relative py-2 ${i === 4 ? "text-brand-primary" : "text-slate-500 hover:text-slate-900"}`}
-                            >
-                                {l}
-                                {i === 4 && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-primary rounded-full" />}
-                            </button>
-                        ))}
-                    </nav>
-
-                    <div className="flex items-center gap-4">
-                        {isLoggedIn ? (
-                            <div className="flex items-center gap-4">
-                                <RoleBasedNav />
-                                <ClientAccountMenu
-                                    fullName={userName || 'Chào bạn'}
-                                    avatarUrl={userAvatarUrl}
-                                    email={userEmail}
-                                />
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-black px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-slate-200 active:scale-95"
-                            >
-                                Đăng nhập
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </header>
 
             {/* ══════════════════  STEPPER  ══════════════════ */}
             <div className="max-w-4xl mx-auto -mt-12 mb-5 relative z-20 px-8 mt-10">
@@ -741,22 +679,6 @@ export default function PartnerRegisterPage() {
                 </form>
             </div>
 
-            {/* ══════════════════  STANDARD FOOTER  ══════════════════ */}
-            <footer className="bg-white border-t border-slate-100">
-                <div className="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-8">
-                    <div className="flex items-center gap-3 text-slate-400">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                            <Bus className="w-5 h-5 text-slate-400" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Go Routex © 2026 • Hành trình của đối tác</span>
-                    </div>
-                    <div className="flex gap-12 text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-                        <button className="hover:text-brand-primary transition-colors">Chính sách bảo mật</button>
-                        <button className="hover:text-brand-primary transition-colors">Điều khoản dịch vụ</button>
-                        <button className="hover:text-brand-primary transition-colors">Liên hệ hỗ trợ</button>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 }

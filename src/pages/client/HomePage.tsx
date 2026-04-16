@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Bus,
   MapPin,
@@ -10,15 +10,12 @@ import {
   Armchair,
   CheckCircle2,
   ArrowRightLeft,
-  LayoutDashboard,
   Search,
   TrendingUp,
   History as HistoryIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { ClientAccountMenu } from "../../Components/client/ClientAccountMenu";
-import { RoleBasedNav } from "../../Components/client/RoleBasedNav";
 import { getClientHomeRoute } from "../../utils/auth";
 
 const POPULAR_ROUTES = [
@@ -85,13 +82,8 @@ const Field = ({ label, icon: Icon, children }: FieldProps) => (
 export default function HomePage() {
   const navigate = useNavigate();
   const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
-  const [userName] = useState(
-    () => localStorage.getItem("profileFullName") || localStorage.getItem("userName") || "",
-  );
-  const [userEmail] = useState(() => localStorage.getItem("userEmail") || "");
-  const [userAvatarUrl] = useState(
-    () => localStorage.getItem("profileAvatarUrl") || "",
-  );
+
+
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [searchData, setSearchData] = useState({
     originCity: "",
@@ -120,75 +112,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">
-      {/* ══════════════════  TOP NAV BAR  ══════════════════ */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Logo */}
-          <div
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => navigate(getClientHomeRoute())}
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center shadow-lg shadow-brand-primary/20 group-hover:scale-105 transition-transform">
-              <Bus className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-brand-primary transition-colors">
-              GO <span className="text-brand-primary">ROUTEX</span>
-            </span>
-          </div>
 
-          <nav className="hidden md:flex items-center gap-10">
-            {["Trang chủ", "Tuyến đường", "Lịch trình", "Hỗ trợ", "Đối tác"].map(
-              (l, i) => (
-                <button
-                  key={l}
-                  onClick={() => {
-                    if (i === 0) navigate(getClientHomeRoute());
-                    if (i === 1) navigate("/routes");
-                    if (i === 2) navigate("/schedules");
-                    if (i === 3) navigate("/support");
-                    if (i === 4) navigate("/partner");
-                  }}
-                  className={`text-sm font-semibold transition-all relative py-2 ${i === 0 ? "text-brand-primary" : "text-slate-500 hover:text-slate-900"}`}
-                >
-                  {l}
-                  {i === 0 && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-primary rounded-full" />
-                  )}
-                </button>
-              ),
-            )}
-          </nav>
-
-          {/* Auth */}
-          <div className="flex items-center gap-4">
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <RoleBasedNav />
-                <ClientAccountMenu
-                  fullName={userName || "Chào bạn"}
-                  avatarUrl={userAvatarUrl}
-                  email={userEmail}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate("/login")}
-                  className="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2 transition-colors"
-                >
-                  Đăng nhập
-                </button>
-                <button
-                  onClick={() => navigate("/register")}
-                  className="bg-brand-primary hover:bg-brand-primary/90 text-white text-sm font-black px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
-                >
-                  Đăng ký ngay
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
 
       {/* ══════════════════  HERO SECTION  ══════════════════ */}
       <section className="relative pt-12 pb-24 px-6 overflow-hidden">
@@ -547,120 +471,7 @@ export default function HomePage() {
         </aside>
       </main>
 
-      {/* ══════════════════  FOOTER  ══════════════════ */}
-      <footer className="mt-24 bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center">
-                  <Bus className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-lg font-black tracking-tight text-slate-900">
-                  GO ROUTEX
-                </span>
-              </div>
-              <p className="text-slate-500 text-sm leading-relaxed">
-                Hệ thống đặt vé xe công nghệ hàng đầu Việt Nam. Mang lại trải
-                nghiệm di chuyển hiện đại, an toàn và thông minh.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 mb-6 font-bold uppercase tracking-widest text-xs">
-                Về chúng tôi
-              </h4>
-              <ul className="space-y-4">
-                {[
-                  { label: "Tuyển dụng", to: "#" },
-                  { label: "Tin tức", to: "#" },
-                  { label: "Liên hệ chúng tôi", to: "/lien-he-chung-toi" },
-                  { label: "Quy định chung", to: "#" },
-                ].map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      to={item.to}
-                      className="text-slate-500 text-sm hover:text-brand-primary transition-colors"
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 mb-6 font-bold uppercase tracking-widest text-xs">
-                Hỗ trợ khách hàng
-              </h4>
-              <ul className="space-y-4">
-                {[
-                  { label: "Chính sách bảo mật", to: "/chinh-sach-bao-mat" },
-                  { label: "Điều khoản dịch vụ", to: "/dieu-khoan-dich-vu" },
-                  { label: "Hướng dẫn thanh toán", to: "/support" },
-                  { label: "Câu hỏi thường gặp", to: "/support" },
-                ].map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      to={item.to}
-                      className="text-slate-500 text-sm hover:text-brand-primary transition-colors"
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-black text-slate-900 mb-6 font-bold uppercase tracking-widest text-xs">
-                Tải ứng dụng
-              </h4>
-              <div className="flex flex-col gap-3">
-                <div className="bg-slate-900 p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-slate-800 transition-colors">
-                  <div className="w-8 h-8 bg-white/20 rounded-md flex items-center justify-center">
-                    <LayoutDashboard className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-white/50 font-bold leading-none mb-1">
-                      Tải trên
-                    </p>
-                    <p className="text-sm text-white font-black leading-none">
-                      App Store
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-slate-900 p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-slate-800 transition-colors">
-                  <div className="w-8 h-8 bg-white/20 rounded-md flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-white/50 font-bold leading-none mb-1">
-                      Tải trên
-                    </p>
-                    <p className="text-sm text-white font-black leading-none">
-                      Google Play
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
-            <span className="text-slate-400 text-sm font-medium">
-              © 2026 Go Routex JSC. Mọi quyền được bảo lưu.
-            </span>
-            <div className="flex gap-8">
-              {["Facebook", "LinkedIn", "Instagram"].map((s) => (
-                <a
-                  key={s}
-                  href="#"
-                  className="text-slate-400 hover:text-brand-primary transition-colors text-sm font-bold"
-                >
-                  {s}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 }
