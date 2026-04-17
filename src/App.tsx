@@ -31,6 +31,7 @@ import { MerchantMaintenancePage } from './pages/merchant/MerchantMaintenancePag
 import { MerchantProfilePage } from './pages/merchant/MerchantProfilePage'
 import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
 import { MerchantOperationPointPage } from './pages/merchant/MerchantOperationPointPage'
+import { MerchantVehicleTemplatePage } from './pages/merchant/MerchantVehicleTemplatePage'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useEffect } from 'react'
@@ -162,6 +163,7 @@ function App() {
           <Route index element={<Navigate to="portal" replace />} />
           <Route path="portal" element={<MerchantPortalPage />} />
           <Route path="vehicles" element={<MerchantVehicleManagementPage />} />
+          <Route path="vehicle-templates" element={<MerchantVehicleTemplatePage />} />
           <Route path="schedules" element={<MerchantScheduleManagementPage />} />
           <Route path="tickets" element={<MerchantTicketManagementPage />} />
           <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />

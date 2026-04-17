@@ -13,6 +13,7 @@ import {
   Bus,
   LayoutDashboard,
   Store,
+  Copy,
 } from "lucide-react";
 
 interface NavItem {
@@ -38,6 +39,7 @@ const merchantNavGroups: NavGroup[] = [
     title: "Management",
     items: [
       { label: "Đội xe của tôi", to: "/merchant/vehicles", icon: Bus },
+      { label: "Mẫu cấu hình xe", to: "/merchant/vehicle-templates", icon: Copy },
       { label: "Điểm đón/trả", to: "/merchant/operation-points", icon: MapPin },
       { label: "Lịch trình chạy", to: "/merchant/schedules", icon: Calendar },
       { label: "Quản lý vé", to: "/merchant/tickets", icon: Ticket },
