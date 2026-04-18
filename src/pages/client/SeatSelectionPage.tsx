@@ -3,9 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
     ArrowLeft, Clock,
     Bus, MapPin, ShieldCheck,
-    X, ArrowRight
+    X, ArrowRight, Loader2
 } from 'lucide-react'
 import type { RouteItem } from '../../Components/client/Ticket'
+import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
+
+const DETAIL_API_URL = "http://localhost:8082/api/v1/management/route-service/detail";
 
 // Dummy Data for Seat Map: 2 floors (Lower A, Upper B)
 const generateSeats = () => {
@@ -31,7 +34,7 @@ export default function SeatSelectionPage() {
     const location = useLocation()
     const routeData = location.state?.routeData as RouteItem
 
-    const trip = routeData || {
+    const [trip, setTrip] = useState<Partial<RouteItem>>(routeData || {
         origin: "Hồ Chí Minh",
         destination: "Đà Lạt",
         plannedStartTime: new Date().toISOString(),
@@ -40,7 +43,41 @@ export default function SeatSelectionPage() {
         vehicleType: "LIMOUSINE",
         pickupBranch: "292 Đinh Bộ Lĩnh, Bình Thạnh",
         routeCode: "HCM-DL-99"
-    }
+    })
+
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        const fetchDetail = async () => {
+            const routeId = routeData?.id;
+            if (!routeId) return;
+
+            setLoading(true);
+            try {
+                const meta = createRequestMeta();
+                const response = await fetch(`${DETAIL_API_URL}?routeId=${routeId}`, {
+                    method: 'GET',
+                    headers: {
+                        ...createAuthorizedEnvelopeHeaders(meta),
+                        'X-Request-Id': meta.requestId,
+                        'X-Request-DateTime': meta.requestDateTime,
+                        'X-Channel': meta.channel
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    setTrip(result.data || result);
+                }
+            } catch (err) {
+                console.error("Fetch route detail error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDetail();
+    }, [routeData?.id]);
 
     const [seats, setSeats] = useState(initialSeats)
     const [selectedSeats, setSelectedSeats] = useState<string[]>([])
@@ -149,10 +186,10 @@ export default function SeatSelectionPage() {
                                 <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Giờ khởi hành</p>
                                 <div className="flex items-center gap-2">
                                     <span className="text-brand-primary font-black text-xl leading-none">
-                                        {new Date(trip.plannedStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                        {trip.plannedStartTime ? new Date(trip.plannedStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                     </span>
                                     <span className="text-slate-400 font-bold text-[10px] leading-none">
-                                        {new Date(trip.plannedStartTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                        {trip.plannedStartTime ? new Date(trip.plannedStartTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '--/--'}
                                     </span>
                                 </div>
                             </div>
@@ -170,7 +207,13 @@ export default function SeatSelectionPage() {
 
             {/* ══════════════════  MAIN CONTENT AREA ══════════════════ */}
             <main className="max-w-[1400px] mx-auto px-10 py-16 -mt-10">
-                <div className="flex flex-col lg:flex-row gap-12 items-center">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[48px] shadow-2xl border border-slate-50">
+                        <Loader2 className="w-12 h-12 text-brand-primary animate-spin mb-6" />
+                        <p className="text-slate-500 font-black text-xl">Đang tải thông tin chuyến đi...</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col lg:flex-row gap-12 items-center">
                     
                     {/* Visual Bus Map Container */}
                     <div className="flex-1 w-full bg-white rounded-[48px] p-16 shadow-2xl shadow-slate-200/40 border border-slate-50 relative overflow-hidden group">
@@ -306,7 +349,8 @@ export default function SeatSelectionPage() {
                             </div>
                         )}
                     </div>
-                </div>
+                  </div>
+                )}
             </main>
 
             {/* ══════════════════  FLOATING ACTION BAR  ══════════════════ */}

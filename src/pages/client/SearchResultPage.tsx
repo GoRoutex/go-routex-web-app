@@ -1,58 +1,92 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, SlidersHorizontal, MapPin, Bus } from 'lucide-react'
+import { ArrowLeft, SlidersHorizontal, MapPin, Bus, Loader2, AlertCircle } from 'lucide-react'
 import { Ticket } from '../../Components/client/Ticket'
 import type { RouteItem } from '../../Components/client/Ticket'
+import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-const mockRouteData: RouteItem[] = [
-  {
-    id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-    pickupBranch: "233 Điện Biên Phủ",
-    origin: "Hà Nội",
-    destination: "Hải Phòng",
-    availableSeats: 32,
-    plannedStartTime: "2026-03-04T07:30:00Z",
-    plannedEndTime: "2026-03-04T13:30:00Z",
-    routeCode: "HAN-HPH-06",
-    vehicleType: "LIMOUSINE",
-    seatCapacity: 34,
-    price: 320000,
-    stopPoints: [
-      {
-        id: "d80f95a5-db24-499f-ac6e-bc92d02fbdc2",
-        stopOrder: "1",
-        routeId: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-        plannedArrivalTime: "2026-03-04T09:30:00Z",
-        plannedDepartureTime: "2026-03-04T09:45:00Z",
-        note: "Trạm dừng chân",
-      },
-    ],
-  },
-  {
-    id: "1fa5fc7c-d2ce-5ed6-9093-bdb0db903547",
-    pickupBranch: "15 Trần Hưng Đạo",
-    origin: "Hà Nội",
-    destination: "Hải Phòng",
-    availableSeats: 3,
-    plannedStartTime: "2026-03-04T10:00:00Z",
-    plannedEndTime: "2026-03-04T15:30:00Z",
-    routeCode: "HAN-HPH-07",
-    vehicleType: "SLEEPER",
-    seatCapacity: 30,
-    price: 280000,
-    stopPoints: [],
-  },
-]
+const SEARCH_API_URL = "http://localhost:8082/api/v1/management/route-service/search";
 
 export default function SearchResultPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  
+  const [routes, setRoutes] = useState<RouteItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const searchData = location.state?.searchData
   const tripType = location.state?.tripType || "one-way"
 
-  const origin = searchData?.originCity || "Điểm đi"
-  const destination = searchData?.destinationCity || "Điểm đến"
-  const date = searchData?.departureDate || "Hôm nay"
-  const returnDate = searchData?.returnDate
+  // Helper to format date
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "---";
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('vi-VN', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const origin = searchData?.originCity || "Hà Nội"
+  const destination = searchData?.destinationCity || "Hải Phòng"
+  const date = formatDate(searchData?.departureDate)
+  const returnDate = formatDate(searchData?.returnDate)
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!searchData?.originCity || !searchData?.destinationCity) return;
+      
+      setLoading(true);
+      setError(null);
+      try {
+        const meta = createRequestMeta();
+        const body = {
+          ...meta,
+          data: {
+            origin: searchData.originCity,
+            destination: searchData.destinationCity,
+            departureDate: searchData.departureDate,
+            seat: String(searchData.seats || 1),
+            pageSize: "50",
+            pageNumber: "1"
+          }
+        };
+
+        const response = await fetch(SEARCH_API_URL, {
+          method: 'POST',
+          headers: {
+            ...createAuthorizedEnvelopeHeaders(meta),
+            'Content-Type': 'application/json',
+            // Một số API yêu cầu prefix X- thay vì RT-
+            'X-Request-Id': meta.requestId,
+            'X-Request-DateTime': meta.requestDateTime,
+            'X-Channel': meta.channel
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) throw new Error("Không thể tìm thấy chuyến đi phù hợp");
+        
+        const result = await response.json();
+        // Giả sử API trả về mảng routes trong data.items giống các API khác
+        const items = result.data?.items || result.data || [];
+        setRoutes(items);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [searchData]);
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans">
@@ -79,41 +113,45 @@ export default function SearchResultPage() {
           </div>
 
           {/* Route Summary */}
-          <div className="bg-white border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-md bg-opacity-10 shadow-inner">
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-brand-dark/20 relative z-20">
             <div className="flex items-center gap-8 justify-between">
               <div className="flex items-center gap-10 flex-1">
                 <div className="flex flex-col">
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Điểm đi</span>
-                  <div className="flex items-center gap-3">
-                    <Bus className="w-6 h-6 text-brand-primary" />
-                    <span className="text-white font-black text-2xl tracking-tight">{origin}</span>
+                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Điểm đi</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+                      <Bus className="w-5 h-5 text-brand-primary" />
+                    </div>
+                    <span className="text-slate-900 font-black text-2xl tracking-tight">{origin}</span>
                   </div>
                 </div>
                 
                 <div className="flex flex-col items-center px-4">
-                   <div className="w-8 h-px bg-white/20" />
+                   <div className="w-12 h-px bg-slate-100" />
                 </div>
 
                 <div className="flex flex-col">
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Điểm đến</span>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-6 h-6 text-brand-secondary" />
-                    <span className="text-white font-black text-2xl tracking-tight">{destination}</span>
+                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Điểm đến</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-brand-secondary/10 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-brand-secondary" />
+                    </div>
+                    <span className="text-slate-900 font-black text-2xl tracking-tight">{destination}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="h-12 w-px bg-white/10" />
+              <div className="h-12 w-px bg-slate-100 mx-6" />
 
               <div className="text-right flex items-center gap-12">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày đi</p>
-                  <p className="text-white font-black text-xl mt-1 tracking-tight">{date}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ngày đi</p>
+                  <p className="text-slate-900 font-black text-xl tracking-tight bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">{date}</p>
                 </div>
                 {tripType === "round-trip" && (
-                  <div className="border-l border-white/10 pl-12 text-left">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày về</p>
-                    <p className="text-white font-black text-xl mt-1 tracking-tight">{returnDate}</p>
+                  <div className="border-l border-slate-100 pl-12 text-left">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ngày về</p>
+                    <p className="text-slate-900 font-black text-xl tracking-tight bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">{returnDate}</p>
                   </div>
                 )}
 
@@ -129,15 +167,39 @@ export default function SearchResultPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chuyến đi hiện có</h2>
-            <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-xs">Tìm thấy {mockRouteData.length} kết quả phù hợp</p>
+            <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-xs">
+              {loading ? "Đang tìm kiếm..." : `Tìm thấy ${routes.length} kết quả phù hợp`}
+            </p>
           </div>
           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
              <span className="text-slate-600 font-black text-[12px]">Sắp xếp: Phổ biến nhất</span>
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-32 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+            <Loader2 className="w-12 h-12 text-brand-primary animate-spin mx-auto mb-6" />
+            <p className="text-slate-500 font-black text-xl">Đang tải chuyến đi...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-32 bg-rose-50 rounded-[3rem] border border-rose-100 shadow-sm">
+            <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-6" />
+            <p className="text-rose-600 font-black text-xl">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-6 px-8 py-3 bg-rose-500 text-white rounded-2xl font-black hover:bg-rose-600 transition-all"
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
         {/* Ticket List */}
-        {mockRouteData.length === 0 ? (
+        {!loading && !error && routes.length === 0 ? (
           <div className="text-center py-32 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                <Bus className="w-10 h-10 text-slate-200" />
@@ -145,9 +207,9 @@ export default function SearchResultPage() {
             <p className="text-slate-400 font-black text-xl">Không tìm thấy chuyến đi phù hợp.</p>
             <p className="text-slate-300 font-bold mt-2">Vui lòng thử chọn ngày hoặc lộ trình khác.</p>
           </div>
-        ) : (
+        ) : !loading && !error && (
           <div className="grid grid-cols-1 gap-6">
-            {mockRouteData.map((item) => (
+            {routes.map((item: RouteItem) => (
               <Ticket
                 key={item.id}
                 item={item}
