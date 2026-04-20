@@ -10,6 +10,7 @@ import {
 import { ClientAvatar } from "./ClientAvatar";
 import { API_BASE_URL, LOGOUT_URL } from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
+import { logout } from "../../utils/auth";
 
 type ClientAccountMenuProps = {
   fullName: string;
@@ -89,7 +90,7 @@ export function ClientAccountMenu({
 
       logoutTimerRef.current = window.setTimeout(() => {
         setLogoutState((current) => ({ ...current, open: false }));
-        navigate("/");
+        logout();
       }, 900);
     };
 
@@ -107,104 +108,8 @@ export function ClientAccountMenu({
           },
         }),
       });
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("profileCompleted");
-      localStorage.removeItem("profileFullName");
-      localStorage.removeItem("profileNationalId");
-      localStorage.removeItem("profileCccdNumber");
-      localStorage.removeItem("profileDob");
-      localStorage.removeItem("profileAvatarUrl");
-      localStorage.removeItem("profileAddress");
-      localStorage.removeItem("profileGender");
-      localStorage.removeItem("profilePhone");
-      localStorage.removeItem("userPhoneNumber");
-      localStorage.removeItem("profileStatus");
-      localStorage.removeItem("profileEmailVerified");
-      localStorage.removeItem("profilePhoneVerified");
-      localStorage.removeItem("profileCreatedAt");
-      localStorage.removeItem("profileUpdatedAt");
-      localStorage.removeItem("membershipId");
-      localStorage.removeItem("membershipCustomerId");
-      localStorage.removeItem("membershipTierId");
-      localStorage.removeItem("membershipCurrentPoint");
-      localStorage.removeItem("membershipCurrentAvailablePoints");
-      localStorage.removeItem("membershipTotalPoints");
-      localStorage.removeItem("membershipPromotedAt");
-      localStorage.removeItem("membershipDiscountPercent");
-      localStorage.removeItem("membershipPriorityLevel");
-      localStorage.removeItem("membershipStatus");
-      localStorage.removeItem("membershipStatsTotalTrips");
-      localStorage.removeItem("membershipBadge");
-      localStorage.removeItem("membershipStatsTotalSpent");
-      localStorage.removeItem("membershipPointToNextTier");
-      localStorage.removeItem("membershipPointMultiplier");
-      localStorage.removeItem("membershipNextTierName");
-      localStorage.removeItem("customerId");
-      localStorage.removeItem("profileCustomerId");
-      localStorage.removeItem("profileTripPoints");
-      localStorage.removeItem("profileTotalTrips");
-      localStorage.removeItem("profileTotalSpent");
-      localStorage.removeItem("profileLastTripAt");
-      localStorage.removeItem("profileLastBookingAt");
-      localStorage.removeItem("userRoles");
-      localStorage.removeItem("profileAuthorities");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("profileRole");
       finalizeLogout("Đã đăng xuất thành công.", "success");
     } catch {
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("profileCompleted");
-      localStorage.removeItem("profileFullName");
-      localStorage.removeItem("profileNationalId");
-      localStorage.removeItem("profileCccdNumber");
-      localStorage.removeItem("profileDob");
-      localStorage.removeItem("profileAvatarUrl");
-      localStorage.removeItem("profileAddress");
-      localStorage.removeItem("profileGender");
-      localStorage.removeItem("profilePhone");
-      localStorage.removeItem("userPhoneNumber");
-      localStorage.removeItem("profileStatus");
-      localStorage.removeItem("profileEmailVerified");
-      localStorage.removeItem("profilePhoneVerified");
-      localStorage.removeItem("profileCreatedAt");
-      localStorage.removeItem("profileUpdatedAt");
-      localStorage.removeItem("membershipId");
-      localStorage.removeItem("membershipCustomerId");
-      localStorage.removeItem("membershipTierId");
-      localStorage.removeItem("membershipCurrentPoint");
-      localStorage.removeItem("membershipCurrentAvailablePoints");
-      localStorage.removeItem("membershipTotalPoints");
-      localStorage.removeItem("membershipPromotedAt");
-      localStorage.removeItem("membershipDiscountPercent");
-      localStorage.removeItem("membershipPriorityLevel");
-      localStorage.removeItem("membershipStatus");
-      localStorage.removeItem("membershipStatsTotalTrips");
-      localStorage.removeItem("membershipBadge");
-      localStorage.removeItem("membershipStatsTotalSpent");
-      localStorage.removeItem("membershipPointToNextTier");
-      localStorage.removeItem("membershipPointMultiplier");
-      localStorage.removeItem("membershipNextTierName");
-      localStorage.removeItem("customerId");
-      localStorage.removeItem("profileCustomerId");
-      localStorage.removeItem("profileTripPoints");
-      localStorage.removeItem("profileTotalTrips");
-      localStorage.removeItem("profileTotalSpent");
-      localStorage.removeItem("profileLastTripAt");
-      localStorage.removeItem("profileLastBookingAt");
-      localStorage.removeItem("userRoles");
-      localStorage.removeItem("profileAuthorities");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("profileRole");
       finalizeLogout("Đăng xuất thất bại, nhưng phiên đăng nhập đã được xóa.", "error");
     }
   };
@@ -213,9 +118,9 @@ export function ClientAccountMenu({
     "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-brand-primary";
   const resolvedDisplayName = fullName;
   const accountEmail =
-    email?.trim().length > 0
+    (email && email.trim().length > 0)
       ? email.trim()
-      : resolvedDisplayName.includes("@")
+      : (resolvedDisplayName && resolvedDisplayName.includes("@"))
         ? resolvedDisplayName
         : "";
 

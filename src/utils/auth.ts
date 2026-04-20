@@ -161,13 +161,28 @@ export const getClientHomeRoute = () =>
   localStorage.getItem("isLoggedIn") === "true" ? "/home" : "/";
 
 export const logout = () => {
-  localStorage.removeItem("isLoggedIn");
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("userRoles");
-  localStorage.removeItem("userRole");
-  localStorage.removeItem("userName");
-  localStorage.removeItem("userEmail");
-  localStorage.removeItem("userId");
+  // Clear all auth related items
+  const keysToRemove = [
+    "isLoggedIn", "authToken", "refreshToken", "userRoles", "userRole", 
+    "userName", "userEmail", "userId", "userPhoneNumber",
+    "profileCompleted", "profileFullName", "profileNationalId", "profileCccdNumber",
+    "profileDob", "profileAvatarUrl", "profileAddress", "profileGender",
+    "profilePhone", "profileStatus", "profileEmailVerified", "profilePhoneVerified",
+    "profileCreatedAt", "profileUpdatedAt", "profileAuthorities", "profileRole",
+    "profileCustomerId", "profileTripPoints", "profileTotalTrips", "profileTotalSpent",
+    "profileLastTripAt", "profileLastBookingAt",
+    "membershipId", "membershipCustomerId", "membershipTierId", "membershipCurrentPoint",
+    "membershipCurrentAvailablePoints", "membershipTotalPoints", "membershipPromotedAt",
+    "membershipDiscountPercent", "membershipPriorityLevel", "membershipStatus",
+    "membershipStatsTotalTrips", "membershipBadge", "membershipStatsTotalSpent",
+    "membershipPointToNextTier", "membershipPointMultiplier", "membershipNextTierName",
+    "customerId"
+  ];
+  
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  
+  // Clear all items to be absolutely sure
+  // localStorage.clear(); // Option 2: but might clear too much (like theme if any)
+  
   window.location.href = "/";
 };

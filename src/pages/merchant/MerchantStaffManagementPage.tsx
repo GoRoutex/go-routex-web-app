@@ -9,28 +9,38 @@ import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
 
 interface Driver {
-    id?: string;
-    driverId?: string;
-    userId: string;
+    id: string;
+    driverId?: string; // Fallback for some APIs
+    userInfo?: {
+        userId: string;
+        fullName: string;
+        email: string;
+        phone: string;
+    };
+    merchantInfo?: {
+        merchantId: string;
+        merchantName: string;
+    };
+    userId: string; // Flattened for form/logic compatibility
     employeeCode: string;
     emergencyContactName: string;
     emergencyContactPhone: string;
     status: string;
     operationStatus: string;
-    rating: string;
-    totalTrips: string;
+    rating: number | string;
+    totalTrips: number | string;
     licenseClass: string;
     licenseNumber: string;
     licenseIssueDate: string;
     licenseExpiryDate: string;
-    pointsDelta?: string;
-    pointsReason?: string;
+    pointsDelta?: number | string;
+    pointsReason?: string | null;
     kycVerified: boolean;
     trainingCompleted: boolean;
     note: string;
-    userName?: string; // Additional field for display
-    email?: string; // Additional field for display
-    phone?: string; // Additional field for display
+    userName?: string; // Derived from userInfo.fullName
+    email?: string; // Derived from userInfo.email
+    phone?: string; // Derived from userInfo.phone
 }
 
 export function MerchantStaffManagementPage() {
@@ -45,6 +55,7 @@ export function MerchantStaffManagementPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState<Partial<Driver>>({
@@ -71,13 +82,25 @@ export function MerchantStaffManagementPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?pageNumber=${pageNumber}&pageSize=${pageSize}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createAuthorizedEnvelopeHeaders(createRequestMeta())
                 }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
-                setDrivers(result.data.items);
-                setTotalItems(result.data.totalItems || result.data.totalCount || 0);
+                const mappedDrivers = result.data.items.map((d: any) => ({
+                    ...d,
+                    userId: d.userInfo?.userId || d.userId,
+                    userName: d.userInfo?.fullName || d.userName,
+                    email: d.userInfo?.email || d.email,
+                    phone: d.userInfo?.phone || d.phone
+                }));
+                setDrivers(mappedDrivers);
+                
+                // Handle new pagination structure
+                const total = result.data.pagination?.totalElements ?? 
+                             result.data.totalItems ?? 
+                             result.data.totalCount ?? 0;
+                setTotalItems(total);
             }
         } catch (err: any) {
             toast.error("Không thể tải danh sách tài xế: " + err.message);
@@ -113,15 +136,53 @@ export function MerchantStaffManagementPage() {
         setIsModalOpen(true);
     };
 
+    const fetchDriverDetail = async (driverId: string, userId: string, employeeCode: string) => {
+        setDetailLoading(true);
+        try {
+            const url = `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/detail?driverId=${driverId}&userId=${userId}&employeeCode=${employeeCode}`;
+            const meta = createRequestMeta();
+            const response = await fetch(url, {
+                headers: createAuthorizedEnvelopeHeaders(meta)
+            });
+
+            if (!response.ok) throw new Error("Không thể tải chi tiết nhân sự");
+
+            const body = await response.json();
+            const data = body.data || body.payload || body;
+
+            // Normalize data similar to list fetch
+            const normalized = {
+                ...data,
+                userId: data.userInfo?.userId || data.userId,
+                userName: data.userInfo?.fullName || data.userName,
+                email: data.userInfo?.email || data.email,
+                phone: data.userInfo?.phone || data.phone
+            };
+
+            setSelectedDriver(normalized);
+            const { userInfo, merchantInfo, ...cleanFormData } = normalized;
+            setFormData({
+                ...cleanFormData,
+                licenseIssueDate: normalized.licenseIssueDate ? normalized.licenseIssueDate.split('T')[0] : "",
+                licenseExpiryDate: normalized.licenseExpiryDate ? normalized.licenseExpiryDate.split('T')[0] : "",
+            });
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
     const handleOpenEdit = (driver: Driver) => {
         setIsEditing(true);
-        setSelectedDriver(driver);
-        setFormData({
-            ...driver,
-            licenseIssueDate: driver.licenseIssueDate ? driver.licenseIssueDate.split('T')[0] : "",
-            licenseExpiryDate: driver.licenseExpiryDate ? driver.licenseExpiryDate.split('T')[0] : "",
-        });
         setIsModalOpen(true);
+        
+        // Use IDs from the list item to fetch fresh details
+        const driverId = driver.id || driver.driverId || "";
+        const userId = driver.userInfo?.userId || driver.userId || "";
+        const employeeCode = driver.employeeCode || "";
+        
+        fetchDriverDetail(driverId, userId, employeeCode);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -340,7 +401,14 @@ export function MerchantStaffManagementPage() {
 
                         {/* Form Content */}
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-12">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                            {detailLoading ? (
+                                <div className="h-full flex flex-col items-center justify-center py-20 text-slate-400">
+                                    <Loader2 className="animate-spin text-brand-primary mb-4" size={40} />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Đang tải chi tiết nhân sự...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                 {/* Section 1: Basic Info */}
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
@@ -516,6 +584,8 @@ export function MerchantStaffManagementPage() {
                                     placeholder="Nhập ghi chú thêm về nhân sự này..."
                                 />
                             </div>
+                        </>
+                        )}
                         </form>
 
                         {/* Modal Footer */}

@@ -65,9 +65,14 @@ export function MerchantVehicleTemplatePage() {
       if (!response.ok) throw new Error("Không thể tải danh sách mẫu xe");
 
       const body = await response.json();
-      const content = extractArrayValue(body, ["templates", "items", "data", "content"]) as VehicleTemplate[];
+      const content = extractArrayValue(body, ["templates", "items", "data", "content"]) as any[];
       
-      setTemplates(content || []);
+      const mappedTemplates = (content || []).map((t: any) => ({
+        ...t,
+        templateId: t.templateId || t.id || t.id_
+      }));
+
+      setTemplates(mappedTemplates);
     } catch (err: any) {
       console.error("Fetch templates error:", err);
       setError(err.message);
@@ -91,7 +96,12 @@ export function MerchantVehicleTemplatePage() {
       if (!response.ok) throw new Error("Không thể tải chi tiết mẫu xe");
 
       const body = await response.json();
-      setSelectedTemplate(body.data || body.payload || body);
+      const data = body.data || body.payload || body;
+      const normalizedData = {
+        ...data,
+        templateId: data.templateId || data.id || data.id_
+      };
+      setSelectedTemplate(normalizedData);
       setIsDetailModalOpen(true);
     } catch (err: any) {
       console.error("Fetch detail error:", err);
@@ -296,9 +306,9 @@ export function MerchantVehicleTemplatePage() {
                   </td>
                 </tr>
               ) : (
-                templates.map((t) => (
+                templates.map((t, index) => (
                   <tr 
-                    key={t.templateId} 
+                    key={t.templateId || index} 
                     className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
                     onClick={() => fetchTemplateDetail(t.templateId)}
                   >
