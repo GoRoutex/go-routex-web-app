@@ -3,11 +3,14 @@ import {
     Plus, MapPin, Clock, ArrowRight,
     Edit3, Trash2,
     ChevronLeft, ChevronRight, X, Loader2, Save,
-    Navigation, User, Building, Info, Search, Activity, MoreHorizontal
+    Navigation, User, Building, Info, Search, Activity, MoreHorizontal, Truck
 } from "lucide-react";
+
 import { toast } from "react-toastify";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+
+
 import { getAccessToken, parseJwt } from "../../utils/auth";
 
 interface RoutePoint {
@@ -64,6 +67,17 @@ export function MerchantScheduleManagementPage() {
     const [fetchingDetail, setFetchingDetail] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
 
+    // Assign Vehicle states
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [vehicles, setVehicles] = useState<any[]>([]);
+    const [drivers, setDrivers] = useState<any[]>([]);
+    const [selectedVehicleId, setSelectedVehicleId] = useState("");
+    const [selectedDriverId, setSelectedDriverId] = useState("");
+    const [assigningRouteId, setAssigningRouteId] = useState("");
+    const [assignLoading, setAssignLoading] = useState(false);
+    const [fetchingResources, setFetchingResources] = useState(false);
+
+
     // Form states matching create payload
     const [formData, setFormData] = useState({
         creator: "",
@@ -74,6 +88,7 @@ export function MerchantScheduleManagementPage() {
         plannedEndTime: "",
         operationPoints: [] as RoutePoint[]
     });
+
 
     const formatWithOffset = (date: Date) => {
         const tzo = -date.getTimezoneOffset();
@@ -129,13 +144,62 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const fetchVehicles = async () => {
+        try {
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/vehicles/fetch?pageNumber=1&pageSize=100&status=ACTIVE`,
+                {
+                    headers: createAuthorizedEnvelopeHeaders()
+                }
+            );
+
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setVehicles(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi fetch vehicles:", err);
+        }
+    };
+
+    const fetchDrivers = async () => {
+        try {
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?status=ACTIVE&pageNumber=1&pageSize=100`,
+                {
+                    headers: createAuthorizedEnvelopeHeaders()
+                }
+            );
+
+
+
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setDrivers(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi fetch drivers:", err);
+        }
+    };
+
+    const fetchAllResources = async () => {
+        setFetchingResources(true);
+        await Promise.all([fetchVehicles(), fetchDrivers()]);
+        setFetchingResources(false);
+    };
+
+
+
     useEffect(() => {
         fetchRoutes(page);
     }, [page]);
 
     useEffect(() => {
         fetchProvinces();
+        fetchAllResources();
     }, []);
+
+
 
     const handleOpenCreate = () => {
         setIsEditing(false);
@@ -422,6 +486,57 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const handleOpenAssign = (route: RouteItem) => {
+        setAssigningRouteId(route.routeId || route.id);
+        setSelectedVehicleId("");
+        setSelectedDriverId("");
+        setIsAssignModalOpen(true);
+    };
+
+    const handleAssignVehicle = async () => {
+        if (!selectedVehicleId || !selectedDriverId) {
+            toast.error("Vui lòng chọn đầy đủ xe và tài xế");
+            return;
+        }
+        setAssignLoading(true);
+        try {
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                data: {
+                    creator: localStorage.getItem("userName") || "System",
+                    routeId: assigningRouteId,
+                    vehicleId: selectedVehicleId,
+                    driverId: selectedDriverId
+                }
+            };
+
+
+            const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/routes/assign`, {
+                method: 'POST',
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success("Gán xe thành công");
+                setIsAssignModalOpen(false);
+                fetchRoutes(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi khi gán xe");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        } finally {
+            setAssignLoading(false);
+        }
+    };
+
+
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
@@ -526,7 +641,8 @@ export function MerchantScheduleManagementPage() {
                                 <tr className="bg-slate-50/50">
                                     <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tuyến đường</th>
                                     <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình</th>
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Thời gian</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Khởi hành</th>
+
                                     <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Hạ tầng</th>
                                     <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                                     <th className="px-6 py-4 text-right"></th>
@@ -557,12 +673,18 @@ export function MerchantScheduleManagementPage() {
                                                 <span className="text-sm font-bold text-slate-700">{route.destination}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="text-sm font-bold text-slate-600 flex items-center gap-1.5">
-                                                <Clock size={12} className="text-slate-300" />
-                                                {route.plannedStartTime ? route.plannedStartTime.split('T')[1]?.substring(0, 5) : 'N/A'}
+                                        <td className="px-6 py-5 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <div className="text-sm font-black text-slate-900 flex items-center gap-1.5 mb-1">
+                                                    <Clock size={12} className="text-brand-primary" />
+                                                    {route.plannedStartTime ? route.plannedStartTime.split('T')[1]?.substring(0, 5) : 'N/A'}
+                                                </div>
+                                                <p className="text-[10px] font-bold text-slate-400">
+                                                    {route.plannedStartTime ? new Date(route.plannedStartTime).toLocaleDateString('vi-VN') : ''}
+                                                </p>
                                             </div>
                                         </td>
+
                                         <td className="px-6 py-5">
                                             <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                                                 <MapPin size={12} className="text-slate-300" />
@@ -582,10 +704,23 @@ export function MerchantScheduleManagementPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
-                                                <MoreHorizontal size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenAssign(route);
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all shadow-sm"
+                                                    title="Gán xe cho tuyến này"
+                                                >
+                                                    <Truck size={14} /> Gán xe
+                                                </button>
+                                                <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                            </div>
                                         </td>
+
                                     </tr>
                                 ))}
                             </tbody>
@@ -932,6 +1067,109 @@ export function MerchantScheduleManagementPage() {
                     </button>
                 </div>
             </div>
+            {/* Assign Vehicle Modal */}
+            {isAssignModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
+                        <div className="p-10 border-b border-slate-50 flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <div className="w-14 h-14 rounded-2xl bg-brand-primary flex items-center justify-center text-white shadow-lg shadow-brand-primary/20">
+                                    <Truck size={28} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-950 tracking-tight">Thiết lập Chuyến vận hành</h3>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gán phương tiện & Nhân sự cho tuyến đường {assigningRouteId}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsAssignModalOpen(false)}
+                                className="w-12 h-12 rounded-full border border-slate-50 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all bg-white shadow-sm"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-10 space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Phương tiện vận hành</label>
+                                    <div className="relative group">
+                                        <select
+                                            disabled={fetchingResources}
+                                            required
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary focus:bg-white appearance-none cursor-pointer transition-all"
+                                            value={selectedVehicleId}
+                                            onChange={(e) => setSelectedVehicleId(e.target.value)}
+                                        >
+                                            <option value="">{fetchingResources ? "Đang truy xuất dữ liệu..." : "Chọn xe..."}</option>
+                                            {vehicles.map(v => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.type} - {v.vehiclePlate}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover:text-brand-primary transition-colors">
+                                            {fetchingResources ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} className="rotate-90" />}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Tài xế điều khiển</label>
+                                    <div className="relative group">
+                                        <select
+                                            disabled={fetchingResources}
+                                            required
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary focus:bg-white appearance-none cursor-pointer transition-all"
+                                            value={selectedDriverId}
+                                            onChange={(e) => setSelectedDriverId(e.target.value)}
+                                        >
+                                            <option value="">{fetchingResources ? "Đang truy xuất dữ liệu..." : "Chọn tài xế..."}</option>
+                                            {drivers.map(d => (
+                                                <option key={d.id} value={d.id}>
+                                                    {d.userInfo?.fullName || "Chưa có tên"}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover:text-brand-primary transition-colors">
+                                            {fetchingResources ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} className="rotate-90" />}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                    <Info size={14} />
+                                    <p className="text-[9px] font-black uppercase tracking-widest">Thông tin tuyến</p>
+                                </div>
+                                <p className="text-xs font-bold text-slate-600">Mã tuyến: <span className="text-slate-950">{assigningRouteId}</span></p>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex gap-3">
+                            <button
+                                onClick={() => setIsAssignModalOpen(false)}
+                                className="flex-1 py-4 border border-slate-100 bg-white text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button
+                                onClick={handleAssignVehicle}
+                                disabled={assignLoading || !selectedVehicleId}
+                                className="flex-[2] py-4 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {assignLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                Xác nhận gán xe
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

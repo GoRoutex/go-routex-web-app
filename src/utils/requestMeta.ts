@@ -38,3 +38,15 @@ export const createAuthorizedEnvelopeHeaders = (meta = createRequestMeta()) => {
         Authorization: token ? `Bearer ${token}` : "",
     };
 };
+
+export const createXAuthorizedHeaders = (meta = createRequestMeta()) => {
+    const token = getAccessToken();
+    return {
+        "X-Request-Id": meta.requestId,
+        "X-Request-DateTime": meta.requestDateTime,
+        "X-Channel": meta.channel,
+        "Authorization": token ? `Bearer ${token}` : "",
+        "accept": "*/*"
+    };
+};
+

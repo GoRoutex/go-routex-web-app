@@ -24,6 +24,8 @@ export type RouteItem = {
   currency?: string
   vehicleType?: string | null
   seatCapacity?: number | null
+  vehiclePlate?: string | null
+  hasFloor?: boolean | null
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0")
@@ -125,7 +127,11 @@ export const Ticket = ({ item, onClick }: { item: RouteItem, onClick?: () => voi
               <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
                 <Bus className="w-4 h-4 text-brand-primary" />
               </div>
-              <span className="text-[13px] font-bold text-slate-600 tracking-tight">{formatVehicleType(item.vehicleType)} • {item.seatCapacity || 32} chỗ</span>
+              <span className="text-[13px] font-bold text-slate-600 tracking-tight">
+                {formatVehicleType(item.vehicleType)} • {item.seatCapacity || 32} chỗ
+                {item.vehiclePlate && ` • ${item.vehiclePlate}`}
+                {item.hasFloor && ` • 2 tầng`}
+              </span>
             </div>
             {item.pickupBranch && (
               <div className="flex items-center gap-2.5">

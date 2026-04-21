@@ -130,9 +130,22 @@ const InputField = ({
 export default function BookingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const passedRoute: RouteItem | undefined = location.state?.routeData;
+  const passedRoute = location.state?.routeData;
   const passedSeats: string[] = location.state?.selectedSeats ?? [];
-  const routeData = passedRoute ?? mockRouteData;
+
+  // Map fields if they are in the raw API format
+  const routeData: RouteItem = passedRoute
+    ? {
+        ...passedRoute,
+        price: passedRoute.price || (passedRoute as any).ticketPrice,
+        stopPoints: passedRoute.stopPoints || (passedRoute as any).routePoints?.map((rp: any) => ({
+          ...rp,
+          stopOrder: rp.operationOrder,
+          note: rp.note || rp.stopName
+        }))
+      }
+    : mockRouteData;
+
   const selectedSeats = passedSeats.length > 0 ? passedSeats : ["A1", "A2"];
 
   const [customerName, setCustomerName] = useState("");

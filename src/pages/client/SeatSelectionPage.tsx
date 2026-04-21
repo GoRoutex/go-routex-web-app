@@ -34,15 +34,28 @@ export default function SeatSelectionPage() {
     const location = useLocation()
     const routeData = location.state?.routeData as RouteItem
 
-    const [trip, setTrip] = useState<Partial<RouteItem>>(routeData || {
-        origin: "Hồ Chí Minh",
-        destination: "Đà Lạt",
-        plannedStartTime: new Date().toISOString(),
-        plannedEndTime: new Date(Date.now() + 6 * 3600000).toISOString(),
-        price: 350000,
-        vehicleType: "LIMOUSINE",
-        pickupBranch: "292 Đinh Bộ Lĩnh, Bình Thạnh",
-        routeCode: "HCM-DL-99"
+    const [trip, setTrip] = useState<Partial<RouteItem>>(() => {
+        if (!routeData) return {
+            origin: "Hồ Chí Minh",
+            destination: "Đà Lạt",
+            plannedStartTime: new Date().toISOString(),
+            plannedEndTime: new Date(Date.now() + 6 * 3600000).toISOString(),
+            price: 350000,
+            vehicleType: "LIMOUSINE",
+            pickupBranch: "292 Đinh Bộ Lĩnh, Bình Thạnh",
+            routeCode: "HCM-DL-99"
+        };
+
+        // Ensure we use the mapped fields if they came from search
+        return {
+            ...routeData,
+            price: routeData.price || (routeData as any).ticketPrice,
+            stopPoints: routeData.stopPoints || (routeData as any).routePoints?.map((rp: any) => ({
+                ...rp,
+                stopOrder: rp.operationOrder,
+                note: rp.note || rp.stopName
+            }))
+        };
     })
 
     const [loading, setLoading] = useState(false)
@@ -67,7 +80,20 @@ export default function SeatSelectionPage() {
 
                 if (response.ok) {
                     const result = await response.json();
-                    setTrip(result.data || result);
+                    
+                    setTrip(prev => {
+                        const data = result.data || result;
+                        return {
+                            ...prev,
+                            ...data,
+                            price: data.ticketPrice || data.price || prev.price,
+                            stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
+                                ...rp,
+                                stopOrder: rp.operationOrder || rp.stopOrder,
+                                note: rp.note || rp.stopName
+                            })) || prev.stopPoints
+                        };
+                    });
                 }
             } catch (err) {
                 console.error("Fetch route detail error:", err);
@@ -158,7 +184,10 @@ export default function SeatSelectionPage() {
                             <div className="flex items-center gap-3">
                                 <span className="text-brand-primary text-[10px] font-black uppercase tracking-widest">{trip.routeCode}</span>
                                 <div className="w-1 h-1 rounded-full bg-slate-800" />
-                                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Hợp tác cùng {trip.vehicleType === 'LIMOUSINE' ? 'Premium Air' : 'Routex Direct'}</span>
+                                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                    {(trip as any).vehiclePlate ? `Biển số: ${(trip as any).vehiclePlate}` : (trip.vehicleType === 'LIMOUSINE' ? 'Premium Air' : 'Routex Direct')}
+                                    {trip.hasFloor && " • Xe 2 tầng"}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -197,7 +226,7 @@ export default function SeatSelectionPage() {
                             <div className="px-6 py-4 border-l border-white/10">
                                 <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Giá vé niêm yết</p>
                                 <p className="text-white font-black text-xl leading-none">
-                                    {new Intl.NumberFormat('vi-VN').format(trip.price || 350000)} <span className="text-[10px] text-slate-400">VND</span>
+                                    {new Intl.NumberFormat('vi-VN').format(trip.price || 0)} <span className="text-[10px] text-slate-400">VND</span>
                                 </p>
                             </div>
                         </div>
@@ -322,7 +351,10 @@ export default function SeatSelectionPage() {
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Phương tiện</p>
-                                        <p className="font-bold text-white tracking-tight">Limousine VIP Cloud</p>
+                                        <p className="font-bold text-white tracking-tight">
+                                            {trip.vehicleType || "Limousine VIP Cloud"} 
+                                            {(trip as any).vehiclePlate && ` - ${(trip as any).vehiclePlate}`}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4">
@@ -370,7 +402,7 @@ export default function SeatSelectionPage() {
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Thanh toán dự kiến</p>
                                 <p className="text-2xl font-black text-white tracking-tighter">
-                                    {new Intl.NumberFormat('vi-VN').format(selectedSeats.length * (trip.price || 350000))} <span className="text-sm font-bold text-slate-400">₫</span>
+                                    {new Intl.NumberFormat('vi-VN').format(selectedSeats.length * (trip.price || 0))} <span className="text-sm font-bold text-slate-400">₫</span>
                                 </p>
                             </div>
                         </div>

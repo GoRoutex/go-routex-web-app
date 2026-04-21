@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, SlidersHorizontal, MapPin, Bus, Loader2, AlertCircle } from 'lucide-react'
 import { Ticket } from '../../Components/client/Ticket'
 import type { RouteItem } from '../../Components/client/Ticket'
@@ -10,13 +10,29 @@ const SEARCH_API_URL = "http://localhost:8082/api/v1/management/route-service/se
 export default function SearchResultPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchData = location.state?.searchData
-  const tripType = location.state?.tripType || "one-way"
+  // Get data from location state OR query params
+  const stateSearchData = location.state?.searchData
+  const stateTripType = location.state?.tripType
+
+  const originParam = searchParams.get('origin')
+  const destinationParam = searchParams.get('destination')
+  const dateParam = searchParams.get('date')
+  const seatsParam = searchParams.get('seats')
+  const typeParam = searchParams.get('type') as "one-way" | "round-trip" | null
+  const returnDateParam = searchParams.get('returnDate')
+
+  const origin = stateSearchData?.originCity || originParam || "Hà Nội"
+  const destination = stateSearchData?.destinationCity || destinationParam || "Hải Phòng"
+  const tripType = stateTripType || typeParam || "one-way"
+  const departureDate = stateSearchData?.departureDate || dateParam
+  const returnDateRaw = stateSearchData?.returnDate || returnDateParam
+  const seats = stateSearchData?.seats || (seatsParam ? parseInt(seatsParam) : 1)
 
   // Helper to format date
   const formatDate = (dateStr: string) => {
@@ -33,14 +49,12 @@ export default function SearchResultPage() {
     }
   };
 
-  const origin = searchData?.originCity || "Hà Nội"
-  const destination = searchData?.destinationCity || "Hải Phòng"
-  const date = formatDate(searchData?.departureDate)
-  const returnDate = formatDate(searchData?.returnDate)
+  const date = formatDate(departureDate)
+  const returnDate = formatDate(returnDateRaw)
 
   useEffect(() => {
     const fetchResults = async () => {
-      if (!searchData?.originCity || !searchData?.destinationCity) return;
+      if (!origin || !destination || !departureDate) return;
       
       setLoading(true);
       setError(null);
@@ -49,10 +63,10 @@ export default function SearchResultPage() {
         const body = {
           ...meta,
           data: {
-            origin: searchData.originCity,
-            destination: searchData.destinationCity,
-            departureDate: searchData.departureDate,
-            seat: String(searchData.seats || 1),
+            origin: origin,
+            destination: destination,
+            departureDate: departureDate,
+            seat: String(seats),
             pageSize: "50",
             pageNumber: "1"
           }
@@ -63,7 +77,6 @@ export default function SearchResultPage() {
           headers: {
             ...createAuthorizedEnvelopeHeaders(meta),
             'Content-Type': 'application/json',
-            // Một số API yêu cầu prefix X- thay vì RT-
             'X-Request-Id': meta.requestId,
             'X-Request-DateTime': meta.requestDateTime,
             'X-Channel': meta.channel
@@ -74,8 +87,21 @@ export default function SearchResultPage() {
         if (!response.ok) throw new Error("Không thể tìm thấy chuyến đi phù hợp");
         
         const result = await response.json();
-        // Giả sử API trả về mảng routes trong data.items giống các API khác
-        const items = result.data?.items || result.data || [];
+        const rawItems = result.data?.items || result.data || [];
+        
+        // Map fields based on the new API response structure
+        const items = rawItems.map((item: any) => ({
+          ...item,
+          origin: origin, // Use the searched origin
+          destination: destination, // Use the searched destination
+          price: item.ticketPrice, // Map ticketPrice to price
+          stopPoints: item.routePoints?.map((rp: any) => ({
+            ...rp,
+            stopOrder: rp.operationOrder,
+            note: rp.note || rp.stopName // Use stopName as note if note is empty
+          }))
+        }));
+        
         setRoutes(items);
       } catch (err: any) {
         setError(err.message);
@@ -85,7 +111,7 @@ export default function SearchResultPage() {
     };
 
     fetchResults();
-  }, [searchData]);
+  }, [origin, destination, departureDate, seats]);
 
 
   return (

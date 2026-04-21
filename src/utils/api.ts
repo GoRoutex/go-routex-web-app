@@ -24,3 +24,7 @@ export const UPLOAD_AVATAR_URL = "user-service/profile/avatar";
 export const COMPLETE_PROFILE_URL = "user-service/profile/complete-profile";
 export const PROFILE_ME_URL = "user-service/profile/me";
 export const PROFILE_UPDATE_URL = "user-service/profile/update";
+export const USER_MANAGEMENT_SERVICE_BASE_URL = `${GATEWAY_BASE_URL}/management/user-service`;
+
+
+

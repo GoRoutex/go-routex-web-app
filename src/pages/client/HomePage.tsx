@@ -103,7 +103,20 @@ export default function HomePage() {
       alert("Hãy nhập đủ thông tin tìm kiếm.");
       return;
     }
-    navigate("/search-results", { state: { searchData, tripType } });
+
+    const params = new URLSearchParams({
+      origin: searchData.originCity,
+      destination: searchData.destinationCity,
+      date: searchData.departureDate,
+      seats: String(searchData.seats),
+      type: tripType
+    });
+
+    if (tripType === "round-trip" && searchData.returnDate) {
+      params.append("returnDate", searchData.returnDate);
+    }
+
+    navigate(`/search-results?${params.toString()}`, { state: { searchData, tripType } });
   };
 
   const patchRoute = (from: string, to: string) => {

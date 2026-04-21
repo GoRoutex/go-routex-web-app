@@ -19,10 +19,12 @@ export interface VehicleTemplate {
   fuelType: string;
   hasFloor: boolean;
   status: string;
+  ticketPrice: number;
   description?: string;
   createdAt?: string;
   totalSeats?: number;
 }
+
 
 export function MerchantVehicleTemplatePage() {
   const [templates, setTemplates] = useState<VehicleTemplate[]>([]);
@@ -45,8 +47,10 @@ export function MerchantVehicleTemplatePage() {
     type: "SEAT",
     fuelType: "DIESEL",
     hasFloor: false,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    ticketPrice: 0
   });
+
 
   const fetchTemplates = async () => {
     try {
@@ -123,7 +127,8 @@ export function MerchantVehicleTemplatePage() {
       type: "SEAT",
       fuelType: "DIESEL",
       hasFloor: false,
-      status: "ACTIVE"
+      status: "ACTIVE",
+      ticketPrice: 0
     });
     setIsEditModalOpen(true);
   };
@@ -142,7 +147,8 @@ export function MerchantVehicleTemplatePage() {
       type: template.type || "SEAT",
       fuelType: template.fuelType || "DIESEL",
       hasFloor: template.hasFloor || false,
-      status: template.status || "ACTIVE"
+      status: template.status || "ACTIVE",
+      ticketPrice: template.ticketPrice || 0
     });
     setIsEditModalOpen(true);
   };
@@ -229,6 +235,16 @@ export function MerchantVehicleTemplatePage() {
     }
   };
 
+  const formatCurrency = (val: number | string) => {
+    if (!val) return "0";
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseCurrency = (val: string) => {
+    return parseInt(val.replace(/\./g, "")) || 0;
+  };
+
+
   useEffect(() => {
     fetchTemplates();
   }, []);
@@ -293,8 +309,10 @@ export function MerchantVehicleTemplatePage() {
                 <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tên mẫu xe</th>
                 <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Mã mẫu</th>
                 <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Phân loại</th>
-                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Số ghế</th>
-                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Số ghế</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Giá vé</th>
+                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -326,7 +344,13 @@ export function MerchantVehicleTemplatePage() {
                             {t.category}
                         </span>
                     </td>
-                    <td className="px-6 py-5 text-sm font-bold text-slate-600">{t.seatCapacity || t.totalSeats} ghế</td>
+                                    <td className="px-6 py-5 text-sm font-bold text-slate-600">{t.seatCapacity || t.totalSeats} ghế</td>
+                                    <td className="px-6 py-5">
+                                        <span className="text-sm font-black text-brand-primary">
+                                            {t.ticketPrice ? t.ticketPrice.toLocaleString('vi-VN') : '0'} đ
+                                        </span>
+                                    </td>
+
                     <td className="px-6 py-5">
                       <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
                         t.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
@@ -408,7 +432,14 @@ export function MerchantVehicleTemplatePage() {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hãng sản xuất</p>
                       <p className="text-base font-bold text-slate-900">{selectedTemplate.manufacturer} - {selectedTemplate.model}</p>
                     </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá vé mặc định</p>
+                      <p className="text-base font-black text-brand-primary">
+                        {selectedTemplate.ticketPrice?.toLocaleString('vi-VN')} VNĐ
+                      </p>
+                    </div>
                   </div>
+
 
                   <div className="space-y-2">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mô tả cấu hình</p>
@@ -574,6 +605,18 @@ export function MerchantVehicleTemplatePage() {
                   </select>
                 </div>
                 <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Giá vé mặc định (VNĐ)</label>
+                  <input 
+                    required
+                    type="text"
+                    placeholder="VD: 250.000"
+                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-black text-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                    value={formatCurrency(formData.ticketPrice || 0)}
+                    onChange={e => setFormData({...formData, ticketPrice: parseCurrency(e.target.value)})}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trạng thái</label>
                   <select 
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
@@ -585,6 +628,7 @@ export function MerchantVehicleTemplatePage() {
                   </select>
                 </div>
               </div>
+
 
               <div className="flex justify-end gap-3 pt-6 border-t border-slate-50">
                 <button 

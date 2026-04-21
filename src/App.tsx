@@ -17,7 +17,9 @@ import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage'
 import { AdminProfileOverviewPage } from './pages/admin/AdminProfileOverviewPage'
 import { RouteManagementPage } from './pages/admin/RouteManagementPage'
 import AdminMerchantManagementPage from './pages/admin/AdminMerchantManagementPage'
+import { AdminUserManagementPage } from './pages/admin/AdminUserManagementPage'
 import MerchantApplicationFormsPage from './pages/admin/MerchantApplicationFormsPage'
+
 import { MerchantLayout } from './Components/merchant/MerchantLayout'
 import { MerchantPortalPage } from './pages/merchant/MerchantPortalPage'
 import { MerchantVehicleManagementPage } from './pages/merchant/MerchantVehicleManagementPage'
@@ -139,7 +141,9 @@ function App() {
           <Route path="tickets" element={<TicketingPage />} />
           <Route path="merchants" element={<AdminMerchantManagementPage />} />
           <Route path="merchants/applications" element={<MerchantApplicationFormsPage />} />
+          <Route path="users" element={<AdminUserManagementPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
+
 
           <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
           <Route path="reports/revenue" element={<DashboardFinancePage />} />

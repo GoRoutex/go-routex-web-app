@@ -40,8 +40,14 @@ const navGroups: NavGroup[] = [
           { label: "Đơn đăng ký mới", to: "/admin/merchants/applications" },
         ]
       },
+      {
+        label: "Người dùng hệ thống",
+        to: "/admin/users",
+        icon: Users
+      }
     ],
   },
+
   {
     title: "Tài chính",
     items: [
