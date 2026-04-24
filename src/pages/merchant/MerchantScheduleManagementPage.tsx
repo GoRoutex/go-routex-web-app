@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
     Plus, MapPin, Clock, ArrowRight,
-    Edit3, Trash2,
+    Edit3,
     ChevronLeft, ChevronRight, X, Loader2, Save,
     Navigation, User, Building, Info, Search, Activity, MoreHorizontal, Truck
 } from "lucide-react";
@@ -76,6 +76,7 @@ export function MerchantScheduleManagementPage() {
     const [assigningRouteId, setAssigningRouteId] = useState("");
     const [assignLoading, setAssignLoading] = useState(false);
     const [fetchingResources, setFetchingResources] = useState(false);
+    const [allOperationPoints, setAllOperationPoints] = useState<any[]>([]);
 
 
     // Form states matching create payload
@@ -170,9 +171,6 @@ export function MerchantScheduleManagementPage() {
                     headers: createAuthorizedEnvelopeHeaders()
                 }
             );
-
-
-
             const result = await response.json();
             if (result.data && result.data.items) {
                 setDrivers(result.data.items);
@@ -182,9 +180,30 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const fetchOperationPoints = async () => {
+        try {
+            const params = new URLSearchParams({
+                pageNumber: "1",
+                pageSize: "100"
+            });
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/fetch?${params.toString()}`,
+                {
+                    headers: createAuthorizedEnvelopeHeaders()
+                }
+            );
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setAllOperationPoints(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi fetch operation points:", err);
+        }
+    };
+
     const fetchAllResources = async () => {
         setFetchingResources(true);
-        await Promise.all([fetchVehicles(), fetchDrivers()]);
+        await Promise.all([fetchVehicles(), fetchDrivers(), fetchOperationPoints()]);
         setFetchingResources(false);
     };
 
@@ -705,16 +724,18 @@ export function MerchantScheduleManagementPage() {
                                         </td>
                                         <td className="px-6 py-5 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleOpenAssign(route);
-                                                    }}
-                                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all shadow-sm"
-                                                    title="Gán xe cho tuyến này"
-                                                >
-                                                    <Truck size={14} /> Gán xe
-                                                </button>
+                                                {route.status !== 'ASSIGNED' && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenAssign(route);
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all shadow-sm"
+                                                        title="Gán xe cho tuyến này"
+                                                    >
+                                                        <Truck size={14} /> Gán xe
+                                                    </button>
+                                                )}
                                                 <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
                                                     <MoreHorizontal size={18} />
                                                 </button>
@@ -891,113 +912,159 @@ export function MerchantScheduleManagementPage() {
                                             </button>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="flex flex-col gap-8 pb-12 pt-4">
                                             {formData.operationPoints.length === 0 ? (
-                                                <div className="md:col-span-2 py-20 border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 opacity-30">
-                                                    <MapPin size={32} />
-                                                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 text-center">
-                                                        Cần ít nhất 1 trạm dừng chân<br />để thiết lập hành trình
+                                                <div className="w-full min-h-[200px] border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 opacity-40 bg-slate-50/50">
+                                                    <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm">
+                                                        <MapPin size={28} className="text-slate-300" />
+                                                    </div>
+                                                    <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 text-center">
+                                                        Thiết lập điểm dừng đầu tiên<br /><span className="text-[9px] text-slate-400 font-bold">để bắt đầu hoạch định hành trình</span>
                                                     </p>
                                                 </div>
                                             ) : (
                                                 formData.operationPoints.map((point, index) => (
-                                                    <div key={index} className="p-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm relative group/point hover:border-brand-primary/10 transition-all">
-                                                        <div className="flex items-center justify-between mb-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="w-8 h-8 rounded-xl bg-slate-950 text-white text-[11px] font-black flex items-center justify-center shadow-lg">
-                                                                    {index + 1}
-                                                                </span>
-                                                                <h5 className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Trạm dừng</h5>
+                                                    <div key={index} className="w-full bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/30 relative flex flex-col overflow-hidden group/point hover:border-brand-primary/20 transition-all p-8 gap-8">
+                                                        {/* Header Section */}
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex items-center gap-5">
+                                                                <div className="relative">
+                                                                    <div className="w-12 h-12 rounded-[1.5rem] bg-slate-950 text-white text-[14px] font-black flex items-center justify-center shadow-xl z-10 relative">
+                                                                        {index + 1}
+                                                                    </div>
+                                                                    <div className="absolute -inset-2 bg-slate-950/10 rounded-3xl blur-lg -z-0" />
+                                                                </div>
+                                                                <div>
+                                                                    <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none mb-2">Điểm dừng chân</h5>
+                                                                    <p className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">Routing Hub #{index + 1}</p>
+                                                                </div>
                                                             </div>
+
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemovePoint(index)}
-                                                                className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center opacity-0 group-hover/point:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
+                                                                className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center border border-slate-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:rotate-90 hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-300 group/remove"
+                                                                title="Gỡ bỏ điểm dừng"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <X size={20} className="transition-transform group-hover/remove:scale-110" />
                                                             </button>
                                                         </div>
-                                                        <div className="space-y-5">
-                                                            <div className="grid grid-cols-1 gap-5">
-                                                                <div className="grid grid-cols-2 gap-4">
-                                                                    <div className="col-span-1">
-                                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Mã trạm</label>
-                                                                        <div className="relative">
-                                                                            <input
-                                                                                className="w-full bg-slate-50 px-3 py-2.5 rounded-xl text-[10px] font-black pr-8"
-                                                                                value={point.operationPointId}
-                                                                                onChange={(e) => updatePoint(index, 'operationPointId', e.target.value)}
-                                                                                onBlur={() => handleFetchPointDetail(index, 'code')}
-                                                                                placeholder="Code"
-                                                                            />
-                                                                            <button onClick={() => handleFetchPointDetail(index, 'code')} type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300">
-                                                                                <Search size={12} />
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="col-span-1">
-                                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Thành phố</label>
-                                                                        <input
-                                                                            className="w-full bg-slate-50 px-3 py-2.5 rounded-xl text-[10px] font-black"
-                                                                            value={point.stopCity}
-                                                                            onChange={(e) => updatePoint(index, 'stopCity', e.target.value)}
-                                                                            placeholder="TP"
-                                                                        />
+
+                                                        {/* Integrated Fields Section */}
+                                                        <div className="space-y-6">
+                                                            {/* System Search (Full Width Top) */}
+                                                            <div className="space-y-2">
+                                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1 block">Hệ thống trạm Routex Core (Truy xuất nhanh)</label>
+                                                                <div className="relative group/search">
+                                                                    <select
+                                                                        className="w-full bg-slate-50 px-6 py-4 rounded-2xl text-[11px] font-black appearance-none cursor-pointer hover:bg-slate-100 transition-all border border-slate-100 focus:border-brand-primary outline-none pr-12 shadow-sm"
+                                                                        onChange={(e) => {
+                                                                            const selected = allOperationPoints.find(p => (p.operationPointId || p.id) === e.target.value);
+                                                                            if (selected) populatePointData(index, selected);
+                                                                        }}
+                                                                        value=""
+                                                                    >
+                                                                        <option value="" disabled>-- Tìm kiếm & Gán trạm dừng từ hệ thống trung tâm --</option>
+                                                                        {allOperationPoints.map(p => (
+                                                                            <option key={p.id} value={p.operationPointId || p.id} className="text-slate-900 bg-white">
+                                                                                {p.name} ({p.code})
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/search:text-brand-primary transition-colors">
+                                                                        <Search size={18} />
                                                                     </div>
                                                                 </div>
+                                                            </div>
 
-                                                                <div>
-                                                                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Tên / Điểm dừng</label>
+                                                            {/* Manual Fields Grid */}
+                                                            <div className="grid grid-cols-12 gap-6">
+                                                                <div className="col-span-3 space-y-2">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Point ID</label>
                                                                     <div className="relative">
                                                                         <input
-                                                                            className="w-full bg-slate-50 px-3 py-2.5 rounded-xl text-[10px] font-black pr-8"
-                                                                            value={point.stopName}
-                                                                            onChange={(e) => updatePoint(index, 'stopName', e.target.value)}
-                                                                            onBlur={() => handleFetchPointDetail(index, 'name')}
-                                                                            placeholder="Bến xe..."
+                                                                            className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                            value={point.operationPointId}
+                                                                            onChange={(e) => updatePoint(index, 'operationPointId', e.target.value)}
+                                                                            onBlur={() => handleFetchPointDetail(index, 'code')}
+                                                                            placeholder="ID"
                                                                         />
-                                                                        <button onClick={() => handleFetchPointDetail(index, 'name')} type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300">
-                                                                            <Search size={12} />
+                                                                        <button onClick={() => handleFetchPointDetail(index, 'code')} type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300">
+                                                                            <Search size={14} />
                                                                         </button>
                                                                     </div>
                                                                 </div>
+                                                                <div className="col-span-3 space-y-2">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Khu vực</label>
+                                                                    <input
+                                                                        className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                        value={point.stopCity}
+                                                                        onChange={(e) => updatePoint(index, 'stopCity', e.target.value)}
+                                                                        placeholder="TỈNH / THÀNH"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-6 space-y-2">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Địa chỉ & Tên trạm chi tiết</label>
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                            value={point.stopName}
+                                                                            onChange={(e) => updatePoint(index, 'stopName', e.target.value)}
+                                                                            onBlur={() => handleFetchPointDetail(index, 'name')}
+                                                                            placeholder="Nhập tên bến bãi, chi nhánh hoặc điểm đón khách..."
+                                                                        />
+                                                                        <button onClick={() => handleFetchPointDetail(index, 'name')} type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                                                            <Search size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
 
-                                                                <div className="grid grid-cols-1 gap-4">
-                                                                    <div className="p-4 bg-emerald-50/30 border border-emerald-100/50 rounded-2xl">
-                                                                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2">Dự kiến đến</p>
+                                                            {/* Operational Data Grid */}
+                                                            <div className="grid grid-cols-12 gap-6 items-end border-t border-slate-50 pt-6">
+                                                                <div className="col-span-3">
+                                                                    <div className="p-4 bg-emerald-50/40 border border-emerald-100/50 rounded-2xl">
+                                                                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
+                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm" />
+                                                                            Dự kiến đến
+                                                                        </p>
                                                                         <input
                                                                             type="datetime-local"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-emerald-700 outline-none cursor-pointer"
+                                                                            className="w-full bg-transparent text-[11px] font-black text-emerald-800 outline-none cursor-pointer"
                                                                             value={point.plannedArrivalTime}
                                                                             onChange={(e) => updatePoint(index, 'plannedArrivalTime', e.target.value)}
                                                                         />
                                                                     </div>
-                                                                    <div className="p-4 bg-blue-50/30 border border-blue-100/50 rounded-2xl">
-                                                                        <p className="text-[8px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2">Dự kiến đi</p>
+                                                                </div>
+                                                                <div className="col-span-3">
+                                                                    <div className="p-4 bg-blue-50/40 border border-blue-100/50 rounded-2xl">
+                                                                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
+                                                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                                                                            Dự kiến đi
+                                                                        </p>
                                                                         <input
                                                                             type="datetime-local"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-blue-700 outline-none cursor-pointer"
+                                                                            className="w-full bg-transparent text-[11px] font-black text-blue-800 outline-none cursor-pointer"
                                                                             value={point.plannedDepartureTime}
                                                                             onChange={(e) => updatePoint(index, 'plannedDepartureTime', e.target.value)}
                                                                         />
                                                                     </div>
                                                                 </div>
-
-                                                                <div className="grid grid-cols-2 gap-3 pt-2">
-                                                                    <div>
-                                                                        <label className="text-[7px] font-black text-slate-300 uppercase mb-1 block">Vĩ độ (Lat)</label>
+                                                                <div className="col-span-6 flex gap-4">
+                                                                    <div className="flex-1 flex items-center gap-4 bg-slate-50/50 px-5 py-3 rounded-xl border border-slate-100">
+                                                                        <span className="text-[8px] font-black text-slate-300">LAT</span>
                                                                         <input
                                                                             type="number" step="any"
-                                                                            className="w-full bg-slate-50 px-3 py-2 rounded-lg text-[9px] font-black"
+                                                                            className="w-full bg-transparent text-[11px] font-black text-slate-700 outline-none"
                                                                             value={point.stopLatitude}
                                                                             onChange={(e) => updatePoint(index, 'stopLatitude', parseFloat(e.target.value))}
                                                                         />
                                                                     </div>
-                                                                    <div>
-                                                                        <label className="text-[7px] font-black text-slate-300 uppercase mb-1 block">Kinh độ (Long)</label>
+                                                                    <div className="flex-1 flex items-center gap-4 bg-slate-50/50 px-5 py-3 rounded-xl border border-slate-100">
+                                                                        <span className="text-[8px] font-black text-slate-300">LNG</span>
                                                                         <input
                                                                             type="number" step="any"
-                                                                            className="w-full bg-slate-50 px-3 py-2 rounded-lg text-[9px] font-black"
+                                                                            className="w-full bg-transparent text-[11px] font-black text-slate-700 outline-none"
                                                                             value={point.stopLongitude}
                                                                             onChange={(e) => updatePoint(index, 'stopLongitude', parseFloat(e.target.value))}
                                                                         />
