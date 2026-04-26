@@ -169,23 +169,19 @@ export function MerchantOperationPointPage() {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-[1.75rem] font-black tracking-tight text-slate-900 leading-tight">Điểm đón & Trả khách</h2>
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 bg-slate-100 w-fit px-3 py-1 rounded-lg">
-            Hạ tầng vận hành · Hub Logistics
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-            <button
-                onClick={handleOpenCreate}
-                className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] transition-all"
-            >
-                <Plus size={18} />
-                Thêm điểm mới
-            </button>
-        </div>
-      </div>
+       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+         <div>
+           <h2 className="text-xl font-black tracking-tight text-slate-900">Điểm đón & Trả khách</h2>
+           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Hạ tầng vận hành Logistics Hub</p>
+         </div>
+         <button
+             onClick={handleOpenCreate}
+             className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all self-start"
+         >
+             <Plus size={14} />
+             Thêm điểm mới
+         </button>
+       </div>
 
       {/* Main Content */}
       {loading ? (
@@ -225,52 +221,52 @@ export function MerchantOperationPointPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {points.map((point) => (
-                            <tr key={point.id} onClick={() => handleOpenEdit(point)} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
-                                <td className="px-6 py-5">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-                                            <MapPin size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-slate-900 leading-none mb-1">{point.name}</p>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã: {point.code}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-5">
-                                    <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                        {point.type === 'OPERATION_POINT' ? 'TRẠM DỪNG' : point.type}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-5">
-                                    <p className="text-xs font-bold text-slate-500 leading-snug truncate max-w-[200px]">
-                                        {point.address}, {point.city}
-                                    </p>
-                                </td>
-                                <td className="px-6 py-5">
-                                    <div className="space-y-0.5 text-[11px] font-black text-slate-400">
-                                        <p>Lat: {point.latitude}</p>
-                                        <p>Lng: {point.longitude}</p>
-                                    </div>
-                                </td>
-                                 <td className="px-6 py-5">
-                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
-                                        point.status === 'ACTIVE'
-                                        ? 'bg-slate-100 text-slate-700'
-                                        : 'bg-slate-50 text-slate-400'
-                                    }`}>
-                                        <div className={`w-1.5 h-1.5 rounded-full ${
-                                            point.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
-                                        }`} />
-                                        {point.status || 'ACTIVE'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-5 text-right">
-                                    <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
-                                        <MoreHorizontal size={18} />
-                                    </button>
-                                </td>
-                            </tr>
+                             <tr key={point.id} onClick={() => handleOpenEdit(point)} className="hover:bg-slate-50/50 transition-colors cursor-pointer border-b border-slate-50 last:border-0">
+                                 <td className="px-6 py-3">
+                                     <div className="flex items-center gap-3">
+                                         <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white">
+                                             <MapPin size={14} />
+                                         </div>
+                                         <div>
+                                             <p className="text-[11px] font-black text-slate-900 leading-none mb-0.5">{point.name}</p>
+                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">REF: {point.code}</p>
+                                         </div>
+                                     </div>
+                                 </td>
+                                 <td className="px-6 py-3">
+                                     <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                         {point.type === 'OPERATION_POINT' ? 'TRẠM DỪNG' : point.type}
+                                     </span>
+                                 </td>
+                                 <td className="px-6 py-3">
+                                     <p className="text-[11px] font-bold text-slate-500 leading-snug truncate max-w-[200px]">
+                                         {point.address}
+                                     </p>
+                                 </td>
+                                 <td className="px-6 py-3">
+                                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400">
+                                         <Navigation size={10} />
+                                         <span>{point.latitude}, {point.longitude}</span>
+                                     </div>
+                                 </td>
+                                  <td className="px-6 py-3">
+                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
+                                         point.status === 'ACTIVE'
+                                         ? 'bg-emerald-50 text-emerald-600'
+                                         : 'bg-slate-50 text-slate-400'
+                                     }`}>
+                                         <div className={`w-1 h-1 rounded-full ${
+                                             point.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
+                                         }`} />
+                                         {point.status || 'ACTIVE'}
+                                     </span>
+                                 </td>
+                                 <td className="px-6 py-3 text-right">
+                                     <button className="text-slate-300 hover:text-black p-1">
+                                         <MoreHorizontal size={14} />
+                                     </button>
+                                 </td>
+                             </tr>
                         ))}
                     </tbody>
                 </table>
@@ -281,38 +277,38 @@ export function MerchantOperationPointPage() {
       {/* Creation Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-in fade-in duration-500">
-            <div className="bg-white w-full max-w-3xl rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative border border-white/50">
+            <div className="bg-white w-full max-w-xl rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative border border-white/50">
                 {/* Modal Header */}
-                <div className="p-10 border-b border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
-                            <Plus size={24} />
+                <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-900 border border-slate-100 flex items-center justify-center">
+                            {isEditing ? <Edit3 size={18} /> : <Plus size={18} />}
                         </div>
                         <div>
-                            <h3 className="text-2xl font-black text-slate-950 tracking-tight">
+                            <h3 className="text-lg font-black text-slate-950 tracking-tight">
                                 {isEditing ? "Cập nhật Điểm đón/trả" : "Thêm Điểm đón/trả mới"}
                             </h3>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 text-xs">
-                                {isEditing ? `ID: ${selectedPoint?.id}` : "Mở rộng mạng lưới vận hành"}
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                                {isEditing ? `Ref: ${selectedPoint?.code}` : "Expand operational network"}
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={() => setIsModalOpen(false)}
-                        className="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
+                        className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
                     >
-                        <X size={20} />
+                        <X size={16} />
                     </button>
                 </div>
 
                 {/* Form Content */}
-                <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
                     <div className="grid grid-cols-2 gap-6">
                         <div className="col-span-2 sm:col-span-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Mã điểm (Code)</label>
                             <input
                                 required
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.code}
                                 onChange={(e) => setFormData({...formData, code: e.target.value})}
                                 placeholder="VD: MĐ-001"
@@ -322,7 +318,7 @@ export function MerchantOperationPointPage() {
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tên hiển thị</label>
                             <input
                                 required
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                                 placeholder="VD: Bến xe Miền Đông"
@@ -332,7 +328,7 @@ export function MerchantOperationPointPage() {
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Địa chỉ chi tiết</label>
                             <input
                                 required
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.address}
                                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                                 placeholder="Số nhà, tên đường..."
@@ -342,7 +338,7 @@ export function MerchantOperationPointPage() {
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Thành phố / Tỉnh</label>
                             <input
                                 required
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.city}
                                 onChange={(e) => setFormData({...formData, city: e.target.value})}
                                 placeholder="VD: Hồ Chí Minh"
@@ -351,7 +347,7 @@ export function MerchantOperationPointPage() {
                         <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái</label>
                             <select
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none"
                                 value={formData.status}
                                 onChange={(e) => setFormData({...formData, status: e.target.value})}
                             >
@@ -363,7 +359,7 @@ export function MerchantOperationPointPage() {
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Vĩ độ (Latitude)</label>
                             <input
                                 type="number" step="any"
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.latitude}
                                 onChange={(e) => setFormData({...formData, latitude: parseFloat(e.target.value)})}
                             />
@@ -372,7 +368,7 @@ export function MerchantOperationPointPage() {
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Kinh độ (Longitude)</label>
                             <input
                                 type="number" step="any"
-                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                 value={formData.longitude}
                                 onChange={(e) => setFormData({...formData, longitude: parseFloat(e.target.value)})}
                             />
@@ -381,26 +377,26 @@ export function MerchantOperationPointPage() {
                 </form>
 
                 {/* Modal Footer */}
-                <div className="p-10 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
                     <div className="flex items-center gap-3 text-slate-400">
-                        <Info size={16} />
-                        <p className="text-[9px] font-black uppercase tracking-widest">Hệ thống sẽ đồng bộ điểm dừng này lên bản đồ toàn cầu</p>
+                        <Info size={14} />
+                        <p className="text-[9px] font-black uppercase tracking-widest leading-none">Global Network Sync · Verified</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="px-8 py-4 bg-white border border-slate-200 rounded-2xl font-black text-xs text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
+                            className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
                         >
                             Hủy bỏ
                         </button>
                         <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="px-10 py-4 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                            className="px-8 py-3 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
                         >
-                            {submitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                            Lưu cấu trúc điểm
+                            {submitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                            Lưu điểm đón
                         </button>
                     </div>
                 </div>

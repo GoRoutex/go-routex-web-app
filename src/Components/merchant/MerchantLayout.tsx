@@ -89,7 +89,7 @@ export function MerchantLayout() {
           onToggleRightSidebar={() => setIsRightSidebarVisible((value) => !value)}
           onToggleTheme={() => setIsDarkMode((value) => !value)}
         />
-        <main className={`flex-1 overflow-y-auto p-8 lg:p-12 max-w-[1600px] mx-auto w-full transition-colors duration-300 ${isDarkMode ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>
+        <main className={`flex-1 overflow-y-auto p-6 lg:p-10 max-w-[1600px] mx-auto w-full transition-colors duration-300 ${isDarkMode ? 'bg-slate-950' : 'bg-[#F8FAFC]'}`}>
           <Outlet />
         </main>
       </div>

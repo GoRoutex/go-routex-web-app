@@ -240,7 +240,7 @@ export default function SearchResultPage() {
                 key={item.id}
                 item={item}
                 onClick={() =>
-                  navigate('/route-detail', { state: { routeData: item } })
+                  navigate('/booking', { state: { routeData: item } })
                 }
               />
             ))}

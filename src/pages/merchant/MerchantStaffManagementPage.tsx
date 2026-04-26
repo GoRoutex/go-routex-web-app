@@ -276,20 +276,18 @@ export function MerchantStaffManagementPage() {
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-[1.75rem] font-black tracking-tight text-slate-900 leading-tight">Tài xế & Nhân sự</h2>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 bg-slate-100 w-fit px-3 py-1 rounded-lg">
-                        Đội ngũ vận hành · Merchant Staff
-                    </p>
+                    <h2 className="text-xl font-black tracking-tight text-slate-900">Tài xế & Nhân sự</h2>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đội ngũ vận hành Routex Core</p>
                 </div>
                 <button
                     onClick={handleOpenCreate}
-                    className="flex items-center gap-2 bg-black text-white px-8 py-4 rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all self-start"
                 >
-                    <Plus size={18} />
+                    <Plus size={14} />
                     Thêm nhân sự
                 </button>
             </div>
@@ -331,13 +329,13 @@ export function MerchantStaffManagementPage() {
 
             {/* Main Content Table */}
             <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="relative max-w-md w-full">
-                        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
+                <div className="px-5 py-3 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="relative flex-1">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                         <input
                             type="text"
                             placeholder="Tìm theo mã, tên hoặc số điện thoại..."
-                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-[1.5rem] text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all"
+                            className="w-full pl-11 pr-5 py-2 bg-slate-50 border-none rounded-xl text-xs font-black outline-none focus:ring-2 focus:ring-brand-primary/5 transition-all"
                         />
                     </div>
                 </div>
@@ -345,12 +343,12 @@ export function MerchantStaffManagementPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50">
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nhân sự</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Bằng lái</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Kinh nghiệm</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                                <th className="px-6 py-4 text-right"></th>
+                                <th className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nhân sự</th>
+                                <th className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Bằng lái</th>
+                                <th className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</th>
+                                <th className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Kinh nghiệm</th>
+                                <th className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                <th className="px-4 py-3 text-right"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -370,45 +368,42 @@ export function MerchantStaffManagementPage() {
                                 </tr>
                             ) : (
                                 drivers.map((d) => (
-                                    <tr key={d.id || d.driverId} onClick={() => handleOpenEdit(d)} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
-                                        <td className="px-6 py-5">
+                                    <tr key={d.id || d.driverId} onClick={() => handleOpenEdit(d)} className="hover:bg-slate-50/50 transition-colors cursor-pointer border-b border-slate-50 last:border-0">
+                                        <td className="px-6 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-                                                    <Users size={16} />
+                                                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white">
+                                                    <Users size={14} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-black text-slate-900">{d.userName || d.employeeCode}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{d.employeeCode}</p>
+                                                    <p className="text-[11px] font-black text-slate-900">{d.userName || d.employeeCode}</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{d.employeeCode}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="space-y-1">
-                                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-wider">Hạng {d.licenseClass}</span>
-                                                <p className="text-[11px] font-bold text-slate-500">Số: {d.licenseNumber}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
+                                        <td className="px-6 py-3">
                                             <div className="space-y-0.5">
-                                                <p className="text-[11px] font-bold text-slate-500">{d.userName || "N/A"}</p>
-
-                                                <p className="text-[11px] font-bold text-slate-400">{d.phone || "N/A"}</p>
+                                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase tracking-wider">Hạng {d.licenseClass}</span>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">REF: {d.licenseNumber}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-black text-slate-700">{d.totalTrips} chuyến</p>
-                                                <p className="text-[11px] font-black text-amber-500">★ {d.rating}</p>
+                                        <td className="px-6 py-3">
+                                            <p className="text-[11px] font-black text-slate-900">{d.phone || "N/A"}</p>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-[11px] font-black text-slate-900">{d.totalTrips} Chuyến</p>
+                                                <div className="w-1 h-1 rounded-full bg-slate-200" />
+                                                <p className="text-[10px] font-black text-amber-500">★ {d.rating}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusColors[d.status] || statusColors['INACTIVE']}`}>
+                                        <td className="px-6 py-3">
+                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statusColors[d.status] || statusColors['INACTIVE']}`}>
                                                 {d.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
-                                                <MoreHorizontal size={18} />
+                                        <td className="px-6 py-3 text-right">
+                                            <button className="text-slate-300 hover:text-black p-1">
+                                                <MoreHorizontal size={14} />
                                             </button>
                                         </td>
                                     </tr>
@@ -424,28 +419,28 @@ export function MerchantStaffManagementPage() {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-in fade-in duration-500">
                     <div className="bg-white w-full max-w-5xl h-full max-h-[90vh] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative border border-white/50">
                         {/* Modal Header */}
-                        <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-white relative z-10">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 rounded-[2rem] bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
-                                    {isEditing ? <Edit3 size={24} /> : <Plus size={24} />}
+                        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center shadow-lg shadow-black/10">
+                                    {isEditing ? <Edit3 size={18} /> : <Plus size={18} />}
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-950 tracking-tight">
+                                    <h3 className="text-lg font-black text-slate-950 tracking-tight">
                                         {isEditing ? "Hồ sơ Nhân sự" : "Thêm Nhân sự mới"}
                                     </h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Cấu hình thông tin đội ngũ vận hành</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Asset Registry · Fleet Team</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
+                                className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
                             >
-                                <X size={20} />
+                                <X size={16} />
                             </button>
                         </div>
 
                         {/* Form Content */}
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-12">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-10">
                             {detailLoading ? (
                                 <div className="h-full flex flex-col items-center justify-center py-20 text-slate-400">
                                     <Loader2 className="animate-spin text-brand-primary mb-4" size={40} />
@@ -466,7 +461,7 @@ export function MerchantStaffManagementPage() {
                                                     <div className="relative">
                                                         <input
                                                             required
-                                                            className={`w-full px-6 py-4 border rounded-2xl text-sm font-black transition-all outline-none ${isEditing
+                                                            className={`w-full px-4 py-3 border rounded-2xl text-sm font-black transition-all outline-none ${isEditing
                                                                 ? "bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed"
                                                                 : "bg-slate-50 border-slate-100 text-slate-900 focus:bg-white focus:border-brand-primary/20"
                                                                 }`}
@@ -509,7 +504,7 @@ export function MerchantStaffManagementPage() {
                                                                             .map((user) => (
                                                                                 <div
                                                                                     key={user.id}
-                                                                                    className="px-6 py-4 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none transition-colors group"
+                                                                                    className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none transition-colors group"
                                                                                     onClick={() => {
                                                                                         setFormData({ ...formData, userId: user.id });
                                                                                         setUserSearchTerm(`${user.fullName} - ${user.phoneNumber}`);
@@ -539,7 +534,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Mã nhân viên</label>
                                                     <input
                                                         required
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                         value={formData.employeeCode}
                                                         onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
                                                         placeholder="VD: NV-001"
@@ -549,7 +544,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Xếp hạng (Rating)</label>
                                                     <input
                                                         type="text"
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
                                                         value={formData.rating}
                                                         onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
                                                     />
@@ -567,7 +562,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tên người thân</label>
                                                     <input
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                         value={formData.emergencyContactName}
                                                         onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
                                                     />
@@ -575,7 +570,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số điện thoại khẩn</label>
                                                     <input
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                         value={formData.emergencyContactPhone}
                                                         onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
                                                     />
@@ -593,7 +588,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Hạng bằng</label>
                                                     <input
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
                                                         value={formData.licenseClass}
                                                         onChange={(e) => setFormData({ ...formData, licenseClass: e.target.value })}
                                                         placeholder="E, D, FC..."
@@ -602,7 +597,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số hiệu bằng</label>
                                                     <input
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
                                                         value={formData.licenseNumber}
                                                         onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                                                     />
@@ -611,7 +606,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Ngày cấp</label>
                                                     <input
                                                         type="date"
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
                                                         value={formData.licenseIssueDate}
                                                         onChange={(e) => setFormData({ ...formData, licenseIssueDate: e.target.value })}
                                                     />
@@ -620,7 +615,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Ngày hết hạn</label>
                                                     <input
                                                         type="date"
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
                                                         value={formData.licenseExpiryDate}
                                                         onChange={(e) => setFormData({ ...formData, licenseExpiryDate: e.target.value })}
                                                     />
@@ -638,7 +633,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái hồ sơ</label>
                                                     <select
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
                                                         value={formData.status}
                                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                                     >
@@ -650,7 +645,7 @@ export function MerchantStaffManagementPage() {
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái công việc</label>
                                                     <select
-                                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
                                                         value={formData.operationStatus}
                                                         onChange={(e) => setFormData({ ...formData, operationStatus: e.target.value })}
                                                     >
@@ -687,7 +682,7 @@ export function MerchantStaffManagementPage() {
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Ghi chú nội bộ</label>
                                         <textarea
                                             rows={3}
-                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[2rem] text-sm font-bold outline-none focus:bg-white focus:border-brand-primary/20 transition-all resize-none"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-brand-primary/20 transition-all resize-none"
                                             value={formData.note}
                                             onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                                             placeholder="Nhập ghi chú thêm về nhân sự này..."
@@ -698,25 +693,25 @@ export function MerchantStaffManagementPage() {
                         </form>
 
                         {/* Modal Footer */}
-                        <div className="p-10 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                        <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
                             <div className="flex items-center gap-3 text-slate-400">
-                                <Info size={16} />
-                                <p className="text-[9px] font-black uppercase tracking-widest">Toàn bộ hồ sơ nhân sự được bảo mật theo chuẩn dữ liệu Routex</p>
+                                <Info size={14} />
+                                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Security Standard · RT-MANAGEMENT</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-10 py-4 bg-white border border-slate-200 rounded-2xl font-black text-xs text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
+                                    className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
                                 >
                                     Hủy bỏ
                                 </button>
                                 <button
                                     onClick={handleSubmit}
                                     disabled={submitting}
-                                    className="px-12 py-4 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                                    className="px-8 py-3 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
                                 >
-                                    {submitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                    {submitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                                     {isEditing ? "Lưu hồ sơ" : "Tạo nhân sự"}
                                 </button>
                             </div>

@@ -11,23 +11,32 @@ import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/
 const DETAIL_API_URL = "http://localhost:8082/api/v1/management/route-service/detail";
 
 // Dummy Data for Seat Map: 2 floors (Lower A, Upper B)
-const generateSeats = () => {
-    const lower = Array.from({ length: 17 }).map((_, i) => ({
-        id: `A${(i + 1).toString().padStart(2, '0')}`,
-        number: `A${(i + 1).toString().padStart(2, '0')}`,
-        status: Math.random() > 0.8 ? 'occupied' : 'available',
+// Dynamic Seat Generation
+const generateSeats = (totalSeats = 40, hasFloor = true) => {
+    if (hasFloor) {
+        const countPerFloor = Math.ceil(totalSeats / 2);
+        const lower = Array.from({ length: countPerFloor }).map((_, i) => ({
+            id: `A${(i + 1).toString().padStart(2, '0')}`,
+            number: `A${(i + 1).toString().padStart(2, '0')}`,
+            status: 'available',
+            floor: 'lower'
+        }))
+        const upper = Array.from({ length: totalSeats - countPerFloor }).map((_, i) => ({
+            id: `B${(i + 1).toString().padStart(2, '0')}`,
+            number: `B${(i + 1).toString().padStart(2, '0')}`,
+            status: 'available',
+            floor: 'upper'
+        }))
+        return [...lower, ...upper]
+    }
+    
+    return Array.from({ length: totalSeats }).map((_, i) => ({
+        id: `S${(i + 1).toString().padStart(2, '0')}`,
+        number: `S${(i + 1).toString().padStart(2, '0')}`,
+        status: 'available',
         floor: 'lower'
     }))
-    const upper = Array.from({ length: 17 }).map((_, i) => ({
-        id: `B${(i + 1).toString().padStart(2, '0')}`,
-        number: `B${(i + 1).toString().padStart(2, '0')}`,
-        status: Math.random() > 0.8 ? 'occupied' : 'available',
-        floor: 'upper'
-    }))
-    return [...lower, ...upper]
 }
-
-const initialSeats = generateSeats()
 
 export default function SeatSelectionPage() {
     const navigate = useNavigate()
@@ -80,20 +89,23 @@ export default function SeatSelectionPage() {
 
                 if (response.ok) {
                     const result = await response.json();
-                    
-                    setTrip(prev => {
-                        const data = result.data || result;
-                        return {
-                            ...prev,
-                            ...data,
-                            price: data.ticketPrice || data.price || prev.price,
-                            stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
-                                ...rp,
-                                stopOrder: rp.operationOrder || rp.stopOrder,
-                                note: rp.note || rp.stopName
-                            })) || prev.stopPoints
-                        };
-                    });
+                    const data = result.data || result;
+
+                    setTrip(prev => ({
+                        ...prev,
+                        ...data,
+                        price: data.ticketPrice || data.price || prev.price,
+                        stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
+                            ...rp,
+                            stopOrder: rp.operationOrder || rp.stopOrder,
+                            note: rp.note || rp.stopName
+                        })) || prev.stopPoints
+                    }));
+
+                    // Update seat map based on vehicle configuration
+                    const seatsCount = data.availableSeats || 40;
+                    const floors = data.hasFloor || true;
+                    setSeats(generateSeats(seatsCount, floors));
                 }
             } catch (err) {
                 console.error("Fetch route detail error:", err);
@@ -105,7 +117,7 @@ export default function SeatSelectionPage() {
         fetchDetail();
     }, [routeData?.id]);
 
-    const [seats, setSeats] = useState(initialSeats)
+    const [seats, setSeats] = useState<any[]>(() => generateSeats(40, true))
     const [selectedSeats, setSelectedSeats] = useState<string[]>([])
     const [holdExpiration, setHoldExpiration] = useState<number | null>(null)
     const [timeLeft, setTimeLeft] = useState(0)
@@ -160,7 +172,12 @@ export default function SeatSelectionPage() {
 
     const handleContinue = () => {
         if (selectedSeats.length === 0) return
-        navigate('/booking', { state: { selectedSeats } })
+        navigate('/booking', { 
+            state: { 
+                selectedSeats,
+                routeData: trip 
+            } 
+        })
     }
 
     return (
@@ -256,7 +273,7 @@ export default function SeatSelectionPage() {
                                     <div className="w-full h-1 bg-slate-100 rounded-full mt-4 max-w-[80px] mx-auto" />
                                 </div>
                                 
-                                <div className="grid grid-cols-3 gap-5 p-6 bg-slate-50/50 rounded-[3rem] border border-slate-100">
+                                <div className="grid grid-cols-2 gap-x-16 gap-y-5 p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100 shadow-inner">
                                     {seats.filter(s => s.floor === 'lower').map((seat) => (
                                         <button
                                             key={seat.id}
@@ -282,7 +299,7 @@ export default function SeatSelectionPage() {
                                     <div className="w-full h-1 bg-indigo-50 rounded-full mt-4 max-w-[80px] mx-auto" />
                                 </div>
                                 
-                                <div className="grid grid-cols-3 gap-5 p-6 bg-indigo-50/20 rounded-[3rem] border border-indigo-50">
+                                <div className="grid grid-cols-2 gap-x-16 gap-y-5 p-10 bg-indigo-50/20 rounded-[3rem] border border-indigo-50 shadow-inner">
                                     {seats.filter(s => s.floor === 'upper').map((seat) => (
                                         <button
                                             key={seat.id}

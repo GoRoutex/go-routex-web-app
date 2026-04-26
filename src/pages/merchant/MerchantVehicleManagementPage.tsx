@@ -316,14 +316,14 @@ export function MerchantVehicleManagementPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">Quản lý đội xe</h2>
-          <p className="text-sm text-slate-500 font-medium mt-1">Quản lý danh sách phương tiện vận hành của nhà xe.</p>
+          <h2 className="text-xl font-black tracking-tight text-slate-900">Quản lý đội xe</h2>
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đội hình vận tải Routex Core</p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
+          className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
         >
-          <Plus size={18} />
+          <Plus size={14} />
           Thêm xe mới
         </button>
       </div>
@@ -390,48 +390,48 @@ export function MerchantVehicleManagementPage() {
                   return (
                     <tr 
                       key={v.vehicleId || i} 
-                      className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                      className="hover:bg-slate-50/50 transition-colors group cursor-pointer border-b border-slate-50 last:border-0"
                       onClick={() => fetchVehicleDetail(v.vehicleId)}
                     >
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-brand-primary group-hover:text-white transition-all">
-                            {detailLoading && detailData?.vehicleId === v.vehicleId ? <Loader2 size={18} className="animate-spin" /> : <Bus size={20} />}
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-black group-hover:text-white transition-all">
+                            {detailLoading && detailData?.vehicleId === v.vehicleId ? <Loader2 size={14} className="animate-spin" /> : <Bus size={16} />}
                           </div>
-                          <span className="text-sm font-black text-slate-900 uppercase tracking-wider">{v.vehiclePlate}</span>
+                          <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">{v.vehiclePlate}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+                      <td className="px-6 py-3">
+                        <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-widest">
                           {v.category}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-sm font-bold text-slate-600">{v.type}</td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                           <Info size={14} />
-                           {v.templateId ? "Sử dụng mẫu" : "Thủ công"}
+                      <td className="px-6 py-3 text-[11px] font-black text-slate-500 uppercase tracking-tighter">{v.type}</td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
+                           <Info size={12} />
+                           {v.templateId ? "TR-ACTIVE" : "MANUAL"}
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${status.color}`}>
-                           <div className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                      <td className="px-6 py-3">
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${status.color}`}>
+                           <div className={`w-1 h-1 rounded-full ${status.dot}`} />
                           {status.label}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={(e) => handleOpenEdit(v, e)}
-                            className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-900 hover:text-white transition-all"
+                            className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
                           >
-                            <Edit3 size={16} />
+                            <Edit3 size={14} />
                           </button>
                           <button 
                             onClick={(e) => handleOpenDelete(v, e)}
-                            className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                            className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -448,26 +448,26 @@ export function MerchantVehicleManagementPage() {
       {isDetailModalOpen && detailData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-50 flex justify-between items-start bg-slate-50/50">
-              <div className="flex items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                  <Bus size={36} />
+            <div className="p-6 border-b border-slate-50 flex justify-between items-start bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center shadow-lg shadow-black/10">
+                  <Bus size={24} />
                 </div>
                 <div>
                   <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{detailData.vehiclePlate}</h3>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusLabel(detailData.status).color}`}>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">{detailData.vehiclePlate}</h3>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${getStatusLabel(detailData.status).color}`}>
                       {getStatusLabel(detailData.status).label}
                     </span>
                   </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Chi tiết phương tiện ID: {detailData.vehicleId}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Asset ID: {detailData.vehicleId}</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsDetailModalOpen(false)}
-                className="p-3 hover:bg-white rounded-full transition-all text-slate-400 shadow-sm"
+                className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition-all text-slate-400 shadow-sm border border-slate-100"
               >
-                <X size={24} />
+                <X size={16} />
               </button>
             </div>
 
@@ -545,21 +545,21 @@ export function MerchantVehicleManagementPage() {
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-50 flex justify-between items-start bg-white">
+            <div className="p-6 border-b border-slate-50 flex justify-between items-start bg-white">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center">
-                  <Bus size={32} />
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-900 border border-slate-100 flex items-center justify-center">
+                  <Bus size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight">{selectedVehicle ? "Cập nhật phương tiện" : "Thêm xe mới"}</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Thông tin chi tiết phương tiện</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">{selectedVehicle ? "Cập nhật phương tiện" : "Thêm xe mới"}</h3>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Fleet Configuration</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-full transition-colors text-slate-400 border border-slate-50"
               >
-                <X size={24} />
+                <X size={16} />
               </button>
             </div>
 

@@ -57,7 +57,7 @@ import BookingPage from './pages/client/BookingPage'
 import ClientRoutesPage from './pages/client/ClientRoutesPage'
 import ClientSchedulesPage from './pages/client/ClientSchedulesPage'
 import ClientSupportPage from './pages/client/ClientSupportPage'
-import SeatSelectionPage from './pages/client/SeatSelectionPage'
+// SeatSelectionPage removed as merged into BookingPage
 import PaymentPage from './pages/client/PaymentPage'
 import PrivacyPolicyPage from './pages/client/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/client/TermsOfServicePage'
@@ -99,7 +99,6 @@ function App() {
           <Route path="/settings" element={<ClientSettingsPage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/search-results" element={<SearchResultPage />} />
-          <Route path="/route-detail" element={<SeatSelectionPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/routes" element={<ClientRoutesPage />} />

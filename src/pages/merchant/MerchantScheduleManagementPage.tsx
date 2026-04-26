@@ -43,6 +43,13 @@ interface RouteItem {
     creator: string;
     operationPoints?: RoutePoint[];
     routePoints?: RoutePoint[];
+    assignmentInformation?: {
+        vehicleId: string;
+        vehiclePlate: string | null;
+        vehicleTemplateName: string | null;
+        driverId: string;
+        driverName: string | null;
+    };
 }
 
 interface Province {
@@ -166,7 +173,7 @@ export function MerchantScheduleManagementPage() {
     const fetchDrivers = async () => {
         try {
             const response = await fetch(
-                `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?status=ACTIVE&pageNumber=1&pageSize=100`,
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?status=AVAILABLE&pageNumber=1&pageSize=100`,
                 {
                     headers: createAuthorizedEnvelopeHeaders()
                 }
@@ -354,14 +361,14 @@ export function MerchantScheduleManagementPage() {
     const handleFetchPointDetail = async (index: number, type: 'code' | 'name') => {
         const point = formData.operationPoints[index];
         const searchValue = type === 'code' ? point.operationPointId : point.stopName;
-        
+
         if (!searchValue.trim()) return;
 
         try {
-            const queryParam = type === 'code' 
-                ? `code=${encodeURIComponent(searchValue)}` 
+            const queryParam = type === 'code'
+                ? `code=${encodeURIComponent(searchValue)}`
                 : `name=${encodeURIComponent(searchValue)}`;
-                
+
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/detail?${queryParam}`,
                 {
@@ -402,7 +409,7 @@ export function MerchantScheduleManagementPage() {
             operationPointId: data.code || updated[index].operationPointId,
             // Store the real internal ID (UUID) for the backend
             realOperationPointId: data.operationPointId || data.id,
-            code: data.code || "", 
+            code: data.code || "",
             stopName: data.name || updated[index].stopName,
             stopAddress: data.address || updated[index].stopAddress,
             stopCity: data.city || updated[index].stopCity,
@@ -557,11 +564,11 @@ export function MerchantScheduleManagementPage() {
 
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h2 className="text-[1.75rem] font-black tracking-tight text-slate-900 leading-tight">Quản lý Tuyến Đường</h2>
+                    <h2 className="text-2xl font-black tracking-tight text-slate-900 leading-tight">Quản lý Tuyến Đường</h2>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 bg-slate-100 w-fit px-3 py-1 rounded-lg">
                         Hạng mục vận hành · Lộ trình cố định
                     </p>
@@ -581,49 +588,49 @@ export function MerchantScheduleManagementPage() {
             {!loading && routes.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Panel 1: Total Routes */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng tuyến đường</p>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black text-slate-900">{totalItems}</h3>
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
-                                <Navigation size={18} />
+                            <h3 className="text-lg font-black text-slate-900">{totalItems}</h3>
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+                                <Navigation size={16} />
                             </div>
                         </div>
                     </div>
 
                     {/* Panel 2: Active Routes */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tuyến dự kiến</p>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black text-slate-700">
+                            <h3 className="text-lg font-black text-slate-700">
                                 {routes.filter(r => r.status === 'ACTIVE' || r.status === 'PLANNED').length}
                             </h3>
-                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
-                                <Activity size={18} />
+                            <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <Activity size={16} />
                             </div>
                         </div>
                     </div>
 
                     {/* Panel 3: Total Stops */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Trạm dừng</p>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black text-slate-700">
+                            <h3 className="text-lg font-black text-slate-700">
                                 {routes.reduce((acc, current) => acc + ((current.operationPoints || current.routePoints)?.length || 0), 0)}
                             </h3>
-                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
-                                <MapPin size={18} />
+                            <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <MapPin size={16} />
                             </div>
                         </div>
                     </div>
 
                     {/* Panel 4: Daily Plan */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Chuyến xe hôm nay</p>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black text-slate-900">24</h3>
-                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
-                                <Clock size={18} />
+                            <h3 className="text-lg font-black text-slate-900">24</h3>
+                            <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-all">
+                                <Clock size={16} />
                             </div>
                         </div>
                     </div>
@@ -658,26 +665,26 @@ export function MerchantScheduleManagementPage() {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-slate-50/50">
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tuyến đường</th>
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình</th>
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Khởi hành</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tuyến đường</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Khởi hành</th>
 
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Hạ tầng</th>
-                                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                                    <th className="px-6 py-4 text-right"></th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Hạ tầng</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                    <th className="px-5 py-3 text-right"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {routes.map((route) => (
-                                    <tr 
-                                        key={route.id} 
+                                    <tr
+                                        key={route.id}
                                         onClick={() => handleOpenEdit(route)}
                                         className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                                     >
-                                        <td className="px-6 py-5">
+                                        <td className="px-5 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center text-white">
-                                                    <Navigation size={16} />
+                                                <div className="w-9 h-9 rounded-xl bg-slate-950 flex items-center justify-center text-white">
+                                                    <Navigation size={14} />
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-black text-slate-900 leading-none mb-1">{route.routeCode || route.routeId || "N/A"}</p>
@@ -685,14 +692,14 @@ export function MerchantScheduleManagementPage() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
+                                        <td className="px-5 py-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-bold text-slate-700">{route.origin}</span>
                                                 <ArrowRight size={12} className="text-slate-300" />
                                                 <span className="text-sm font-bold text-slate-700">{route.destination}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 whitespace-nowrap">
+                                        <td className="px-5 py-3 whitespace-nowrap">
                                             <div className="flex flex-col">
                                                 <div className="text-sm font-black text-slate-900 flex items-center gap-1.5 mb-1">
                                                     <Clock size={12} className="text-brand-primary" />
@@ -704,28 +711,43 @@ export function MerchantScheduleManagementPage() {
                                             </div>
                                         </td>
 
-                                        <td className="px-6 py-5">
-                                            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <MapPin size={12} className="text-slate-300" />
-                                                {(route.operationPoints || route.routePoints)?.length || 0} Trạm
+                                        <td className="px-5 py-3">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <MapPin size={12} className="text-slate-300" />
+                                                    {(route.operationPoints || route.routePoints)?.length || 0} Trạm
+                                                </div>
+                                                {route.assignmentInformation && (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase tracking-tight">
+                                                            <Truck size={10} className="text-slate-400" />
+                                                            <span>{route.assignmentInformation.vehiclePlate || 'N/A'}</span>
+                                                            {route.assignmentInformation.vehicleTemplateName && (
+                                                                <span className="text-[8px] text-slate-300">({route.assignmentInformation.vehicleTemplateName})</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-tight">
+                                                            <User size={10} className="text-slate-300" />
+                                                            <span>{route.assignmentInformation.driverName || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${
-                                                route.status === 'ACTIVE' || route.status === 'PLANNED' 
-                                                ? 'bg-slate-100 text-slate-700' 
-                                                : 'bg-slate-50 text-slate-400'
-                                            }`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full ${
-                                                    route.status === 'ACTIVE' || route.status === 'PLANNED' ? 'bg-emerald-500' : 'bg-slate-300'
-                                                }`} />
+                                        <td className="px-5 py-3">
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 ${route.status === 'ACTIVE' || route.status === 'PLANNED'
+                                                    ? 'bg-slate-100 text-slate-700'
+                                                    : 'bg-slate-50 text-slate-400'
+                                                }`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${route.status === 'ACTIVE' || route.status === 'PLANNED' ? 'bg-emerald-500' : 'bg-slate-300'
+                                                    }`} />
                                                 {route.status || 'PLANNED'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-right">
+                                        <td className="px-5 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 {route.status !== 'ASSIGNED' && (
-                                                    <button 
+                                                    <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleOpenAssign(route);
@@ -752,16 +774,16 @@ export function MerchantScheduleManagementPage() {
 
             {/* Creation/Edit Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 lg:p-12 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
-                    <div className="bg-white w-full max-w-7xl h-full max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
+                    <div className="bg-white w-full max-w-7xl h-full max-h-[92vh] rounded-[2rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
                         {/* Modal Header */}
-                        <div className="p-8 md:p-12 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md relative z-10">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 rounded-[2rem] bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
-                                    {isEditing ? <Edit3 size={24} /> : <Plus size={24} />}
+                        <div className="p-6 md:p-8 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-[1.5rem] bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
+                                    {isEditing ? <Edit3 size={20} /> : <Plus size={20} />}
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-950 tracking-tight">
+                                    <h3 className="text-xl font-black text-slate-950 tracking-tight">
                                         {isEditing ? "Cập nhật Tuyến đường" : "Thiết kế Vùng vận hành"}
                                     </h3>
                                     <div className="flex items-center gap-3 mt-1">
@@ -777,34 +799,34 @@ export function MerchantScheduleManagementPage() {
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
+                                className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:scale-110 transition-all shadow-sm bg-white"
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                         </div>
 
                         {/* Form Content */}
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12 space-y-12 bg-white relative">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-10 bg-white relative">
                             {fetchingDetail && (
                                 <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
-                                    <Loader2 className="animate-spin text-brand-primary" size={40} />
+                                    <Loader2 className="animate-spin text-brand-primary" size={32} />
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Đang truy xuất dữ liệu chi tiết...</p>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 {/* Section 1: Basic & Entity Info */}
-                                <div className="lg:col-span-4 space-y-12">
-                                    <div className="space-y-8">
+                                <div className="lg:col-span-4 space-y-8">
+                                    <div className="space-y-6">
                                         <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
-                                            <Building size={16} className="text-slate-400" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Đơn vị & Người tạo</h4>
+                                            <Building size={14} className="text-slate-400" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em]">Đơn vị & Người tạo</h4>
                                         </div>
-                                        <div className="space-y-6">
+                                        <div className="space-y-4">
                                             <div>
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Chi nhánh khai thác (Pickup Branch)</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                     value={formData.pickupBranch}
                                                     onChange={(e) => setFormData({ ...formData, pickupBranch: e.target.value })}
                                                     placeholder="Tên bến xe hoặc chi nhánh"
@@ -814,7 +836,7 @@ export function MerchantScheduleManagementPage() {
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tên nhân viên tạo (Creator)</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                     value={formData.creator}
                                                     onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
                                                     placeholder="Tên quản trị viên"
@@ -823,18 +845,18 @@ export function MerchantScheduleManagementPage() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-8">
+                                    <div className="space-y-6">
                                         <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-2">
-                                            <Clock size={16} className="text-slate-400" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Thời gian dự tính</h4>
+                                            <Clock size={14} className="text-slate-400" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em]">Thời gian dự tính</h4>
                                         </div>
-                                        <div className="space-y-6">
+                                        <div className="space-y-4">
                                             <div>
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Bắt đầu hoạch định</label>
                                                 <input
                                                     type="datetime-local"
                                                     required
-                                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none cursor-pointer hover:bg-slate-100/50 transition-all"
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none cursor-pointer hover:bg-slate-100/50 transition-all"
                                                     value={formData.plannedStartTime}
                                                     onChange={(e) => setFormData({ ...formData, plannedStartTime: e.target.value })}
                                                 />
@@ -844,7 +866,7 @@ export function MerchantScheduleManagementPage() {
                                                 <input
                                                     type="datetime-local"
                                                     required
-                                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none cursor-pointer hover:bg-slate-100/50 transition-all"
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none cursor-pointer hover:bg-slate-100/50 transition-all"
                                                     value={formData.plannedEndTime}
                                                     onChange={(e) => setFormData({ ...formData, plannedEndTime: e.target.value })}
                                                 />
@@ -854,18 +876,18 @@ export function MerchantScheduleManagementPage() {
                                 </div>
 
                                 {/* Section 2: Journey & Transit Points */}
-                                <div className="lg:col-span-8 space-y-12">
-                                    <div className="space-y-8 bg-slate-50/50 p-10 rounded-[3rem] border border-slate-100">
+                                <div className="lg:col-span-8 space-y-10">
+                                    <div className="space-y-6 bg-slate-50/50 p-6 md:p-8 rounded-[2rem] border border-slate-100">
                                         <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100/50 pb-2">
-                                            <MapPin size={16} className="text-slate-400" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Lộ trình vận chuyển</h4>
+                                            <MapPin size={14} className="text-slate-400" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em]">Lộ trình vận chuyển</h4>
                                         </div>
                                         <div className="flex flex-col md:flex-row items-center gap-6">
                                             <div className="flex-1 w-full relative">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Thành phố đi (Origin)</label>
                                                 <select
                                                     required
-                                                    className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary appearance-none cursor-pointer"
+                                                    className="w-full px-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary appearance-none cursor-pointer"
                                                     value={formData.origin}
                                                     onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                                                 >
@@ -876,15 +898,15 @@ export function MerchantScheduleManagementPage() {
                                                 </select>
                                             </div>
                                             <div className="pt-6 hidden md:block">
-                                                <div className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center text-white shadow-lg">
-                                                    <ArrowRight size={16} />
+                                                <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white shadow-lg">
+                                                    <ArrowRight size={14} />
                                                 </div>
                                             </div>
                                             <div className="flex-1 w-full">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block text-right">Thành phố đến (Destination)</label>
                                                 <select
                                                     required
-                                                    className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary appearance-none cursor-pointer text-right"
+                                                    className="w-full px-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-black text-slate-900 shadow-sm outline-none focus:border-brand-primary appearance-none cursor-pointer text-right"
                                                     value={formData.destination}
                                                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                                                 >
@@ -897,174 +919,166 @@ export function MerchantScheduleManagementPage() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-8">
+                                    <div className="space-y-6">
                                         <div className="flex items-center justify-between border-b border-slate-50 pb-2">
                                             <div className="flex items-center gap-2 text-slate-900">
-                                                <MapPin size={16} className="text-slate-400" />
-                                                <h4 className="text-[11px] font-black uppercase tracking-[0.15em]">Trạm dừng (Operation Points)</h4>
+                                                <MapPin size={14} className="text-slate-400" />
+                                                <h4 className="text-[10px] font-black uppercase tracking-[0.15em]">Trạm dừng (Operation Points)</h4>
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={handleAddPoint}
-                                                className="flex items-center gap-2 text-[10px] font-black text-white px-6 py-3 bg-brand-primary rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
+                                                className="flex items-center gap-2 text-[9px] font-black text-white px-4 py-2 bg-brand-primary rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
                                             >
-                                                <Plus size={14} /> THÊM TRẠM DỪNG
+                                                <Plus size={12} /> THÊM TRẠM DỪNG
                                             </button>
                                         </div>
 
-                                        <div className="flex flex-col gap-8 pb-12 pt-4">
+                                        <div className="flex flex-col gap-6 pb-8 pt-2">
                                             {formData.operationPoints.length === 0 ? (
-                                                <div className="w-full min-h-[200px] border-2 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 opacity-40 bg-slate-50/50">
-                                                    <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm">
-                                                        <MapPin size={28} className="text-slate-300" />
+                                                <div className="w-full min-h-[150px] border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center gap-3 opacity-40 bg-slate-50/50">
+                                                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
+                                                        <MapPin size={24} className="text-slate-300" />
                                                     </div>
-                                                    <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 text-center">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 text-center">
                                                         Thiết lập điểm dừng đầu tiên<br /><span className="text-[9px] text-slate-400 font-bold">để bắt đầu hoạch định hành trình</span>
                                                     </p>
                                                 </div>
                                             ) : (
                                                 formData.operationPoints.map((point, index) => (
-                                                    <div key={index} className="w-full bg-white rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/30 relative flex flex-col overflow-hidden group/point hover:border-brand-primary/20 transition-all p-8 gap-8">
+                                                    <div key={index} className="w-full bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 relative flex flex-col overflow-hidden group/point hover:border-brand-primary/20 transition-all p-6 gap-6">
                                                         {/* Header Section */}
                                                         <div className="flex items-start justify-between">
-                                                            <div className="flex items-center gap-5">
+                                                            <div className="flex items-center gap-4">
                                                                 <div className="relative">
-                                                                    <div className="w-12 h-12 rounded-[1.5rem] bg-slate-950 text-white text-[14px] font-black flex items-center justify-center shadow-xl z-10 relative">
+                                                                    <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white text-[12px] font-black flex items-center justify-center shadow-xl z-10 relative">
                                                                         {index + 1}
                                                                     </div>
                                                                     <div className="absolute -inset-2 bg-slate-950/10 rounded-3xl blur-lg -z-0" />
                                                                 </div>
                                                                 <div>
-                                                                    <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none mb-2">Điểm dừng chân</h5>
-                                                                    <p className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">Routing Hub #{index + 1}</p>
+                                                                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none mb-1">Điểm dừng chân</h5>
+                                                                    <p className="text-[9px] font-bold text-brand-primary uppercase tracking-widest">Routing Hub #{index + 1}</p>
                                                                 </div>
                                                             </div>
 
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemovePoint(index)}
-                                                                className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center border border-slate-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:rotate-90 hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-300 group/remove"
+                                                                className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center border border-slate-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:rotate-90 hover:shadow-lg hover:shadow-rose-500/20 transition-all duration-300 group/remove"
                                                                 title="Gỡ bỏ điểm dừng"
                                                             >
-                                                                <X size={20} className="transition-transform group-hover/remove:scale-110" />
+                                                                <X size={16} className="transition-transform group-hover/remove:scale-110" />
                                                             </button>
                                                         </div>
 
                                                         {/* Integrated Fields Section */}
-                                                        <div className="space-y-6">
-                                                            {/* System Search (Full Width Top) */}
+                                                        <div className="space-y-4">
+                                                            {/* System Search */}
                                                             <div className="space-y-2">
-                                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1 block">Hệ thống trạm Routex Core (Truy xuất nhanh)</label>
+                                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1 block">Hệ thống trạm Routex Core</label>
                                                                 <div className="relative group/search">
                                                                     <select
-                                                                        className="w-full bg-slate-50 px-6 py-4 rounded-2xl text-[11px] font-black appearance-none cursor-pointer hover:bg-slate-100 transition-all border border-slate-100 focus:border-brand-primary outline-none pr-12 shadow-sm"
+                                                                        className="w-full bg-slate-50 px-4 py-3 rounded-2xl text-[10px] font-black appearance-none cursor-pointer hover:bg-slate-100 transition-all border border-slate-100 focus:border-brand-primary outline-none pr-10 shadow-sm"
                                                                         onChange={(e) => {
                                                                             const selected = allOperationPoints.find(p => (p.operationPointId || p.id) === e.target.value);
                                                                             if (selected) populatePointData(index, selected);
                                                                         }}
                                                                         value=""
                                                                     >
-                                                                        <option value="" disabled>-- Tìm kiếm & Gán trạm dừng từ hệ thống trung tâm --</option>
+                                                                        <option value="" disabled>-- Tìm kiếm & Gán trạm dừng từ hệ thống --</option>
                                                                         {allOperationPoints.map(p => (
                                                                             <option key={p.id} value={p.operationPointId || p.id} className="text-slate-900 bg-white">
                                                                                 {p.name} ({p.code})
                                                                             </option>
                                                                         ))}
                                                                     </select>
-                                                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/search:text-brand-primary transition-colors">
-                                                                        <Search size={18} />
+                                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/search:text-brand-primary transition-colors">
+                                                                        <Search size={14} />
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             {/* Manual Fields Grid */}
-                                                            <div className="grid grid-cols-12 gap-6">
-                                                                <div className="col-span-3 space-y-2">
+                                                            <div className="grid grid-cols-12 gap-4">
+                                                                <div className="col-span-3 space-y-1">
                                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Point ID</label>
                                                                     <div className="relative">
                                                                         <input
-                                                                            className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                            className="w-full bg-slate-50/50 px-3 py-2 rounded-xl text-[10px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
                                                                             value={point.operationPointId}
                                                                             onChange={(e) => updatePoint(index, 'operationPointId', e.target.value)}
                                                                             onBlur={() => handleFetchPointDetail(index, 'code')}
                                                                             placeholder="ID"
                                                                         />
-                                                                        <button onClick={() => handleFetchPointDetail(index, 'code')} type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300">
-                                                                            <Search size={14} />
-                                                                        </button>
                                                                     </div>
                                                                 </div>
-                                                                <div className="col-span-3 space-y-2">
+                                                                <div className="col-span-3 space-y-1">
                                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Khu vực</label>
                                                                     <input
-                                                                        className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                        className="w-full bg-slate-50/50 px-3 py-2 rounded-xl text-[10px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
                                                                         value={point.stopCity}
                                                                         onChange={(e) => updatePoint(index, 'stopCity', e.target.value)}
                                                                         placeholder="TỈNH / THÀNH"
                                                                     />
                                                                 </div>
-                                                                <div className="col-span-6 space-y-2">
-                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Địa chỉ & Tên trạm chi tiết</label>
-                                                                    <div className="relative">
-                                                                        <input
-                                                                            className="w-full bg-slate-50/50 px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
-                                                                            value={point.stopName}
-                                                                            onChange={(e) => updatePoint(index, 'stopName', e.target.value)}
-                                                                            onBlur={() => handleFetchPointDetail(index, 'name')}
-                                                                            placeholder="Nhập tên bến bãi, chi nhánh hoặc điểm đón khách..."
-                                                                        />
-                                                                        <button onClick={() => handleFetchPointDetail(index, 'name')} type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
-                                                                            <Search size={16} />
-                                                                        </button>
-                                                                    </div>
+                                                                <div className="col-span-6 space-y-1">
+                                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Địa chỉ & Tên trạm</label>
+                                                                    <input
+                                                                        className="w-full bg-slate-50/50 px-3 py-2 rounded-xl text-[10px] font-black border border-slate-100 focus:border-brand-primary/30 focus:bg-white outline-none transition-all shadow-sm"
+                                                                        value={point.stopName}
+                                                                        onChange={(e) => updatePoint(index, 'stopName', e.target.value)}
+                                                                        onBlur={() => handleFetchPointDetail(index, 'name')}
+                                                                        placeholder="Nhập tên bến bãi..."
+                                                                    />
                                                                 </div>
                                                             </div>
 
                                                             {/* Operational Data Grid */}
-                                                            <div className="grid grid-cols-12 gap-6 items-end border-t border-slate-50 pt-6">
+                                                            <div className="grid grid-cols-12 gap-4 items-end border-t border-slate-50 pt-4">
                                                                 <div className="col-span-3">
-                                                                    <div className="p-4 bg-emerald-50/40 border border-emerald-100/50 rounded-2xl">
-                                                                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
-                                                                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm" />
-                                                                            Dự kiến đến
+                                                                    <div className="p-3 bg-emerald-50/40 border border-emerald-100/50 rounded-xl">
+                                                                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-1">
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                                            Đến
                                                                         </p>
                                                                         <input
                                                                             type="datetime-local"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-emerald-800 outline-none cursor-pointer"
+                                                                            className="w-full bg-transparent text-[10px] font-black text-emerald-800 outline-none cursor-pointer"
                                                                             value={point.plannedArrivalTime}
                                                                             onChange={(e) => updatePoint(index, 'plannedArrivalTime', e.target.value)}
                                                                         />
                                                                     </div>
                                                                 </div>
                                                                 <div className="col-span-3">
-                                                                    <div className="p-4 bg-blue-50/40 border border-blue-100/50 rounded-2xl">
-                                                                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5">
-                                                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                                            Dự kiến đi
+                                                                    <div className="p-3 bg-blue-50/40 border border-blue-100/50 rounded-xl">
+                                                                        <p className="text-[8px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-1">
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                                            Đi
                                                                         </p>
                                                                         <input
                                                                             type="datetime-local"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-blue-800 outline-none cursor-pointer"
+                                                                            className="w-full bg-transparent text-[10px] font-black text-blue-800 outline-none cursor-pointer"
                                                                             value={point.plannedDepartureTime}
                                                                             onChange={(e) => updatePoint(index, 'plannedDepartureTime', e.target.value)}
                                                                         />
                                                                     </div>
                                                                 </div>
-                                                                <div className="col-span-6 flex gap-4">
-                                                                    <div className="flex-1 flex items-center gap-4 bg-slate-50/50 px-5 py-3 rounded-xl border border-slate-100">
+                                                                <div className="col-span-6 flex gap-3">
+                                                                    <div className="flex-1 flex items-center gap-2 bg-slate-50/50 px-3 py-2 rounded-xl border border-slate-100">
                                                                         <span className="text-[8px] font-black text-slate-300">LAT</span>
                                                                         <input
                                                                             type="number" step="any"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-slate-700 outline-none"
+                                                                            className="w-full bg-transparent text-[10px] font-black text-slate-700 outline-none"
                                                                             value={point.stopLatitude}
                                                                             onChange={(e) => updatePoint(index, 'stopLatitude', parseFloat(e.target.value))}
                                                                         />
                                                                     </div>
-                                                                    <div className="flex-1 flex items-center gap-4 bg-slate-50/50 px-5 py-3 rounded-xl border border-slate-100">
+                                                                    <div className="flex-1 flex items-center gap-2 bg-slate-50/50 px-3 py-2 rounded-xl border border-slate-100">
                                                                         <span className="text-[8px] font-black text-slate-300">LNG</span>
                                                                         <input
                                                                             type="number" step="any"
-                                                                            className="w-full bg-transparent text-[11px] font-black text-slate-700 outline-none"
+                                                                            className="w-full bg-transparent text-[10px] font-black text-slate-700 outline-none"
                                                                             value={point.stopLongitude}
                                                                             onChange={(e) => updatePoint(index, 'stopLongitude', parseFloat(e.target.value))}
                                                                         />
@@ -1082,26 +1096,26 @@ export function MerchantScheduleManagementPage() {
                         </form>
 
                         {/* Modal Footer */}
-                        <div className="p-8 md:p-12 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-slate-400">
-                                <Info size={16} />
-                                <p className="text-[10px] font-black uppercase tracking-widest">Toàn bộ dữ liệu được mã hóa chuẩn RT-MANAGEMENT</p>
+                        <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-400">
+                                <Info size={14} />
+                                <p className="text-[9px] font-black uppercase tracking-widest">Dữ liệu RT-MANAGEMENT</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-10 py-4 bg-white border border-slate-200 rounded-2xl font-black text-xs text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
+                                    className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] text-slate-950 uppercase tracking-widest hover:bg-slate-50 transition-all"
                                 >
                                     Hủy lệnh
                                 </button>
                                 <button
                                     onClick={handleSubmit}
                                     disabled={submitting}
-                                    className="px-12 py-4 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                                    className="px-8 py-3 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
                                 >
-                                    {submitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                                    {isEditing ? "Lưu thay đổi tuyến" : "Tạo tuyến khai thác"}
+                                    {submitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                                    {isEditing ? "Lưu thay đổi" : "Tạo tuyến mới"}
                                 </button>
                             </div>
                         </div>
@@ -1226,7 +1240,7 @@ export function MerchantScheduleManagementPage() {
                             </button>
                             <button
                                 onClick={handleAssignVehicle}
-                                disabled={assignLoading || !selectedVehicleId}
+                                disabled={assignLoading || !selectedVehicleId || !selectedDriverId}
                                 className="flex-[2] py-4 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {assignLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

@@ -1,365 +1,617 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  ArrowLeft,
-  User,
-  Phone,
-  Mail,
-  StickyNote,
-  ChevronRight,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+    ArrowLeft, AlertCircle, Info, ChevronRight, MapPin
+} from 'lucide-react'
+import type { RouteItem } from '../../Components/client/Ticket'
+import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-type StopPoint = {
-  id: string;
-  stopOrder: string;
-  routeId: string;
-  plannedArrivalTime?: string;
-  plannedDepartureTime?: string;
-  note?: string;
-};
+const DETAIL_API_URL = "http://localhost:8082/api/v1/management/route-service/detail";
 
-type RouteItem = {
-  id: string;
-  pickupBranch?: string | null;
-  origin: string;
-  destination: string;
-  availableSeats?: number | null;
-  plannedStartTime: string;
-  plannedEndTime: string;
-  routeCode: string;
-  vehiclePlate?: string | null;
-  vehicleType?: string | null;
-  seatCapacity?: number | null;
-  stopPoints?: StopPoint[] | null;
-  price?: number | null;
-};
+// Dynamic Seat Generation
+const generateSeats = (totalSeats = 40, hasFloor = true) => {
+    if (hasFloor) {
+        const countPerFloor = Math.ceil(totalSeats / 2);
+        const lower = Array.from({ length: countPerFloor }).map((_, i) => ({
+            id: `A${(i + 1).toString().padStart(2, '0')}`,
+            number: `A${(i + 1).toString().padStart(2, '0')}`,
+            status: 'available',
+            floor: 'lower'
+        }))
+        const upper = Array.from({ length: totalSeats - countPerFloor }).map((_, i) => ({
+            id: `B${(i + 1).toString().padStart(2, '0')}`,
+            number: `B${(i + 1).toString().padStart(2, '0')}`,
+            status: 'available',
+            floor: 'upper'
+        }))
+        return [...lower, ...upper]
+    }
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const formatTimeHHmm = (iso?: string) => {
-  if (!iso) return "--:--";
-  const d = new Date(iso);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-};
-const durationText = (s?: string, e?: string) => {
-  if (!s || !e) return "--";
-  const diff = Math.max(0, new Date(e).getTime() - new Date(s).getTime());
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
-};
-const formatVnd = (v?: number | null) => {
-  if (typeof v !== "number") return "—";
-  return new Intl.NumberFormat("vi-VN").format(v) + " ₫";
-};
+    return Array.from({ length: totalSeats }).map((_, i) => ({
+        id: `S${(i + 1).toString().padStart(2, '0')}`,
+        number: `S${(i + 1).toString().padStart(2, '0')}`,
+        status: 'available',
+        floor: 'lower'
+    }))
+}
 
-const formatVehicleType = (value?: string | null) => {
-  if (!value) return "Xe khách";
-  const normalized = value.trim().toUpperCase();
-  if (normalized === "LIMOUSINE") return "Xe limousine";
-  if (normalized === "SLEEPER") return "Xe giường nằm";
-  if (normalized === "STANDARD" || normalized === "COACH") return "Xe tiêu chuẩn";
-  if (normalized === "PREMIUM") return "Xe cao cấp";
-  return value;
-};
-
-const mockRouteData: RouteItem = {
-  id: "09b6fc7c-c3ce-4ed6-9093-ada0db903546",
-  pickupBranch: "233 Điện Biên Phủ",
-  origin: "Hà Nội",
-  destination: "Hải Phòng",
-  availableSeats: 32,
-  plannedStartTime: "2026-03-04T07:30:00Z",
-  plannedEndTime: "2026-03-04T13:30:00Z",
-  routeCode: "HAN-HPH-06",
-  vehiclePlate: "51B-123.45",
-  vehicleType: "LIMOUSINE",
-  seatCapacity: 34,
-  price: 320000,
-  stopPoints: [],
-};
-
-const InputField = ({
-  label,
-  icon: Icon,
-  placeholder,
-  type = "text",
-  value,
-  onChange,
-  multiline,
-}: {
-  label: string;
-  icon: LucideIcon;
-  placeholder: string;
-  type?: string;
-  value: string;
-  onChange: (v: string) => void;
-  multiline?: boolean;
-}) => (
-  <div className="space-y-3">
-    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">
-      {label}
-    </label>
-    <div className="flex items-start gap-5 p-5 bg-slate-50 border-2 border-slate-50 focus-within:border-brand-primary/30 focus-within:bg-white rounded-[1.5rem] transition-all duration-300 shadow-sm focus-within:shadow-xl focus-within:shadow-brand-primary/10 group">
-      <div className="w-12 h-12 rounded-[1rem] bg-white flex items-center justify-center shadow-sm shrink-0 mt-0.5 border border-slate-100 group-focus-within:border-brand-primary/20 transition-all">
-        <Icon className="w-6 h-6 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
-      </div>
-      {multiline ? (
-        <textarea
-          className="bg-transparent border-none focus:outline-none focus:ring-0 font-black text-slate-900 w-full resize-none placeholder:text-slate-300 placeholder:font-normal text-lg pt-2.5"
-          rows={4}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <input
-          type={type}
-          className="bg-transparent border-none focus:outline-none focus:ring-0 font-black text-slate-900 w-full placeholder:text-slate-300 placeholder:font-normal text-lg pt-2.5"
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-    </div>
-  </div>
-);
+import seatActive from '../../assets/seat_active.svg'
+import seatDisabled from '../../assets/seat_disabled.svg'
+import seatSelecting from '../../assets/seat_selecting.svg'
 
 export default function BookingPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const passedRoute = location.state?.routeData;
-  const passedSeats: string[] = location.state?.selectedSeats ?? [];
+    const navigate = useNavigate()
+    const location = useLocation()
+    const passedRoute = location.state?.routeData as RouteItem
 
-  // Map fields if they are in the raw API format
-  const routeData: RouteItem = passedRoute
-    ? {
-        ...passedRoute,
-        price: passedRoute.price || (passedRoute as any).ticketPrice,
-        stopPoints: passedRoute.stopPoints || (passedRoute as any).routePoints?.map((rp: any) => ({
-          ...rp,
-          stopOrder: rp.operationOrder,
-          note: rp.note || rp.stopName
-        }))
-      }
-    : mockRouteData;
+    // --- State Management ---
+    const [step, setStep] = useState<number>(1)
+    const [routeData, setRouteData] = useState<Partial<RouteItem>>(() => {
+        if (!passedRoute) return {
+            origin: "Hồ Chí Minh",
+            destination: "Đà Lạt",
+            plannedStartTime: new Date().toISOString(),
+            plannedEndTime: new Date(Date.now() + 6 * 3600000).toISOString(),
+            price: 350000,
+            vehicleType: "LIMOUSINE",
+            pickupBranch: "292 Đinh Bộ Lĩnh, Bình Thạnh",
+            routeCode: "HCM-DL-99",
+            stopPoints: []
+        };
 
-  const selectedSeats = passedSeats.length > 0 ? passedSeats : ["A1", "A2"];
+        return {
+            ...passedRoute,
+            price: passedRoute.price || (passedRoute as any).ticketPrice,
+            stopPoints: passedRoute.stopPoints || (passedRoute as any).routePoints?.map((rp: any) => ({
+                ...rp,
+                stopOrder: rp.operationOrder,
+                note: rp.note || rp.stopName
+            }))
+        };
+    })
 
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [note, setNote] = useState("");
+    const [loading, setLoading] = useState(false)
+    const [selectedSeats, setSelectedSeats] = useState<string[]>(location.state?.selectedSeats || [])
+    const [seats, setSeats] = useState<any[]>(() => {
+        const baseSeats = generateSeats(40, true);
+        const initialSelected = location.state?.selectedSeats || [];
+        return baseSeats.map(s =>
+            initialSelected.includes(s.id) ? { ...s, status: 'held' } : s
+        );
+    })
 
-  const unitPrice = routeData.price ?? 0;
-  const totalAmount = unitPrice * selectedSeats.length;
-  const canContinue =
-    customerName.trim().length > 0 &&
-    customerPhone.trim().length > 0 &&
-    selectedSeats.length > 0;
+    // Customer Info
+    const [custName, setCustName] = useState("")
+    const [custPhone, setCustPhone] = useState("")
+    const [custEmail, setCustEmail] = useState("")
+    const [custNote, setCustNote] = useState("")
+    const [termsAccepted, setTermsAccepted] = useState(false)
 
-  const handleConfirm = () => {
-    if (!canContinue) return;
-    navigate("/payment", {
-      state: {
-        routeData,
-        selectedSeats,
-        customerName,
-        customerPhone,
-        customerEmail,
-        totalAmount,
-        note,
-      },
-    });
-  };
+    // Pickup / Dropoff
+    const [pickupId, setPickupId] = useState<string>("")
+    const [dropoffId, setDropoffId] = useState<string>("")
+    const [pickupType, setPickupType] = useState<"office" | "transfer">("office")
+    const [dropoffType, setDropoffType] = useState<"office" | "transfer">("office")
 
-  return (
-    <div className="min-h-screen bg-[#FDFDFD] font-sans pb-40">
-      {/* Header - Refined & Slimmer */}
-      <div
-        className="bg-slate-950 pt-4 pb-10 px-6 relative overflow-hidden"
-        style={{ borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
-      >
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-primary/10 rounded-full -mr-32 -mt-32 blur-[100px] opacity-40 translate-x-1/4 -translate-y-1/4" />
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="flex items-center gap-6 mb-4">
+    // --- Effects ---
+    useEffect(() => {
+        const fetchDetail = async () => {
+            const routeId = passedRoute?.id;
+            if (!routeId) return;
+
+            setLoading(true);
+            try {
+                const meta = createRequestMeta();
+                const response = await fetch(`${DETAIL_API_URL}?routeId=${routeId}`, {
+                    method: 'GET',
+                    headers: {
+                        ...createAuthorizedEnvelopeHeaders(meta),
+                        'X-Request-Id': meta.requestId,
+                        'X-Request-DateTime': meta.requestDateTime,
+                        'X-Channel': meta.channel
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const data = result.data || result;
+
+                    setRouteData(prev => ({
+                        ...prev,
+                        ...data,
+                        price: data.ticketPrice || data.price || prev.price,
+                        stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
+                            ...rp,
+                            stopOrder: rp.operationOrder || rp.stopOrder,
+                            note: rp.note || rp.stopName
+                        })) || prev.stopPoints
+                    }));
+
+                    // Update seat map based on vehicle configuration
+                    const seatsCount = data.availableSeats || 40;
+                    const floors = data.hasFloor || true;
+
+                    setSeats(() => {
+                        const newSeats = generateSeats(seatsCount, floors);
+                        // Maintain the status of already selected seats
+                        return newSeats.map(s => {
+                            const isSelected = selectedSeats.includes(s.id);
+                            return isSelected ? { ...s, status: 'held' } : s;
+                        });
+                    });
+                }
+            } catch (err) {
+                console.error("Fetch route detail error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDetail();
+    }, [passedRoute?.id, selectedSeats]); // Added selectedSeats to sync when API finishes
+
+    const toggleSeat = (id: string) => {
+        setSeats(prevSeats => {
+            const seat = prevSeats.find(s => s.id === id)
+            if (!seat || seat.status === 'occupied') return prevSeats
+
+            if (seat.status === 'available') {
+                setSelectedSeats(prev => prev.includes(id) ? prev : [...prev, id])
+                return prevSeats.map(s => s.id === id ? { ...s, status: 'held' } : s)
+            } else if (seat.status === 'held') {
+                setSelectedSeats(prev => prev.filter(sid => sid !== id))
+                return prevSeats.map(s => s.id === id ? { ...s, status: 'available' } : s)
+            }
+            return prevSeats
+        })
+    }
+
+    const formatVnd = (v?: number | null) => {
+        if (typeof v !== "number") return "0 ₫"
+        return new Intl.NumberFormat("vi-VN").format(v) + " ₫"
+    }
+
+    const totalAmount = selectedSeats.length * (routeData.price || 0)
+
+    // Step validation
+    const canGoToStep2 = selectedSeats.length > 0
+    const canGoToStep3 = custName && custPhone && termsAccepted
+    const canGoToStep4 = pickupId && dropoffId
+    const canCheckout = canGoToStep2 && canGoToStep3 && canGoToStep4
+
+    const handleNext = () => {
+        if (step === 1 && canGoToStep2) setStep(2)
+        else if (step === 2 && canGoToStep3) setStep(3)
+        else if (step === 3 && canGoToStep4) setStep(4)
+        else if (step === 4 && canCheckout) handleCheckout()
+    }
+
+    const handleBack = () => {
+        if (step > 1) setStep(step - 1)
+        else navigate(-1)
+    }
+
+    const handleCheckout = () => {
+        if (!canCheckout) return
+        navigate('/payment', {
+            state: {
+                routeData,
+                selectedSeats,
+                customerName: custName,
+                customerPhone: custPhone,
+                customerEmail: custEmail,
+                totalAmount,
+                note: custNote,
+                pickupPoint: routeData.stopPoints?.find(s => s.id === pickupId),
+                dropoffPoint: routeData.stopPoints?.find(s => s.id === dropoffId)
+            }
+        })
+    }
+
+    // --- Components ---
+    const Stepper = () => (
+        <div className="bg-[#E5E7EB] px-4 py-3 border-b border-gray-200">
+            <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] sm:text-xs">
+                {[
+                    { id: 1, label: "CHỌN GHẾ" },
+                    { id: 2, label: "THÔNG TIN KHÁCH HÀNG" },
+                    { id: 3, label: "ĐIỂM ĐÓN/TRẢ" },
+                    { id: 4, label: "THANH TOÁN" }
+                ].map((s, idx) => (
+                    <div key={s.id} className="flex items-center flex-1 last:flex-none">
+                        <div className={`flex items-center gap-2 ${step >= s.id ? 'text-slate-900' : 'text-gray-400'}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold border ${step >= s.id ? 'bg-brand-primary border-brand-primary text-white' : 'bg-white border-gray-300 text-gray-400'}`}>
+                                {s.id}
+                            </div>
+                            <span className="font-black uppercase tracking-tight hidden sm:inline">{s.label}</span>
+                        </div>
+                        {idx < 3 && <div className={`h-px flex-1 mx-4 ${step > s.id ? 'bg-brand-primary' : 'bg-gray-300'}`} />}
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+
+    const Seat = ({ seat }: { seat: any }) => {
+        const isSelected = seat.status === 'held';
+        const isOccupied = seat.status === 'occupied';
+
+        return (
             <button
-              onClick={() => navigate(-1)}
-              className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/5 group backdrop-blur-md"
+                disabled={isOccupied}
+                onClick={() => toggleSeat(seat.id)}
+                className={`relative w-11 h-11 flex items-center justify-center transition-all group ${isOccupied ? 'cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
             >
-              <ArrowLeft className="w-5 h-5 text-white group-hover:-translate-x-1 transition-transform" />
-            </button>
-            <div>
-              <h1 className="text-white font-black text-2xl tracking-tight">
-                Hoàn tất đặt vé
-              </h1>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">
-                Bước 2: Thông tin hành khách
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="max-w-6xl mx-auto px-6 py-12 -mt-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        <div className="lg:col-span-7 space-y-10">
-          {/* Customer Information - Slimmer Inputs */}
-          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/20 space-y-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-primary/5 flex items-center justify-center border border-brand-primary/10">
-                <User className="w-5 h-5 text-brand-primary" />
-              </div>
-              <h3 className="text-xl font-black text-slate-950 tracking-tight">Thông tin người đặt</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-8">
-              <InputField
-                label="Họ và tên hành khách"
-                icon={User}
-                placeholder="Nguyễn Văn A"
-                value={customerName}
-                onChange={setCustomerName}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <InputField
-                  label="Số điện thoại"
-                  icon={Phone}
-                  placeholder="09xx xxx xxx"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={setCustomerPhone}
+                <img
+                    src={isSelected ? seatSelecting : isOccupied ? seatDisabled : seatActive}
+                    alt="seat"
+                    className="w-full h-full object-contain"
                 />
-                <InputField
-                  label="Địa chỉ Email"
-                  icon={Mail}
-                  placeholder="example@gmail.com"
-                  type="email"
-                  value={customerEmail}
-                  onChange={setCustomerEmail}
-                />
-              </div>
-              <InputField
-                label="Ghi chú thêm (Nếu có)"
-                icon={StickyNote}
-                placeholder="Yêu cầu về vị trí đón, đồ đạc..."
-                value={note}
-                onChange={setNote}
-                multiline
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-5 space-y-10">
-          {/* Route Summary - Compact */}
-          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-2xl shadow-slate-200/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl transition-colors" />
-            <div className="mb-6">
-              <span className="text-brand-primary text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 px-3 py-1 rounded-lg border border-brand-primary/10">
-                {routeData.routeCode}
-              </span>
-            </div>
-            <h2 className="text-2xl font-black text-slate-950 tracking-tight mb-8">
-              {routeData.origin} <span className="text-slate-300 mx-1">→</span>{" "}
-              {routeData.destination}
-            </h2>
-
-            <div className="flex items-center gap-6 mb-10 pb-10 border-b border-slate-50">
-              <div className="text-left">
-                <div className="text-xl font-black text-slate-950 tracking-tighter">
-                  {formatTimeHHmm(routeData.plannedStartTime)}
-                </div>
-                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Xuất phát</div>
-              </div>
-              <div className="flex-1 flex flex-col items-center">
-                <div className="w-full h-px bg-slate-100 relative">
-                  <div className="absolute top-1/2 left-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-200" />
-                  <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand-primary" />
-                </div>
-                <div className="text-[9px] text-slate-400 font-black mt-2 tracking-widest uppercase">
-                  {durationText(routeData.plannedStartTime, routeData.plannedEndTime)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xl font-black text-slate-950 tracking-tighter">
-                  {formatTimeHHmm(routeData.plannedEndTime)}
-                </div>
-                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Dự kiến đến</div>
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vị trí đã chọn</p>
-                <div className="flex gap-1.5">
-                  {selectedSeats.map(id => (
-                    <span key={id} className="text-xs font-black text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-lg">{id}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loại phương tiện</p>
-                <span className="font-bold text-slate-950 text-xs tracking-tight">{formatVehicleType(routeData.vehicleType)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Detail - Elegant Dark */}
-          <div className="bg-slate-950 rounded-[3rem] p-10 shadow-2xl shadow-slate-900/40 text-white relative overflow-hidden group">
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-brand-primary/20 rounded-full blur-3xl" />
-            <h3 className="text-lg font-black mb-8 tracking-tight">Chi tiết thanh toán</h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-center text-slate-500">
-                <span className="font-bold text-[11px] uppercase tracking-widest">Tổng {selectedSeats.length} vé</span>
-                <span className="font-black text-white text-base">{formatVnd(totalAmount)}</span>
-              </div>
-              <div className="pt-6 border-t border-white/5 flex justify-between items-end">
-                <span className="text-slate-400 font-bold text-[11px] uppercase tracking-widest mb-1.5">Thanh toán cuối</span>
-                <span className="text-4xl font-black text-brand-primary tracking-tighter">
-                  {formatVnd(totalAmount)}
+                <span className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black pointer-events-none mt-[-2px]
+                    ${isSelected ? 'text-orange-600' : isOccupied ? 'text-gray-500' : 'text-blue-600 group-hover:text-blue-700'}
+                `}>
+                    {seat.number}
                 </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+            </button>
+        )
+    }
 
-      {/* Floating Bottom Bar */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl z-50 animate-in slide-in-from-bottom-5 duration-700">
-        <div className="bg-white/90 backdrop-blur-2xl border border-slate-100 rounded-[2.5rem] p-5 pr-5 flex flex-col md:flex-row items-center gap-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)]">
-          <div className="flex-1 flex items-center gap-10 px-4">
-            <div className="hidden sm:flex items-center gap-4">
-               <div className="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                  <User size={20} className="text-brand-primary" />
-               </div>
-               <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hành khách</p>
-                  <p className="text-slate-950 font-black text-sm tracking-tight">{customerName || 'Nhập tên...'}</p>
-               </div>
-            </div>
-            <div className="hidden sm:block w-px h-10 bg-slate-100" />
-            <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tổng tiền vé</p>
-              <p className="text-2xl font-black text-slate-950 tracking-tighter">{formatVnd(totalAmount)}</p>
-            </div>
-          </div>
+    return (
+        <div className="min-h-screen bg-[#F3F4F6] font-sans pb-32">
+            {/* Header - Brand Color */}
+            <header className="bg-brand-primary px-6 py-4 sticky top-0 z-[60] shadow-lg">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={handleBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <ArrowLeft className="w-6 h-6 text-white" />
+                        </button>
+                        <div className="text-white">
+                            <h1 className="text-sm sm:text-base font-black tracking-tight">{routeData.origin} - {routeData.destination}</h1>
+                            <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
+                                {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }) : '--/--'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-          <button
-            onClick={handleConfirm}
-            disabled={!canContinue}
-            className={`w-full md:w-auto px-10 py-5 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-lg flex items-center justify-center gap-3 ${
-              canContinue
-                ? "bg-brand-primary hover:bg-brand-accent text-slate-950 shadow-brand-primary/20"
-                : "bg-slate-100 text-slate-300 shadow-none cursor-not-allowed"
-            }`}
-          >
-            Tiếp tục thanh toán
-            <ChevronRight size={20} />
-          </button>
+            {/* Sub-Tabs (Visual only as per image) */}
+            <div className="bg-white border-b border-gray-200 px-6 overflow-x-auto whitespace-nowrap">
+                <div className="max-w-7xl mx-auto flex gap-8">
+                    {["Đặt vé", "Lịch trình", "Trung chuyển", "Chính sách"].map((tab) => (
+                        <button key={tab} className={`py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${tab === "Đặt vé" ? "border-brand-primary text-brand-primary" : "border-transparent text-gray-400"}`}>
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <Stepper />
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                {/* Desktop View (lg screens): Side-by-side but following step if needed, or all in one? */}
+                {/* As per user request "Khi thu nhỏ sẽ là như vầy", I'll use steps for mobile, and keeping the logic unified. */}
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                    {/* LEFT AREA: Step Content */}
+                    <div className="lg:col-span-8 space-y-8">
+
+                        {/* STEP 1: SEAT SELECTION */}
+                        <div className={`${step !== 1 && 'hidden lg:block'} bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden`}>
+                            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-white">
+                                <h2 className="text-lg font-bold text-gray-900">Chọn ghế</h2>
+                                <div className="flex gap-4">
+                                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#D5D9DD] border border-[#C0C6CC]" /><span className="text-[10px] font-bold text-gray-400">Đã bán</span></div>
+                                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#DEF3FF] border border-[#96C5E7]" /><span className="text-[10px] font-bold text-gray-400">Trống</span></div>
+                                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#FDEDE8] border border-[#F8BEAB]" /><span className="text-[10px] font-bold text-gray-400">Chọn</span></div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 flex flex-col items-center">
+                                <div className="flex flex-col md:flex-row gap-12 sm:gap-24 justify-center w-full">
+                                    <div className="flex flex-col items-center flex-1 max-w-xs">
+                                        <div className="w-full flex justify-between items-center mb-6">
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng dưới</p>
+                                            <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-6 sm:gap-8 p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center">
+                                            {seats.filter(s => s.floor === 'lower').map((seat) => (
+                                                <Seat key={seat.id} seat={seat} />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-center flex-1 max-w-xs">
+                                        <div className="w-full flex justify-between items-center mb-6">
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng trên</p>
+                                            <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-6 sm:gap-8 p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center">
+                                            {seats.filter(s => s.floor === 'upper').map((seat) => (
+                                                <Seat key={seat.id} seat={seat} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-8 py-3 px-6 bg-slate-50 rounded-full border border-slate-100 text-xs font-bold text-slate-400">
+                                    Ghế đã chọn: <span className="text-brand-primary ml-1">{selectedSeats.join(", ") || "Chưa chọn"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* STEP 2: CUSTOMER INFO */}
+                        <div className={`${step !== 2 && 'hidden lg:block'} bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10 transition-all`}>
+                            <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-50">
+                                <h2 className="text-lg font-bold text-gray-900">Thông tin khách hàng</h2>
+                                <button className="text-brand-primary text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 bg-brand-primary/5 rounded-lg">Điều khoản & Lưu ý</button>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row gap-10">
+                                <div className="flex-1 space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Họ và tên hành khách *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Nguyễn Văn A"
+                                            className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-50 focus:border-brand-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-gray-900 shadow-sm"
+                                            value={custName}
+                                            onChange={(e) => setCustName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Số điện thoại *</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="09xx xxx xxx"
+                                            className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-50 focus:border-brand-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-gray-900 shadow-sm"
+                                            value={custPhone}
+                                            onChange={(e) => setCustPhone(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email *</label>
+                                        <input
+                                            type="email"
+                                            placeholder="example@gmail.com"
+                                            className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-50 focus:border-brand-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-gray-900 shadow-sm"
+                                            value={custEmail}
+                                            onChange={(e) => setCustEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Ghi chú (Nếu có)</label>
+                                        <textarea
+                                            placeholder="Yêu cầu đặc biệt về vị trí, hành lý..."
+                                            rows={3}
+                                            className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-50 focus:border-brand-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-gray-900 shadow-sm resize-none"
+                                            value={custNote}
+                                            onChange={(e) => setCustNote(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 bg-brand-primary/5 p-8 rounded-3xl border border-brand-primary/10 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 text-brand-primary font-black text-sm mb-6 uppercase tracking-widest">
+                                            <AlertCircle size={18} />
+                                            <span>Lưu ý quan trọng</span>
+                                        </div>
+                                        <ul className="space-y-4 text-xs font-bold text-gray-500 list-disc ml-4 leading-relaxed">
+                                            <li>Quý khách vui lòng <span className="text-brand-accent underline">Đăng ký/Đăng nhập</span> để nhận ưu đãi lên đến 20%.</li>
+                                            <li>Thông tin hành khách phải trùng khớp với giấy tờ tùy thân.</li>
+                                            <li>Mã vé điện tử sẽ được gửi qua SMS và Email sau khi thanh toán.</li>
+                                            <li>Hotline hỗ trợ 24/7: <span className="text-slate-900">1900 6067</span>.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-10 pt-8 border-t border-gray-100 flex items-center gap-4">
+                                <label className="relative flex items-center cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={termsAccepted}
+                                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                                    />
+                                    <div className="w-6 h-6 bg-white border-2 border-gray-200 rounded-lg peer-checked:bg-brand-primary peer-checked:border-brand-primary transition-all flex items-center justify-center">
+                                        {termsAccepted && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                    </div>
+                                    <span className="ml-3 text-[11px] sm:text-xs font-bold text-gray-500">
+                                        Chấp nhận <span className="text-brand-primary border-b border-brand-primary/30">điều khoản đặt vé</span> của nhà xe.
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* STEP 3: PICKUP / DROPOFF */}
+                        <div className={`${step !== 3 && 'hidden lg:block'} bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10`}>
+                            <div className="flex items-center gap-3 mb-10 pb-6 border-b border-gray-50">
+                                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
+                                    <MapPin size={22} />
+                                </div>
+                                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Thông tin đón trả</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-8">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">VỊ TRÍ ĐÓN KHÁCH</h3>
+                                    <div className="flex gap-8">
+                                        {["office", "transfer"].map((type) => (
+                                            <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${pickupType === type ? 'border-brand-primary' : 'border-gray-200 group-hover:border-gray-300'}`}>
+                                                    {pickupType === type && <div className="w-2.5 h-2.5 bg-brand-primary rounded-full shadow-sm" />}
+                                                </div>
+                                                <input type="radio" className="hidden" checked={pickupType === type} onChange={() => setPickupType(type as any)} />
+                                                <span className={`text-xs font-black uppercase tracking-widest ${pickupType === type ? 'text-slate-900' : 'text-gray-400'}`}>
+                                                    {type === 'office' ? 'Bến xe/VP' : 'Trung chuyển'}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full pl-5 pr-10 py-5 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:border-brand-primary/20 appearance-none font-bold text-gray-900 shadow-sm"
+                                            value={pickupId}
+                                            onChange={(e) => setPickupId(e.target.value)}
+                                        >
+                                            <option value="">Chọn địa điểm gần bạn</option>
+                                            {routeData.stopPoints?.map(s => (
+                                                <option key={s.id} value={s.id}>{s.note || `Trạm ${s.stopOrder}`}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronRight className="rotate-90 w-4 h-4" /></div>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-brand-accent flex items-center gap-2 bg-brand-primary/5 p-4 rounded-xl border border-brand-primary/10">
+                                        <Info size={14} />
+                                        Vui lòng có mặt tại điểm đón trước 30 phút giờ xuất bến.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-8">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">VỊ TRÍ TRẢ KHÁCH</h3>
+                                    <div className="flex gap-8">
+                                        {["office", "transfer"].map((type) => (
+                                            <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${dropoffType === type ? 'border-brand-primary' : 'border-gray-200 group-hover:border-gray-300'}`}>
+                                                    {dropoffType === type && <div className="w-2.5 h-2.5 bg-brand-primary rounded-full shadow-sm" />}
+                                                </div>
+                                                <input type="radio" className="hidden" checked={dropoffType === type} onChange={() => setDropoffType(type as any)} />
+                                                <span className={`text-xs font-black uppercase tracking-widest ${dropoffType === type ? 'text-slate-900' : 'text-gray-400'}`}>
+                                                    {type === 'office' ? 'Bến xe/VP' : 'Trung chuyển'}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full pl-5 pr-10 py-5 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:border-brand-primary/20 appearance-none font-bold text-gray-900 shadow-sm"
+                                            value={dropoffId}
+                                            onChange={(e) => setDropoffId(e.target.value)}
+                                        >
+                                            <option value="">Chọn địa điểm trung chuyển</option>
+                                            {routeData.stopPoints?.map(s => (
+                                                <option key={s.id} value={s.id}>{s.note || `Trạm ${s.stopOrder}`}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronRight className="rotate-90 w-4 h-4" /></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* STEP 4: SUMMARY & PRICE (Mobile Only or Sidebar Content) */}
+                        <div className={`${step !== 4 && 'hidden'} lg:hidden space-y-6`}>
+                            {/* Mobile Step 4 implements the Summary cards that are already in the sidebar for desktop */}
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <h2 className="text-lg font-bold mb-6">Tóm tắt đơn hàng</h2>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center pb-4 border-b border-gray-50">
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Chuyến xe</span>
+                                        <span className="text-sm font-black">{routeData.origin} → {routeData.destination}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pb-4 border-b border-gray-50">
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ghế đã chọn</span>
+                                        <span className="text-sm font-black text-brand-primary">{selectedSeats.join(", ")}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-4">
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Tổng thanh toán</span>
+                                        <span className="text-2xl font-black text-brand-accent tracking-tighter">{formatVnd(totalAmount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* RIGHT AREA: Summary Sidebar (Always visible on large screens) */}
+                    <div className="hidden lg:block lg:col-span-4 space-y-6">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sticky top-28">
+                            <div className="flex justify-between items-center mb-8">
+                                <h2 className="text-lg font-bold text-gray-900">Thông tin chuyến đi</h2>
+                                <Info size={16} className="text-gray-300" />
+                            </div>
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hành trình</span>
+                                    <span className="text-sm font-bold text-slate-900">{routeData.origin} - {routeData.destination}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Khởi hành</span>
+                                    <span className="text-sm font-bold text-brand-primary">
+                                        {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Số ghế</span>
+                                    <span className="text-sm font-black text-brand-primary">{selectedSeats.length > 0 ? selectedSeats.join(", ") : "Chưa chọn"}</span>
+                                </div>
+
+                                <div className="pt-6 border-t border-gray-50 flex flex-col gap-4">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-bold text-gray-400 text-[10px] uppercase tracking-[0.2em]">Giá vé lượt đi</span>
+                                        <span className="font-black text-slate-900">{formatVnd(totalAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2">
+                                        <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">TỔNG CỘNG</span>
+                                        <span className="text-3xl font-black text-brand-accent tracking-tighter">{formatVnd(totalAmount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleCheckout}
+                                disabled={!canCheckout}
+                                className={`w-full py-5 rounded-[1.5rem] font-black text-sm mt-10 transition-all shadow-xl flex items-center justify-center gap-3 ${canCheckout ? 'bg-brand-dark hover:bg-brand-primary text-white shadow-brand-primary/20 hover:-translate-y-1' : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                    }`}
+                            >
+                                TIẾP TỤC THANH TOÁN
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {/* MOBILE FLOATING ACTION BAR */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 sm:p-5 z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.06)] lg:hidden transition-transform duration-500">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng cộng</span>
+                        <span className="text-xl font-black text-slate-900 tracking-tighter">{formatVnd(totalAmount)}</span>
+                    </div>
+                    <div className="flex flex-1 gap-3 justify-end">
+                        {step === 4 ? (
+                            <>
+                                <button onClick={() => setStep(3)} className="px-6 py-4 bg-gray-50 text-gray-600 font-bold rounded-2xl border border-gray-100 text-xs">Quay lại</button>
+                                <button onClick={handleCheckout} disabled={!canCheckout} className={`px-10 py-4 rounded-2xl font-black text-white text-xs ${canCheckout ? 'bg-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-gray-300'}`}>Thanh toán</button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={handleNext}
+                                className={`w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-white text-xs transition-all ${(step === 1 && canGoToStep2) || (step === 2 && canGoToStep3) || (step === 3 && canGoToStep4)
+                                        ? 'bg-brand-primary shadow-lg shadow-brand-primary/20 active:scale-95'
+                                        : 'bg-gray-300 cursor-not-allowed'
+                                    }`}
+                            >
+                                {step === 3 ? "Xác nhận đặt chỗ" : "Tiếp tục"}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {loading && (
+                <div className="fixed inset-0 bg-white/70 backdrop-blur-md z-[200] flex items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4" />
+                        <p className="text-brand-primary font-black text-sm uppercase tracking-[0.2em]">Đang chuẩn bị...</p>
+                    </div>
+                </div>
+            )}
         </div>
-      </div>
-    </div>
-  );
+    )
 }
+
