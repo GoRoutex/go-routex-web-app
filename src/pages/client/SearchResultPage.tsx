@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, SlidersHorizontal, MapPin, Bus, Loader2, AlertCircle } from 'lucide-react'
+import { Trash2, DollarSign, Clock, Armchair, ChevronDown } from 'lucide-react'
 import { Ticket } from '../../Components/client/Ticket'
 import type { RouteItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
@@ -18,44 +18,18 @@ export default function SearchResultPage() {
 
   // Get data from location state OR query params
   const stateSearchData = location.state?.searchData
-  const stateTripType = location.state?.tripType
-
   const originParam = searchParams.get('origin')
   const destinationParam = searchParams.get('destination')
   const dateParam = searchParams.get('date')
   const seatsParam = searchParams.get('seats')
-  const typeParam = searchParams.get('type') as "one-way" | "round-trip" | null
-  const returnDateParam = searchParams.get('returnDate')
 
-  const origin = stateSearchData?.originCity || originParam || "Hà Nội"
-  const destination = stateSearchData?.destinationCity || destinationParam || "Hải Phòng"
-  const tripType = stateTripType || typeParam || "one-way"
+  const origin = stateSearchData?.originCity || originParam || "TP. Hồ Chí Minh"
+  const destination = stateSearchData?.destinationCity || destinationParam || "Lâm Đồng"
   const departureDate = stateSearchData?.departureDate || dateParam
-  const returnDateRaw = stateSearchData?.returnDate || returnDateParam
   const seats = stateSearchData?.seats || (seatsParam ? parseInt(seatsParam) : 1)
-
-  // Helper to format date
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "---";
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('vi-VN', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const date = formatDate(departureDate)
-  const returnDate = formatDate(returnDateRaw)
 
   useEffect(() => {
     const fetchResults = async () => {
-      if (!origin || !destination || !departureDate) return;
-      
       setLoading(true);
       setError(null);
       try {
@@ -65,7 +39,7 @@ export default function SearchResultPage() {
           data: {
             origin: origin,
             destination: destination,
-            departureDate: departureDate,
+            departureDate: departureDate || new Date().toISOString(),
             seat: String(seats),
             pageSize: "50",
             pageNumber: "1"
@@ -89,16 +63,15 @@ export default function SearchResultPage() {
         const result = await response.json();
         const rawItems = result.data?.items || result.data || [];
         
-        // Map fields based on the new API response structure
         const items = rawItems.map((item: any) => ({
           ...item,
-          origin: origin, // Use the searched origin
-          destination: destination, // Use the searched destination
-          price: item.ticketPrice, // Map ticketPrice to price
+          origin: origin,
+          destination: destination,
+          price: item.ticketPrice,
           stopPoints: item.routePoints?.map((rp: any) => ({
             ...rp,
             stopOrder: rp.operationOrder,
-            note: rp.note || rp.stopName // Use stopName as note if note is empty
+            note: rp.note || rp.stopName
           }))
         }));
         
@@ -115,137 +88,131 @@ export default function SearchResultPage() {
 
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans">
-      {/* Header */}
-      <div
-        className="bg-brand-dark pt-12 pb-16 px-8 relative overflow-hidden shadow-2xl shadow-brand-dark/20"
-        style={{ borderBottomLeftRadius: 60, borderBottomRightRadius: 60 }}
-      >
-        <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full -mr-48 -mt-48 blur-3xl opacity-50" />
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="flex items-center justify-between mb-12">
-            <button
-              onClick={() => navigate(-1)}
-              className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 group"
-            >
-              <ArrowLeft className="w-6 h-6 text-white group-hover:-translate-x-1 transition-transform" />
-            </button>
-
-            <h1 className="text-white font-black text-2xl tracking-tight">Kết quả tìm kiếm</h1>
-
-            <button className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10">
-              <SlidersHorizontal className="w-6 h-6 text-white" />
-            </button>
-          </div>
-
-          {/* Route Summary */}
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-brand-dark/20 relative z-20">
-            <div className="flex items-center gap-8 justify-between">
-              <div className="flex items-center gap-10 flex-1">
-                <div className="flex flex-col">
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Điểm đi</span>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                      <Bus className="w-5 h-5 text-brand-primary" />
-                    </div>
-                    <span className="text-slate-900 font-black text-2xl tracking-tight">{origin}</span>
-                  </div>
+    <div className="min-h-screen bg-[#F5F5F5] font-sans pb-20">
+      <main className="max-w-[1140px] mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+           
+           {/* Sidebar: Bộ lọc tìm kiếm */}
+           <div className="lg:col-span-3">
+             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="p-4 flex items-center justify-between border-b border-gray-100">
+                   <h2 className="text-[14px] font-bold text-slate-800">BỘ LỌC TÌM KIẾM</h2>
+                   <button className="text-brand-primary text-[13px] font-medium flex items-center gap-1 hover:text-brand-accent transition-colors">
+                      Bỏ lọc
+                      <Trash2 className="w-4 h-4 ml-1" />
+                   </button>
                 </div>
                 
-                <div className="flex flex-col items-center px-4">
-                   <div className="w-12 h-px bg-slate-100" />
+                {/* Filter 1: Giờ đi */}
+                <div className="p-5 border-b border-gray-100">
+                   <h3 className="text-[14px] font-bold text-slate-800 mb-4">Giờ đi</h3>
+                   <div className="space-y-4">
+                      {[
+                        "Sáng sớm 00:00 - 06:00",
+                        "Buổi sáng 06:00 - 12:00",
+                        "Buổi chiều 12:00 - 18:00",
+                        "Buổi tối 18:00 - 24:00"
+                      ].map((time, idx) => (
+                        <label key={idx} className="flex items-center gap-3 cursor-pointer group">
+                           <input type="checkbox" className="w-[18px] h-[18px] rounded border-gray-300 text-brand-primary focus:ring-brand-primary accent-brand-primary cursor-pointer"/>
+                           <span className="text-[13px] font-medium text-slate-500 group-hover:text-slate-800 transition-colors">{time}</span>
+                        </label>
+                      ))}
+                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Điểm đến</span>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-brand-secondary/10 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-brand-secondary" />
+                {/* Filter 2: Loại xe */}
+                <div className="p-5 border-b border-gray-100">
+                   <h3 className="text-[14px] font-bold text-slate-800 mb-4">Loại xe</h3>
+                   <div className="flex flex-wrap gap-2">
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Ghế</button>
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Giường</button>
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Limousine</button>
+                   </div>
+                </div>
+                
+                {/* Filter 3: Hàng ghế */}
+                <div className="p-5 border-b border-gray-100">
+                   <h3 className="text-[14px] font-bold text-slate-800 mb-4">Hàng ghế</h3>
+                   <div className="flex flex-wrap gap-2">
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Hàng đầu</button>
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Hàng giữa</button>
+                      <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Hàng cuối</button>
+                   </div>
+                </div>
+
+                {/* Filter 4: Tầng */}
+                <div className="p-5">
+                   <h3 className="text-[14px] font-bold text-slate-800 mb-4">Tầng</h3>
+                   <div className="flex flex-wrap gap-2">
+                       <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Tầng trên</button>
+                       <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-brand-primary hover:text-brand-primary transition-colors">Tầng dưới</button>
+                   </div>
+                </div>
+             </div>
+           </div>
+
+           {/* Results List */}
+           <div className="lg:col-span-9">
+              <h1 className="text-[20px] font-medium text-slate-800 mb-4">{origin} - {destination} ({loading ? 0 : routes.length})</h1>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-8">
+                 <button className="flex items-center justify-center gap-2 px-4 py-2 border border-brand-primary/30 text-brand-primary text-[14px] font-medium rounded-xl bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors">
+                    <DollarSign className="w-4 h-4 shrink-0"/> Giá rẻ bất ngờ
+                 </button>
+                 <button className="flex items-center justify-center gap-2 px-4 py-2 border border-brand-primary/30 text-brand-primary text-[14px] font-medium rounded-xl bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors">
+                    <Clock className="w-4 h-4 shrink-0"/> Giờ khởi hành
+                 </button>
+                 <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-slate-700 text-[14px] font-medium rounded-xl bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                    <Armchair className="w-4 h-4 shrink-0"/> Ghế trống
+                 </button>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <div className="w-10 h-10 border-4 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-slate-500 font-medium">Đang tìm kiếm chuyến đi...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <p className="text-rose-500 font-medium mb-4">{error}</p>
+                  <button onClick={() => window.location.reload()} className="px-6 py-2 bg-brand-primary text-white rounded-lg font-bold">Thử lại</button>
+                </div>
+              ) : routes.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <p className="text-slate-500 font-medium">Không tìm thấy chuyến đi nào phù hợp.</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {routes.map((item: RouteItem, i: number) => (
+                    <div key={item.id}>
+                        {i === 1 && localStorage.getItem("isLoggedIn") !== "true" && (
+                            <div className="bg-white rounded-xl border border-brand-primary/20 shadow-sm p-6 mb-5 flex items-center justify-between">
+                                <div className="max-w-md">
+                                    <h4 className="text-[15px] font-bold text-slate-800 mb-2">Đăng nhập ngay để nhận được nhiều quyền lợi dành cho thành viên</h4>
+                                    <p className="text-[13px] text-slate-500 mb-4">Khi đăng nhập và tải App, bạn sẽ dễ dàng quản lý đặt chỗ, nhận thông báo quan trọng và nhiều ưu đãi khác...</p>
+                                    <a href="#" className="text-brand-primary font-semibold text-[14px] hover:underline underline-offset-4">Đăng nhập ngay</a>
+                                </div>
+                                {/* Placeholder for illustration, keeping it abstract with a soft layout */}
+                                <div className="hidden sm:flex w-40 h-24 bg-brand-primary/5 rounded-lg relative items-center justify-center border border-brand-primary/10 overflow-hidden">
+                                    <div className="w-16 h-10 bg-brand-primary/20 rounded shadow-sm absolute top-4 left-4" />
+                                    <div className="w-14 h-8 bg-brand-primary/40 rounded shadow-sm absolute bottom-2 right-4" />
+                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md z-10">
+                                        <div className="w-6 h-6 bg-brand-primary rounded" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <Ticket
+                            item={{...item, origin, destination}} // ensuring origin/dest injected
+                            onClick={() => navigate('/booking', { state: { routeData: item } })}
+                        />
                     </div>
-                    <span className="text-slate-900 font-black text-2xl tracking-tight">{destination}</span>
-                  </div>
+                  ))}
                 </div>
-              </div>
-
-              <div className="h-12 w-px bg-slate-100 mx-6" />
-
-              <div className="text-right flex items-center gap-12">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ngày đi</p>
-                  <p className="text-slate-900 font-black text-xl tracking-tight bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">{date}</p>
-                </div>
-                {tripType === "round-trip" && (
-                  <div className="border-l border-slate-100 pl-12 text-left">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ngày về</p>
-                    <p className="text-slate-900 font-black text-xl tracking-tight bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">{returnDate}</p>
-                  </div>
-                )}
-
-              </div>
-            </div>
-          </div>
+              )}
+           </div>
         </div>
-      </div>
-
-      {/* Results */}
-      <main className="max-w-5xl mx-auto px-8 py-12 space-y-8">
-        {/* Trips header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Chuyến đi hiện có</h2>
-            <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-xs">
-              {loading ? "Đang tìm kiếm..." : `Tìm thấy ${routes.length} kết quả phù hợp`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
-             <span className="text-slate-600 font-black text-[12px]">Sắp xếp: Phổ biến nhất</span>
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-32 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-            <Loader2 className="w-12 h-12 text-brand-primary animate-spin mx-auto mb-6" />
-            <p className="text-slate-500 font-black text-xl">Đang tải chuyến đi...</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div className="text-center py-32 bg-rose-50 rounded-[3rem] border border-rose-100 shadow-sm">
-            <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-6" />
-            <p className="text-rose-600 font-black text-xl">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-6 px-8 py-3 bg-rose-500 text-white rounded-2xl font-black hover:bg-rose-600 transition-all"
-            >
-              Thử lại
-            </button>
-          </div>
-        )}
-
-        {/* Ticket List */}
-        {!loading && !error && routes.length === 0 ? (
-          <div className="text-center py-32 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-               <Bus className="w-10 h-10 text-slate-200" />
-            </div>
-            <p className="text-slate-400 font-black text-xl">Không tìm thấy chuyến đi phù hợp.</p>
-            <p className="text-slate-300 font-bold mt-2">Vui lòng thử chọn ngày hoặc lộ trình khác.</p>
-          </div>
-        ) : !loading && !error && (
-          <div className="grid grid-cols-1 gap-6">
-            {routes.map((item: RouteItem) => (
-              <Ticket
-                key={item.id}
-                item={item}
-                onClick={() =>
-                  navigate('/booking', { state: { routeData: item } })
-                }
-              />
-            ))}
-          </div>
-        )}
       </main>
     </div>
   )

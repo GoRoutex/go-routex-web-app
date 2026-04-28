@@ -6,7 +6,8 @@ import {
 import type { RouteItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-const DETAIL_API_URL = "http://localhost:8082/api/v1/management/route-service/detail";
+const DETAIL_API_URL = "http://localhost:8080/api/v1/management/route-service/detail";
+const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
 
 // Dynamic Seat Generation
 const generateSeats = (totalSeats = 40, hasFloor = true) => {
@@ -31,7 +32,7 @@ const generateSeats = (totalSeats = 40, hasFloor = true) => {
         id: `S${(i + 1).toString().padStart(2, '0')}`,
         number: `S${(i + 1).toString().padStart(2, '0')}`,
         status: 'available',
-        floor: 'lower'
+        floor: 'none'
     }))
 }
 
@@ -75,7 +76,7 @@ export default function BookingPage() {
     const [seats, setSeats] = useState<any[]>(() => {
         const baseSeats = generateSeats(40, true);
         const initialSelected = location.state?.selectedSeats || [];
-        return baseSeats.map(s =>
+        return baseSeats.map((s: any) =>
             initialSelected.includes(s.id) ? { ...s, status: 'held' } : s
         );
     })
@@ -127,18 +128,38 @@ export default function BookingPage() {
                         })) || prev.stopPoints
                     }));
 
-                    // Update seat map based on vehicle configuration
-                    const seatsCount = data.availableSeats || 40;
-                    const floors = data.hasFloor || true;
-
-                    setSeats(() => {
-                        const newSeats = generateSeats(seatsCount, floors);
-                        // Maintain the status of already selected seats
-                        return newSeats.map(s => {
-                            const isSelected = selectedSeats.includes(s.id);
-                            return isSelected ? { ...s, status: 'held' } : s;
-                        });
+                    // Fetch Seat Diagram
+                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&routeId=${routeId}`, {
+                        method: 'GET',
+                        headers: {
+                            'accept': '*/*',
+                            'X-Request-Id': meta.requestId,
+                            'X-Request-DateTime': meta.requestDateTime,
+                            'X-Channel': 'ONL'
+                        }
                     });
+
+                    if (seatResponse.ok) {
+                        const seatResult = await seatResponse.json();
+                        const items = seatResult.data?.items || [];
+                        const mappedSeats = items.map((item: any) => ({
+                            id: item.seatId,
+                            number: item.code,
+                            status: item.status === 'AVAILABLE' ? 'available' : 'occupied',
+                            floor: item.floor === 'LOWER' ? 'lower' : item.floor === 'UPPER' ? 'upper' : item.floor === 'NONE' ? 'none' : 'lower',
+                            rowNo: item.rowNo,
+                            colNo: item.colNo
+                        }));
+                        setSeats(() => {
+                            const rawSeats = mappedSeats.length > 0 ? mappedSeats : generateSeats(data.availableSeats || 40, data.hasFloor || true);
+                            return rawSeats.map((s: any) => selectedSeats.includes(s.id) ? { ...s, status: 'held' } : s);
+                        });
+                    } else {
+                        setSeats(() => {
+                            const newSeats = generateSeats(data.availableSeats || 40, data.hasFloor || true);
+                            return newSeats.map((s: any) => selectedSeats.includes(s.id) ? { ...s, status: 'held' } : s);
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Fetch route detail error:", err);
@@ -151,16 +172,16 @@ export default function BookingPage() {
     }, [passedRoute?.id, selectedSeats]); // Added selectedSeats to sync when API finishes
 
     const toggleSeat = (id: string) => {
-        setSeats(prevSeats => {
-            const seat = prevSeats.find(s => s.id === id)
+        setSeats((prevSeats: any[]) => {
+            const seat = prevSeats.find((s: any) => s.id === id)
             if (!seat || seat.status === 'occupied') return prevSeats
 
             if (seat.status === 'available') {
                 setSelectedSeats(prev => prev.includes(id) ? prev : [...prev, id])
-                return prevSeats.map(s => s.id === id ? { ...s, status: 'held' } : s)
+                return prevSeats.map((s: any) => s.id === id ? { ...s, status: 'held' } : s)
             } else if (seat.status === 'held') {
                 setSelectedSeats(prev => prev.filter(sid => sid !== id))
-                return prevSeats.map(s => s.id === id ? { ...s, status: 'available' } : s)
+                return prevSeats.map((s: any) => s.id === id ? { ...s, status: 'available' } : s)
             }
             return prevSeats
         })
@@ -177,7 +198,7 @@ export default function BookingPage() {
     const canGoToStep2 = selectedSeats.length > 0
     const canGoToStep3 = custName && custPhone && termsAccepted
     const canGoToStep4 = pickupId && dropoffId
-    const canCheckout = canGoToStep2 && canGoToStep3 && canGoToStep4
+    const canCheckout = canGoToStep2 && canGoToStep3
 
     const handleNext = () => {
         if (step === 1 && canGoToStep2) setStep(2)
@@ -191,21 +212,59 @@ export default function BookingPage() {
         else navigate(-1)
     }
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (!canCheckout) return
-        navigate('/payment', {
-            state: {
-                routeData,
-                selectedSeats,
-                customerName: custName,
-                customerPhone: custPhone,
-                customerEmail: custEmail,
-                totalAmount,
-                note: custNote,
-                pickupPoint: routeData.stopPoints?.find(s => s.id === pickupId),
-                dropoffPoint: routeData.stopPoints?.find(s => s.id === dropoffId)
+        
+        try {
+            setLoading(true);
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                channel: "ONL",
+                data: {
+                    routeId: routeData.id,
+                    seatNos: selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id),
+                    holdBy: localStorage.getItem("userId") || custPhone
+                },
+                info: {
+                    customerName: custName,
+                    customerPhone: custPhone,
+                    customerEmail: custEmail
+                }
+            };
+            
+            const response = await fetch("http://localhost:8084/api/v1/booking-service/trips/hold-seat", {
+                method: "POST",
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+            
+            if (!response.ok) {
+                throw new Error("Ghế đã bị giữ hoặc không còn trống, vui lòng chọn ghế khác.");
             }
-        })
+            
+            navigate('/payment', {
+                state: {
+                    routeData,
+                    selectedSeats,
+                    seatCodes: selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id),
+                    customerName: custName,
+                    customerPhone: custPhone,
+                    customerEmail: custEmail,
+                    totalAmount,
+                    note: custNote,
+                    pickupPoint: routeData.stopPoints?.find((s: any) => s.id === pickupId),
+                    dropoffPoint: routeData.stopPoints?.find((s: any) => s.id === dropoffId)
+                }
+            });
+        } catch (err: any) {
+            alert(err.message || "Lỗi giữ ghế, vui lòng thử lại.");
+        } finally {
+            setLoading(false);
+        }
     }
 
     // --- Components ---
@@ -311,31 +370,71 @@ export default function BookingPage() {
                             <div className="p-8 flex flex-col items-center">
                                 <div className="flex flex-col md:flex-row gap-12 sm:gap-24 justify-center w-full">
                                     <div className="flex flex-col items-center flex-1 max-w-xs">
-                                        <div className="w-full flex justify-between items-center mb-6">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng dưới</p>
-                                            <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-6 sm:gap-8 p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center">
-                                            {seats.filter(s => s.floor === 'lower').map((seat) => (
-                                                <Seat key={seat.id} seat={seat} />
-                                            ))}
-                                        </div>
+                                        {seats.some((s: any) => s.floor === 'lower') && (
+                                            <div className="w-full flex justify-between items-center mb-6">
+                                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng dưới</p>
+                                                <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
+                                            </div>
+                                        )}
+                                        {(() => {
+                                            const lowerSeats = seats.filter((s: any) => s.floor === 'lower' || s.floor === 'none');
+                                            if (lowerSeats.length === 0) return null;
+
+                                            const maxCols = Math.max(1, ...lowerSeats.map((s: any) => s.colNo || 1));
+                                            const maxRows = Math.max(1, ...lowerSeats.map((s: any) => s.rowNo || 1));
+                                            const useGrid = lowerSeats.some((s: any) => s.colNo && s.rowNo);
+
+                                            return (
+                                                <div
+                                                    className={`p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center ${useGrid ? 'grid gap-6 sm:gap-8' : 'flex flex-wrap justify-center gap-6'}`}
+                                                    style={useGrid ? {
+                                                        gridTemplateColumns: `repeat(${maxCols}, minmax(0, 1fr))`,
+                                                        gridTemplateRows: `repeat(${maxRows}, minmax(0, 1fr))`
+                                                    } : {}}
+                                                >
+                                                    {lowerSeats.map((seat) => (
+                                                        <div key={seat.id} style={useGrid ? { gridColumn: seat.colNo || 'auto', gridRow: seat.rowNo || 'auto' } : {}}>
+                                                            <Seat seat={seat} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )
+                                        })()}
                                     </div>
 
-                                    <div className="flex flex-col items-center flex-1 max-w-xs">
-                                        <div className="w-full flex justify-between items-center mb-6">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng trên</p>
-                                            <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
+                                    {seats.some((s: any) => s.floor === 'upper') && (
+                                        <div className="flex flex-col items-center flex-1 max-w-xs">
+                                            <div className="w-full flex justify-between items-center mb-6">
+                                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Tầng trên</p>
+                                                <ChevronRight className="w-4 h-4 text-gray-300 rotate-90" />
+                                            </div>
+                                            {(() => {
+                                                const upperSeats = seats.filter((s: any) => s.floor === 'upper');
+                                                const maxCols = Math.max(1, ...upperSeats.map((s: any) => s.colNo || 1));
+                                                const maxRows = Math.max(1, ...upperSeats.map((s: any) => s.rowNo || 1));
+                                                const useGrid = upperSeats.some((s: any) => s.colNo && s.rowNo);
+
+                                                return (
+                                                    <div
+                                                        className={`p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center ${useGrid ? 'grid gap-6 sm:gap-8' : 'flex flex-wrap justify-center gap-6'}`}
+                                                        style={useGrid ? {
+                                                            gridTemplateColumns: `repeat(${maxCols}, minmax(0, 1fr))`,
+                                                            gridTemplateRows: `repeat(${maxRows}, minmax(0, 1fr))`
+                                                        } : {}}
+                                                    >
+                                                        {upperSeats.map((seat) => (
+                                                            <div key={seat.id} style={useGrid ? { gridColumn: seat.colNo || 'auto', gridRow: seat.rowNo || 'auto' } : {}}>
+                                                                <Seat seat={seat} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
-                                        <div className="grid grid-cols-3 gap-6 sm:gap-8 p-6 bg-gray-50 rounded-[2rem] w-full shadow-inner place-items-center">
-                                            {seats.filter(s => s.floor === 'upper').map((seat) => (
-                                                <Seat key={seat.id} seat={seat} />
-                                            ))}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                                 <div className="mt-8 py-3 px-6 bg-slate-50 rounded-full border border-slate-100 text-xs font-bold text-slate-400">
-                                    Ghế đã chọn: <span className="text-brand-primary ml-1">{selectedSeats.join(", ") || "Chưa chọn"}</span>
+                                    Ghế đã chọn: <span className="text-brand-primary ml-1">{selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id).join(", ") || "Chưa chọn"}</span>
                                 </div>
                             </div>
                         </div>
@@ -427,7 +526,7 @@ export default function BookingPage() {
                         </div>
 
                         {/* STEP 3: PICKUP / DROPOFF */}
-                        <div className={`${step !== 3 && 'hidden lg:block'} bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10`}>
+                        {/* <div className={`${step !== 3 && 'hidden lg:block'} bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10`}>
                             <div className="flex items-center gap-3 mb-10 pb-6 border-b border-gray-50">
                                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
                                     <MapPin size={22} />
@@ -458,7 +557,7 @@ export default function BookingPage() {
                                             onChange={(e) => setPickupId(e.target.value)}
                                         >
                                             <option value="">Chọn địa điểm gần bạn</option>
-                                            {routeData.stopPoints?.map(s => (
+                                            {routeData.stopPoints?.map((s: any) => (
                                                 <option key={s.id} value={s.id}>{s.note || `Trạm ${s.stopOrder}`}</option>
                                             ))}
                                         </select>
@@ -492,7 +591,7 @@ export default function BookingPage() {
                                             onChange={(e) => setDropoffId(e.target.value)}
                                         >
                                             <option value="">Chọn địa điểm trung chuyển</option>
-                                            {routeData.stopPoints?.map(s => (
+                                            {routeData.stopPoints?.map((s: any) => (
                                                 <option key={s.id} value={s.id}>{s.note || `Trạm ${s.stopOrder}`}</option>
                                             ))}
                                         </select>
@@ -500,7 +599,7 @@ export default function BookingPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* STEP 4: SUMMARY & PRICE (Mobile Only or Sidebar Content) */}
                         <div className={`${step !== 4 && 'hidden'} lg:hidden space-y-6`}>
@@ -514,7 +613,7 @@ export default function BookingPage() {
                                     </div>
                                     <div className="flex justify-between items-center pb-4 border-b border-gray-50">
                                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ghế đã chọn</span>
-                                        <span className="text-sm font-black text-brand-primary">{selectedSeats.join(", ")}</span>
+                                        <span className="text-sm font-black text-brand-primary">{selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id).join(", ")}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-4">
                                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Tổng thanh toán</span>
@@ -546,7 +645,7 @@ export default function BookingPage() {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Số ghế</span>
-                                    <span className="text-sm font-black text-brand-primary">{selectedSeats.length > 0 ? selectedSeats.join(", ") : "Chưa chọn"}</span>
+                                    <span className="text-sm font-black text-brand-primary">{selectedSeats.length > 0 ? selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id).join(", ") : "Chưa chọn"}</span>
                                 </div>
 
                                 <div className="pt-6 border-t border-gray-50 flex flex-col gap-4">
@@ -592,8 +691,8 @@ export default function BookingPage() {
                             <button
                                 onClick={handleNext}
                                 className={`w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-white text-xs transition-all ${(step === 1 && canGoToStep2) || (step === 2 && canGoToStep3) || (step === 3 && canGoToStep4)
-                                        ? 'bg-brand-primary shadow-lg shadow-brand-primary/20 active:scale-95'
-                                        : 'bg-gray-300 cursor-not-allowed'
+                                    ? 'bg-brand-primary shadow-lg shadow-brand-primary/20 active:scale-95'
+                                    : 'bg-gray-300 cursor-not-allowed'
                                     }`}
                             >
                                 {step === 3 ? "Xác nhận đặt chỗ" : "Tiếp tục"}

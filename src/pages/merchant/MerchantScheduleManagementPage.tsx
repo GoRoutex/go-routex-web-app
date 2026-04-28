@@ -155,7 +155,7 @@ export function MerchantScheduleManagementPage() {
     const fetchVehicles = async () => {
         try {
             const response = await fetch(
-                `${ADMIN_MERCHANT_ACTION_BASE_URL}/vehicles/fetch?pageNumber=1&pageSize=100&status=ACTIVE`,
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/vehicles/fetch?pageNumber=1&pageSize=100&status=AVAILABLE`,
                 {
                     headers: createAuthorizedEnvelopeHeaders()
                 }

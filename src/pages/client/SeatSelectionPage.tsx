@@ -8,7 +8,8 @@ import {
 import type { RouteItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-const DETAIL_API_URL = "http://localhost:8082/api/v1/management/route-service/detail";
+const DETAIL_API_URL = "http://localhost:8080/api/v1/management/route-service/detail";
+const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
 
 // Dummy Data for Seat Map: 2 floors (Lower A, Upper B)
 // Dynamic Seat Generation
@@ -102,10 +103,35 @@ export default function SeatSelectionPage() {
                         })) || prev.stopPoints
                     }));
 
-                    // Update seat map based on vehicle configuration
-                    const seatsCount = data.availableSeats || 40;
-                    const floors = data.hasFloor || true;
-                    setSeats(generateSeats(seatsCount, floors));
+                    // Fetch Seat Diagram
+                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&routeId=${routeId}`, {
+                        method: 'GET',
+                        headers: {
+                            'accept': '*/*',
+                            'X-Request-Id': meta.requestId,
+                            'X-Request-DateTime': meta.requestDateTime,
+                            'X-Channel': 'ONL'
+                        }
+                    });
+
+                    if (seatResponse.ok) {
+                        const seatResult = await seatResponse.json();
+                        const items = seatResult.data?.items || [];
+                        const mappedSeats = items.map((item: any) => ({
+                            id: item.seatId,
+                            number: item.code,
+                            status: item.status === 'AVAILABLE' ? 'available' : 'occupied',
+                            floor: item.floor === 'LOWER' ? 'lower' : item.floor === 'UPPER' ? 'upper' : 'lower',
+                            rowNo: item.rowNo,
+                            colNo: item.colNo
+                        }));
+                        setSeats(mappedSeats.length > 0 ? mappedSeats : generateSeats(data.availableSeats || 40, data.hasFloor || true));
+                    } else {
+                        // Fallback
+                        const seatsCount = data.availableSeats || 40;
+                        const floors = data.hasFloor || true;
+                        setSeats(generateSeats(seatsCount, floors));
+                    }
                 }
             } catch (err) {
                 console.error("Fetch route detail error:", err);
@@ -273,50 +299,94 @@ export default function SeatSelectionPage() {
                                     <div className="w-full h-1 bg-slate-100 rounded-full mt-4 max-w-[80px] mx-auto" />
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-x-16 gap-y-5 p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100 shadow-inner">
-                                    {seats.filter(s => s.floor === 'lower').map((seat) => (
-                                        <button
-                                            key={seat.id}
-                                            disabled={seat.status === 'occupied'}
-                                            onClick={() => toggleSeat(seat.id)}
-                                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative
-                                                ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
-                                                seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
-                                                'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
-                                            `}
+                                {(() => {
+                                    const lowerSeats = seats.filter(s => s.floor === 'lower');
+                                    if (lowerSeats.length === 0) return null;
+                                    
+                                    const maxCols = Math.max(1, ...lowerSeats.map(s => s.colNo || 1));
+                                    const maxRows = Math.max(1, ...lowerSeats.map(s => s.rowNo || 1));
+                                    const useGrid = lowerSeats.some(s => s.colNo && s.rowNo);
+                                    
+                                    return (
+                                        <div 
+                                            className={`p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
+                                            style={useGrid ? { 
+                                                gridTemplateColumns: `repeat(${maxCols}, minmax(3rem, 1fr))`,
+                                                gridTemplateRows: `repeat(${maxRows}, minmax(3rem, 1fr))`
+                                            } : {}}
                                         >
-                                            {seat.number}
-                                            {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
-                                        </button>
-                                    ))}
-                                </div>
+                                            {lowerSeats.map((seat) => (
+                                                <button
+                                                    key={seat.id}
+                                                    disabled={seat.status === 'occupied'}
+                                                    onClick={() => toggleSeat(seat.id)}
+                                                    style={useGrid ? { 
+                                                        gridColumn: seat.colNo || 'auto',
+                                                        gridRow: seat.rowNo || 'auto'
+                                                    } : {}}
+                                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative shrink-0
+                                                        ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
+                                                        seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
+                                                        'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
+                                                    `}
+                                                >
+                                                    {seat.number}
+                                                    {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )
+                                })()}
                             </div>
 
                             {/* Upper Floor */}
-                            <div className="flex flex-col items-center">
-                                <div className="mb-10 text-center">
-                                    <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-[10px] font-black text-indigo-400 uppercase tracking-widest border border-indigo-100">Hạng Thương Gia - Tầng 02</span>
-                                    <div className="w-full h-1 bg-indigo-50 rounded-full mt-4 max-w-[80px] mx-auto" />
+                            {seats.some(s => s.floor === 'upper') && (
+                                <div className="flex flex-col items-center">
+                                    <div className="mb-10 text-center">
+                                        <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-[10px] font-black text-indigo-400 uppercase tracking-widest border border-indigo-100">Hạng Thương Gia - Tầng 02</span>
+                                        <div className="w-full h-1 bg-indigo-50 rounded-full mt-4 max-w-[80px] mx-auto" />
+                                    </div>
+                                    
+                                    {(() => {
+                                        const upperSeats = seats.filter(s => s.floor === 'upper');
+                                        if (upperSeats.length === 0) return null;
+                                        
+                                        const maxCols = Math.max(1, ...upperSeats.map(s => s.colNo || 1));
+                                        const maxRows = Math.max(1, ...upperSeats.map(s => s.rowNo || 1));
+                                        const useGrid = upperSeats.some(s => s.colNo && s.rowNo);
+
+                                        return (
+                                            <div 
+                                                className={`p-10 bg-indigo-50/20 rounded-[3rem] border border-indigo-50 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
+                                                style={useGrid ? { 
+                                                    gridTemplateColumns: `repeat(${maxCols}, minmax(3rem, 1fr))`,
+                                                    gridTemplateRows: `repeat(${maxRows}, minmax(3rem, 1fr))`
+                                                } : {}}
+                                            >
+                                                {upperSeats.map((seat) => (
+                                                    <button
+                                                        key={seat.id}
+                                                        disabled={seat.status === 'occupied'}
+                                                        onClick={() => toggleSeat(seat.id)}
+                                                        style={useGrid ? { 
+                                                            gridColumn: seat.colNo || 'auto',
+                                                            gridRow: seat.rowNo || 'auto'
+                                                        } : {}}
+                                                        className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative shrink-0
+                                                            ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
+                                                            seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
+                                                            'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
+                                                        `}
+                                                    >
+                                                        {seat.number}
+                                                        {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-x-16 gap-y-5 p-10 bg-indigo-50/20 rounded-[3rem] border border-indigo-50 shadow-inner">
-                                    {seats.filter(s => s.floor === 'upper').map((seat) => (
-                                        <button
-                                            key={seat.id}
-                                            disabled={seat.status === 'occupied'}
-                                            onClick={() => toggleSeat(seat.id)}
-                                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative
-                                                ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
-                                                seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
-                                                'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
-                                            `}
-                                        >
-                                            {seat.number}
-                                            {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Aesthetic Divider */}
