@@ -34,6 +34,7 @@ import { MerchantProfilePage } from './pages/merchant/MerchantProfilePage'
 import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
 import { MerchantOperationPointPage } from './pages/merchant/MerchantOperationPointPage'
 import { MerchantVehicleTemplatePage } from './pages/merchant/MerchantVehicleTemplatePage'
+import { MerchantTripManagementPage } from './pages/merchant/MerchantTripManagementPage'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useEffect } from 'react'
@@ -64,6 +65,7 @@ import TermsOfServicePage from './pages/client/TermsOfServicePage'
 import ContactUsPage from './pages/client/ContactUsPage'
 import PartnerProgramPage from './pages/client/PartnerProgramPage'
 import PartnerRegisterPage from './pages/client/PartnerRegisterPage'
+import PaymentResultPage from './pages/client/PaymentResultPage'
 import { ClientLayout } from './Components/client/ClientLayout'
 // import { hasAdminRole, hasMerchantRole } from './utils/auth'
 
@@ -101,6 +103,7 @@ function App() {
           <Route path="/search-results" element={<SearchResultPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/routes" element={<ClientRoutesPage />} />
           <Route path="/schedules" element={<ClientSchedulesPage />} />
           <Route path="/support" element={<ClientSupportPage />} />
@@ -168,6 +171,7 @@ function App() {
           <Route path="vehicles" element={<MerchantVehicleManagementPage />} />
           <Route path="vehicle-templates" element={<MerchantVehicleTemplatePage />} />
           <Route path="schedules" element={<MerchantScheduleManagementPage />} />
+          <Route path="trips" element={<MerchantTripManagementPage />} />
           <Route path="tickets" element={<MerchantTicketManagementPage />} />
           <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
           <Route path="feedback" element={<MerchantFeedbackPage />} />

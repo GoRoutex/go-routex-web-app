@@ -3,8 +3,7 @@ import { Copy, Plus, Search, Filter, Loader2, AlertCircle, X, Info, Trash2, Edit
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
 import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
-
-const API_BASE_URL = "http://localhost:8083/api/v1/merchant-service/vehicle-templates";
+import { VEHICLE_TEMPLATE_ENDPOINTS } from "../../utils/api-constants";
 
 export interface VehicleTemplate {
   templateId: string;
@@ -57,7 +56,7 @@ export function MerchantVehicleTemplatePage() {
       setLoading(true);
       setError(null);
       const headers = createAuthorizedEnvelopeHeaders();
-      const url = `${API_BASE_URL}/fetch?pageNumber=1&pageSize=10&status=ACTIVE`;
+      const url = `${VEHICLE_TEMPLATE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=10&status=ACTIVE`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -70,7 +69,7 @@ export function MerchantVehicleTemplatePage() {
 
       const body = await response.json();
       const content = extractArrayValue(body, ["templates", "items", "data", "content"]) as any[];
-      
+
       const mappedTemplates = (content || []).map((t: any) => ({
         ...t,
         templateId: t.templateId || t.id || t.id_
@@ -89,7 +88,7 @@ export function MerchantVehicleTemplatePage() {
     try {
       setDetailLoading(true);
       const headers = createAuthorizedEnvelopeHeaders();
-      const response = await fetch(`${API_BASE_URL}/detail?templateId=${templateId}`, {
+      const response = await fetch(`${VEHICLE_TEMPLATE_ENDPOINTS.DETAIL}?templateId=${templateId}`, {
         method: 'GET',
         headers: {
           ...headers,
@@ -174,7 +173,7 @@ export function MerchantVehicleTemplatePage() {
         }
       };
 
-      const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+      const response = await fetch(isUpdate ? VEHICLE_TEMPLATE_ENDPOINTS.UPDATE : VEHICLE_TEMPLATE_ENDPOINTS.CREATE, {
         method: 'POST',
         headers: {
           ...createAuthorizedEnvelopeHeaders(meta),
@@ -211,7 +210,7 @@ export function MerchantVehicleTemplatePage() {
         }
       };
 
-      const response = await fetch(`${API_BASE_URL}/delete`, {
+      const response = await fetch(VEHICLE_TEMPLATE_ENDPOINTS.DELETE, {
         method: 'POST',
         headers: {
           ...createAuthorizedEnvelopeHeaders(meta),
@@ -256,7 +255,7 @@ export function MerchantVehicleTemplatePage() {
           <h2 className="text-xl font-black tracking-tight text-slate-900">Mẫu xe & Quy chuẩn</h2>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Cấu hình tiêu chuẩn Routex Core</p>
         </div>
-        <button 
+        <button
           onClick={handleOpenCreate}
           className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
         >
@@ -268,9 +267,9 @@ export function MerchantVehicleTemplatePage() {
       <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm mẫu xe, phân hạng..." 
+          <input
+            type="text"
+            placeholder="Tìm kiếm mẫu xe, phân hạng..."
             className="w-full pl-11 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-black focus:ring-2 focus:ring-brand-primary/5 outline-none"
           />
         </div>
@@ -294,7 +293,7 @@ export function MerchantVehicleTemplatePage() {
             <h3 className="text-lg font-black text-slate-900">Lỗi kết nối</h3>
             <p className="text-slate-500 text-sm mt-1">{error}</p>
           </div>
-          <button 
+          <button
             onClick={fetchTemplates}
             className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
           >
@@ -325,8 +324,8 @@ export function MerchantVehicleTemplatePage() {
                 </tr>
               ) : (
                 templates.map((t, index) => (
-                  <tr 
-                    key={t.templateId || index} 
+                  <tr
+                    key={t.templateId || index}
                     className="hover:bg-slate-50/50 transition-colors group cursor-pointer border-b border-slate-50 last:border-0"
                     onClick={() => fetchTemplateDetail(t.templateId)}
                   >
@@ -363,13 +362,13 @@ export function MerchantVehicleTemplatePage() {
                     </td>
                     <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <button
                           onClick={(e) => handleOpenEdit(t, e)}
                           className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
                         >
                           <Edit3 size={14} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => handleOpenDelete(t, e)}
                           className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
                         >
@@ -399,14 +398,14 @@ export function MerchantVehicleTemplatePage() {
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Asset Registry · Template Profile</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsDetailModalOpen(false)}
                 className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-full transition-colors text-slate-400 border border-slate-50"
               >
                 <X size={18} />
               </button>
             </div>
-            
+
             <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
               {detailLoading ? (
                 <div className="py-20 flex flex-col items-center justify-center space-y-4">
@@ -464,9 +463,9 @@ export function MerchantVehicleTemplatePage() {
                 </>
               )}
             </div>
-            
+
             <div className="p-8 bg-slate-50/50 flex justify-end">
-              <button 
+              <button
                 onClick={() => setIsDetailModalOpen(false)}
                 className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
               >
@@ -491,19 +490,19 @@ export function MerchantVehicleTemplatePage() {
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Fleet Standardization · Routex System</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-full transition-colors text-slate-400 border border-slate-50"
               >
                 <X size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mã mẫu xe</label>
-                  <input 
+                  <input
                     required
                     type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
@@ -513,7 +512,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tên mẫu xe</label>
-                  <input 
+                  <input
                     required
                     type="text"
                     placeholder="VD: Thaco Mobihome Deluxe"
@@ -524,7 +523,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nhà sản xuất</label>
-                  <input 
+                  <input
                     required
                     type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
@@ -534,7 +533,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Model / Đời xe</label>
-                  <input 
+                  <input
                     required
                     type="text"
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
@@ -544,7 +543,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Số ghế</label>
-                  <input 
+                  <input
                     required
                     type="number"
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
@@ -554,7 +553,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phân mục</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
@@ -566,7 +565,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kiểu xe</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
                     value={formData.type}
                     onChange={e => setFormData({...formData, type: e.target.value})}
@@ -583,7 +582,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nhiên liệu</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
                     value={formData.fuelType}
                     onChange={e => setFormData({...formData, fuelType: e.target.value})}
@@ -595,7 +594,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cấu trúc tầng</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
                     value={formData.hasFloor ? "true" : "false"}
                     onChange={e => setFormData({...formData, hasFloor: e.target.value === "true"})}
@@ -606,7 +605,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Giá vé mặc định (VNĐ)</label>
-                  <input 
+                  <input
                     required
                     type="text"
                     placeholder="VD: 250.000"
@@ -617,7 +616,7 @@ export function MerchantVehicleTemplatePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trạng thái</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none appearance-none cursor-pointer"
                     value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value})}
@@ -629,14 +628,14 @@ export function MerchantVehicleTemplatePage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
                   className="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all font-sans"
                 >
                   Hủy bỏ
                 </button>
-                <button 
+                <button
                   disabled={submitting}
                   className="px-8 py-2.5 bg-black text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 font-sans"
                 >
@@ -658,18 +657,18 @@ export function MerchantVehicleTemplatePage() {
             </div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight">Xác nhận xóa mẫu xe?</h3>
             <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium">
-              Bạn đang thực hiện xóa mẫu xe <span className="font-bold text-slate-900 font-sans">{selectedTemplate.templateName || selectedTemplate.name}</span>. 
+              Bạn đang thực hiện xóa mẫu xe <span className="font-bold text-slate-900 font-sans">{selectedTemplate.templateName || selectedTemplate.name}</span>.
               Hành động này không thể hoàn tác và sẽ ảnh hưởng đến các quy trình sử dụng mẫu này.
             </p>
-            
+
             <div className="flex gap-3 mt-8">
-              <button 
+              <button
                 onClick={() => setIsDeleteConfirmOpen(false)}
                 className="flex-1 py-3 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-50 transition-all font-sans"
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 disabled={submitting}
                 className="flex-1 py-3 bg-rose-500 text-white rounded-2xl text-sm font-black shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-all flex items-center justify-center gap-2 font-sans"

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Plus, MapPin,
   ChevronLeft, ChevronRight, X, Loader2, Save,
-  Info, Map, MoreHorizontal, Edit3, Trash2, Navigation, AlertCircle
+  Info, MoreHorizontal, Edit3, Navigation
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
@@ -101,34 +101,6 @@ export function MerchantOperationPointPage() {
       status: point.status || "ACTIVE"
     });
     setIsModalOpen(true);
-  };
-
-  const handleDelete = async (point: OperationPoint) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa điểm ${point.name} (${point.code})?`)) return;
-
-    try {
-        const meta = createRequestMeta();
-        const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/delete`, {
-            method: 'POST',
-            headers: {
-                ...createAuthorizedEnvelopeHeaders(meta),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                ...meta,
-                data: { operationPointId: point.id }
-            })
-        });
-
-        if (response.ok) {
-            toast.success("Đã xóa điểm thành công");
-            fetchPoints(page);
-        } else {
-            throw new Error("Lỗi khi xóa");
-        }
-    } catch (err: any) {
-        toast.error(err.message);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

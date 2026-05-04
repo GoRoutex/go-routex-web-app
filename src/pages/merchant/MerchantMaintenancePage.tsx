@@ -4,8 +4,8 @@ import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/
 import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
 
-const MAINTENANCE_API_URL = "http://localhost:8083/api/v1/merchant-service/maintenance-plans";
-const VEHICLE_API_URL = "http://localhost:8083/api/v1/merchant-service/vehicles";
+const MAINTENANCE_API_URL = "http://localhost:8080/api/v1/merchant-service/maintenance-plans";
+const VEHICLE_API_URL = "http://localhost:8080/api/v1/merchant-service/vehicles";
 
 interface MaintenancePlan {
   maintenancePlanId: string;
@@ -43,7 +43,7 @@ export function MerchantMaintenancePage() {
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Detail Modal State
   const [selectedPlan, setSelectedPlan] = useState<MaintenancePlan | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -69,7 +69,7 @@ export function MerchantMaintenancePage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [dateRange, setDateRange] = useState({
-    from: "", 
+    from: "",
     to: ""
   });
 
@@ -100,7 +100,7 @@ export function MerchantMaintenancePage() {
       setLoading(true);
       setError(null);
       const headers = createAuthorizedEnvelopeHeaders();
-      
+
       const queryParams = new URLSearchParams({
         pageNumber: "1",
         pageSize: "50",
@@ -120,7 +120,7 @@ export function MerchantMaintenancePage() {
 
       const body = await response.json();
       const data = extractArrayValue(body, ["items", "maintenancePlans", "data", "content", "payload"]) as any[];
-      
+
       // Map data with nested vehicle support
       const mappedData = (data || []).map(item => ({
         ...item,
@@ -128,7 +128,7 @@ export function MerchantMaintenancePage() {
         vehicleId: item.vehicleId || item.vehicle?.id,
         vehiclePlate: item.vehicle?.vehiclePlate || item.vehiclePlate || "N/A"
       }));
-      
+
       setPlans(mappedData);
     } catch (err: any) {
       console.error("Fetch plans error:", err);
@@ -156,7 +156,7 @@ export function MerchantMaintenancePage() {
             vehiclePlate: detail.vehicle?.vehiclePlate || detail.vehiclePlate || "N/A"
           };
           setSelectedPlan(mappedDetail);
-          
+
           if (isForEdit) {
             setFormData({
               ...mappedDetail,
@@ -230,7 +230,7 @@ export function MerchantMaintenancePage() {
       const isUpdate = !!selectedPlan;
       const endpoint = isUpdate ? "update" : "create";
       const meta = createRequestMeta();
-      
+
       const body = {
         ...meta,
         data: isUpdate ? { ...formData, maintenancePlanId: selectedPlan.maintenancePlanId } : formData
@@ -318,7 +318,7 @@ export function MerchantMaintenancePage() {
     }
   };
 
-  const filteredPlans = plans.filter(p => 
+  const filteredPlans = plans.filter(p =>
     p.vehiclePlate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -336,7 +336,7 @@ export function MerchantMaintenancePage() {
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Bảo trì & Sửa chữa</h2>
           <p className="text-sm text-slate-500 font-medium mt-1">Theo dõi lịch sử bảo trì và lập kế hoạch sửa chữa định kỳ cho đội xe.</p>
         </div>
-        <button 
+        <button
           onClick={handleOpenCreate}
           className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
         >
@@ -398,17 +398,17 @@ export function MerchantMaintenancePage() {
       <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
           <div className="relative flex-1 w-full">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm theo biển số, nội dung..." 
+            <input
+              type="text"
+              placeholder="Tìm theo biển số, nội dung..."
               className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="flex gap-2 w-full md:w-auto">
-            <select 
+            <select
               className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -421,7 +421,7 @@ export function MerchantMaintenancePage() {
               <option value="CANCELLED">Đã hủy</option>
             </select>
 
-            <select 
+            <select
               className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -435,7 +435,7 @@ export function MerchantMaintenancePage() {
             </select>
 
             <div className="relative group/date">
-              <button 
+              <button
                 onClick={() => setDateRange({ from: "2024-01-01", to: "2026-12-31" })}
                 className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"
               >
@@ -464,7 +464,7 @@ export function MerchantMaintenancePage() {
             <h3 className="text-lg font-black text-slate-900">Lỗi kết nối API</h3>
             <p className="text-slate-500 text-sm mt-1">{error}</p>
           </div>
-          <button 
+          <button
             onClick={fetchPlans}
             className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
           >
@@ -500,8 +500,8 @@ export function MerchantMaintenancePage() {
                         filteredPlans.map((p) => {
                           const status = getStatusConfig(p.status);
                           return (
-                              <tr 
-                                key={p.maintenancePlanId} 
+                              <tr
+                                key={p.maintenancePlanId}
                                 className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
                                 onClick={() => fetchPlanDetail(p.maintenancePlanId)}
                               >
@@ -535,13 +535,13 @@ export function MerchantMaintenancePage() {
                                   </td>
                                   <td className="px-6 py-6 text-right" onClick={e => e.stopPropagation()}>
                                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button 
+                                      <button
                                         onClick={(e) => handleOpenEdit(p, e)}
                                         className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-900 hover:text-white transition-all"
                                       >
                                         <Edit3 size={16} />
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => handleOpenDelete(p, e)}
                                         className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
                                       >
@@ -700,7 +700,7 @@ export function MerchantMaintenancePage() {
                   Đóng
                 </button>
                 {selectedPlan.status !== 'COMPLETED' && selectedPlan.status !== 'CANCELLED' && (
-                  <button 
+                  <button
                     onClick={() => { setIsDetailOpen(false); handleOpenEdit(selectedPlan); }}
                     className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
                   >
@@ -736,7 +736,7 @@ export function MerchantMaintenancePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                  <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phương tiện</label>
-                  <select 
+                  <select
                     required
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
                     value={formData.vehicleId}
@@ -755,7 +755,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tiêu đề</label>
-                  <input 
+                  <input
                     required
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
                     value={formData.title}
@@ -766,7 +766,7 @@ export function MerchantMaintenancePage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loại hình</label>
-                  <select 
+                  <select
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
                     value={formData.type}
                     onChange={e => setFormData({...formData, type: e.target.value as any})}
@@ -780,7 +780,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trạng thái</label>
-                  <select 
+                  <select
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
                     value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value as any})}
@@ -794,7 +794,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Đơn vị thực hiện</label>
-                  <input 
+                  <input
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
                     value={formData.serviceProvider}
                     onChange={e => setFormData({...formData, serviceProvider: e.target.value})}
@@ -804,7 +804,7 @@ export function MerchantMaintenancePage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ngày dự kiến</label>
-                  <input 
+                  <input
                     type="date"
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/20"
                     value={formData.plannedDate}
@@ -813,7 +813,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Hạn chót</label>
-                  <input 
+                  <input
                     type="date"
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/20"
                     value={formData.dueDate}
@@ -824,7 +824,7 @@ export function MerchantMaintenancePage() {
                   <>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ngày hoàn thành</label>
-                      <input 
+                      <input
                         type="date"
                         className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
                         value={formData.completedDate || ""}
@@ -834,7 +834,7 @@ export function MerchantMaintenancePage() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chi phí thực tế</label>
                       <div className="relative">
-                        <input 
+                        <input
                           type="text"
                           className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 pr-16"
                           value={formatNumber(formData.actualCost)}
@@ -849,7 +849,7 @@ export function MerchantMaintenancePage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Số KM hiện tại</label>
-                  <input 
+                  <input
                     type="text"
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/20"
                     value={formatNumber(formData.currentOdometerKm)}
@@ -859,7 +859,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mục tiêu KM</label>
-                  <input 
+                  <input
                     type="text"
                     className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/20"
                     value={formatNumber(formData.targetOdometerKm)}
@@ -870,7 +870,7 @@ export function MerchantMaintenancePage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chi phí dự kiến</label>
                   <div className="relative">
-                    <input 
+                    <input
                       type="text"
                       className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-primary/20 pr-16"
                       value={formatNumber(formData.estimatedCost)}
@@ -885,7 +885,7 @@ export function MerchantMaintenancePage() {
               <div className="space-y-4">
                  <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mô tả công việc</label>
-                  <textarea 
+                  <textarea
                     rows={3}
                     className="w-full px-6 py-4 bg-slate-50 border-none rounded-3xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-primary/20 resize-none"
                     value={formData.description}
@@ -895,7 +895,7 @@ export function MerchantMaintenancePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ghi chú thêm</label>
-                  <textarea 
+                  <textarea
                     rows={2}
                     className="w-full px-6 py-4 bg-slate-50 border-none rounded-3xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
                     value={formData.note}
@@ -907,7 +907,7 @@ export function MerchantMaintenancePage() {
 
             <div className="p-8 border-t border-slate-50 flex justify-end items-center bg-slate-50/30 gap-3 shrink-0">
                <button type="button" onClick={() => setIsFormOpen(false)} className="px-8 py-3 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-100 transition-all">Hủy bỏ</button>
-               <button 
+               <button
                 onClick={handleSave}
                 disabled={submitting}
                 className="px-10 py-3 bg-brand-primary text-white rounded-2xl text-sm font-black shadow-lg shadow-brand-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
@@ -931,10 +931,10 @@ export function MerchantMaintenancePage() {
             <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium">
               Bạn đang thực hiện xóa kế hoạch <span className="font-bold text-slate-900">{selectedPlan.code}</span> cho xe <span className="font-bold text-slate-900">{selectedPlan.vehiclePlate}</span>. Hành động này không thể hoàn tác.
             </p>
-            
+
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsDeleting(false)} className="flex-1 py-3 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-50 transition-all">Hủy bỏ</button>
-              <button 
+              <button
                 onClick={handleDelete}
                 disabled={submitting}
                 className="flex-1 py-3 bg-rose-500 text-white rounded-2xl text-sm font-black shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-all flex items-center justify-center gap-2"

@@ -242,24 +242,29 @@ export default function BookingPage() {
                 body: JSON.stringify(body)
             });
             
-            if (!response.ok) {
-                throw new Error("Ghế đã bị giữ hoặc không còn trống, vui lòng chọn ghế khác.");
+            if (response.ok) {
+                const result = await response.json();
+                const booking = result.booking;
+                
+                navigate('/payment', {
+                    state: {
+                        routeData,
+                        selectedSeats,
+                        seatCodes: selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id),
+                        customerName: custName,
+                        customerPhone: custPhone,
+                        customerEmail: custEmail,
+                        totalAmount: booking?.totalAmount || totalAmount,
+                        booking: booking,
+                        note: custNote,
+                        pickupPoint: routeData.stopPoints?.find((s: any) => s.id === pickupId),
+                        dropoffPoint: routeData.stopPoints?.find((s: any) => s.id === dropoffId)
+                    }
+                });
+            } else {
+                const errResult = await response.json();
+                throw new Error(errResult.result?.description || "Ghế đã bị giữ hoặc không còn trống, vui lòng chọn ghế khác.");
             }
-            
-            navigate('/payment', {
-                state: {
-                    routeData,
-                    selectedSeats,
-                    seatCodes: selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id),
-                    customerName: custName,
-                    customerPhone: custPhone,
-                    customerEmail: custEmail,
-                    totalAmount,
-                    note: custNote,
-                    pickupPoint: routeData.stopPoints?.find((s: any) => s.id === pickupId),
-                    dropoffPoint: routeData.stopPoints?.find((s: any) => s.id === dropoffId)
-                }
-            });
         } catch (err: any) {
             alert(err.message || "Lỗi giữ ghế, vui lòng thử lại.");
         } finally {

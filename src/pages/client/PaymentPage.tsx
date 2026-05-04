@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     ArrowLeft,
-    CheckCircle2,
     X,
     QrCode,
     Scan,
-    CreditCard
+    CreditCard,
+    ExternalLink
 } from "lucide-react";
+import { createRequestMeta } from "../../utils/requestMeta";
 
 import momoIcon from "../../assets/payment/momo.svg";
 import shopeePayIcon from "../../assets/payment/shopeePay.png";
@@ -51,17 +52,33 @@ export default function PaymentPage() {
         pickupPoint,
         dropoffPoint,
         totalAmount = 0,
+        booking,
     } = location.state || {};
 
     const seatsToDisplay = seatCodes.length > 0 ? seatCodes : selectedSeats;
 
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("zalopay");
-    const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("vnpay");
+    const [timeLeft, setTimeLeft] = useState(300); // Default 5 minutes
+    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+    const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
     const [showCardModal, setShowCardModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [isFetchingPayment, setIsFetchingPayment] = useState(false);
 
+    // Effect for the timer based on holdUntil
     useEffect(() => {
+        if (!booking?.holdUntil) return;
+
+        const calculateTimeLeft = () => {
+            const holdUntilTime = new Date(booking.holdUntil).getTime();
+            const now = new Date().getTime();
+            const diff = Math.floor((holdUntilTime - now) / 1000);
+            return diff > 0 ? diff : 0;
+        };
+
+        setTimeLeft(calculateTimeLeft());
+
         const timer = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev <= 1) {
@@ -71,8 +88,102 @@ export default function PaymentPage() {
                 return prev - 1;
             });
         }, 1000);
+
         return () => clearInterval(timer);
-    }, []);
+    }, [booking?.holdUntil]);
+
+    // Effect to fetch payment URL when method changes
+    useEffect(() => {
+        const fetchPaymentData = async () => {
+            if (!booking?.bookingCode) return;
+
+            setIsFetchingPayment(true);
+            try {
+                const methodMap: Record<PaymentMethodId, string> = {
+                    zalopay: "ZALOPAY",
+                    vnpay: "VNPAY",
+                    shopeepay: "SHOPEEPAY",
+                    momo: "MOMO",
+                    visa: "VISA"
+                };
+
+                const method = methodMap[paymentMethod];
+                const amount = booking.totalAmount || totalAmount;
+                const meta = createRequestMeta();
+                const url = `http://localhost:8080/api/v1/payment-service/get-payment-url?bookingCode=${booking.bookingCode}&method=${method}&amount=${amount}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'accept': '*/*',
+                        'RT-REQUEST_ID': meta.requestId,
+                        'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                        'RT-CHANNEL': 'ONL'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    setQrCodeUrl(result.data?.qrCodeUrl);
+                    setPaymentUrl(result.data?.paymentUrl);
+                }
+            } catch (err) {
+                console.error("Fetch payment URL error:", err);
+            } finally {
+                setIsFetchingPayment(false);
+            }
+        };
+
+        fetchPaymentData();
+    }, [paymentMethod, booking?.bookingCode, booking?.totalAmount, totalAmount]);
+
+    // Handle timeout: notification and redirect
+    useEffect(() => {
+        if (timeLeft === 0 && !isSuccess && booking?.holdUntil) {
+            alert("Thời gian giữ chỗ của bạn đã hết. Vui lòng thực hiện chọn lại ghế!");
+            navigate(-1);
+        }
+    }, [timeLeft, isSuccess, navigate, booking?.holdUntil]);
+
+    // Polling effect for payment status
+    useEffect(() => {
+        if (!booking?.bookingCode || isSuccess) return;
+
+        const pollStatus = async () => {
+            try {
+                const meta = createRequestMeta();
+                const url = `http://localhost:8080/api/v1/payment-service/polling/status?bookingCode=${booking.bookingCode}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'accept': '*/*',
+                        'RT-REQUEST_ID': meta.requestId,
+                        'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                        'RT-CHANNEL': 'ONL'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const status = result.data?.status;
+
+                    if (status === "PAID" || status === "FAILED") {
+                        navigate("/payment-result", {
+                            state: {
+                                status: status,
+                                bookingCode: booking.bookingCode,
+                                amount: result.data?.amount || totalAmount
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+            }
+        };
+
+        const interval = setInterval(pollStatus, 5000);
+        return () => clearInterval(interval);
+    }, [booking?.bookingCode, isSuccess, navigate, totalAmount]);
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -92,7 +203,13 @@ export default function PaymentPage() {
         setIsProcessing(true);
         setTimeout(() => {
             setIsProcessing(false);
-            setIsSuccess(true);
+            navigate("/payment-result", {
+                state: {
+                    status: "PAID",
+                    bookingCode: booking?.bookingCode || "BK-MOCK-123",
+                    amount: booking?.totalAmount || totalAmount
+                }
+            });
         }, 1500);
     };
 
@@ -102,22 +219,6 @@ export default function PaymentPage() {
 
     const currentMethodLabel = paymentMethods.find(m => m.id === paymentMethod)?.label || "ZaloPay";
 
-    if (isSuccess) {
-        return (
-            <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-6 font-sans">
-                <div className="max-w-md w-full bg-white rounded-3xl p-10 text-center shadow-xl border border-slate-100 animate-in zoom-in-95 duration-500">
-                    <div className="w-24 h-24 rounded-full bg-brand-primary flex items-center justify-center mx-auto mb-8 shadow-lg shadow-brand-primary/20">
-                        <CheckCircle2 className="w-12 h-12 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Thanh toán thành công!</h2>
-                    <p className="text-slate-500 font-medium mb-8">Vé của bạn đã được xác nhận và gửi tới email.</p>
-                    <button onClick={() => navigate("/")} className="w-full bg-brand-primary hover:bg-brand-accent transition-colors text-white py-3.5 rounded-xl font-bold shadow-md">
-                        Quay về trang chủ
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-white font-sans pb-20">
@@ -130,7 +231,7 @@ export default function PaymentPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14">
-                    
+
                     {/* LEFT: PAYMENT METHODS (4 cols) */}
                     <div className="lg:col-span-4">
                         <h2 className="text-[20px] font-bold text-slate-800 mb-4 px-1">Chọn phương thức thanh toán</h2>
@@ -139,13 +240,13 @@ export default function PaymentPage() {
                                 <div key={method.id}>
                                     <label className="flex items-start gap-4 py-4 cursor-pointer group">
                                         <div className="pt-2 flex items-center justify-center shrink-0 pl-1">
-                                            <input 
-                                                type="radio" 
-                                                name="payment" 
-                                                value={method.id} 
+                                            <input
+                                                type="radio"
+                                                name="payment"
+                                                value={method.id}
                                                 checked={paymentMethod === method.id}
                                                 onChange={() => handleSelectMethod(method.id)}
-                                                className="w-5 h-5 accent-brand-primary cursor-pointer" 
+                                                className="w-5 h-5 accent-brand-primary cursor-pointer"
                                             />
                                         </div>
                                         <div className="w-10 h-10 min-w-10 border border-slate-100 rounded-lg p-1.5 shadow-sm flex items-center justify-center bg-white overflow-hidden shrink-0 mt-0.5">
@@ -173,20 +274,41 @@ export default function PaymentPage() {
 
                         <div className="w-full bg-[#f8f9fa] rounded-2xl p-6 flex flex-col items-center border border-slate-100/50">
                             <p className="text-brand-primary font-semibold text-[13px] mb-6">Thời gian giữ chỗ còn lại {formatTime(timeLeft)}</p>
-                            
+
                             <div className="w-[220px] aspect-square bg-white rounded-xl mb-6 flex items-center justify-center relative p-3 border border-slate-200">
-                                <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="bg-white p-1.5 rounded w-10 h-10 shadow-sm flex justify-center items-center">
-                                        <img src={paymentMethods.find(m => m.id === paymentMethod)?.icon} className="w-full h-full object-contain" />
+                                {isFetchingPayment ? (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-2" />
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase">Đang tải...</p>
                                     </div>
-                                </div>
+                                ) : qrCodeUrl ? (
+                                    <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain" />
+                                ) : (
+                                    <QrCode className="w-full h-full text-slate-800" strokeWidth={1.5} />
+                                )}
+                                {!isFetchingPayment && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="bg-white p-1.5 rounded w-10 h-10 shadow-sm flex justify-center items-center">
+                                            <img src={paymentMethods.find(m => m.id === paymentMethod)?.icon} className="w-full h-full object-contain" />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {paymentUrl && (
+                                <button
+                                    onClick={() => window.open(paymentUrl, '_blank')}
+                                    className="w-full max-w-[220px] mb-6 py-3 bg-brand-primary hover:bg-brand-accent text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20 active:scale-95"
+                                >
+                                    <ExternalLink size={18} />
+                                    <span>Thanh toán ngay</span>
+                                </button>
+                            )}
 
                             <h4 className="text-emerald-700 mx-auto font-semibold text-[15px] mb-5 text-center px-4">
                                 Hướng dẫn thanh toán bằng {currentMethodLabel}
                             </h4>
-                            
+
                             <div className="space-y-4 w-full px-1">
                                 <div className="flex items-start gap-3">
                                     <div className="w-[22px] h-[22px] rounded-full bg-[#6a737b] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-sm">1</div>
@@ -206,7 +328,7 @@ export default function PaymentPage() {
 
                     {/* RIGHT: TICKET DETAILS (4 cols) */}
                     <div className="lg:col-span-4 space-y-4">
-                        
+
                         {/* Passenger Info */}
                         <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">
                             <h3 className="text-[16px] font-bold text-slate-800 mb-5 pb-4 border-b border-slate-100/60">Thông tin hành khách</h3>
@@ -264,14 +386,14 @@ export default function PaymentPage() {
                                     <span className="text-slate-500 text-[13px] mt-0.5 shrink-0 opacity-80 pt-2">Thời gian tới điểm lên xe</span>
                                     <div className="flex flex-col items-end text-right pt-2">
                                         <span className="text-brand-primary font-semibold text-[13px]">
-                                            Trước {routeData.plannedStartTime ? new Date(new Date(routeData.plannedStartTime).getTime() - 15*60000).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : "--"}
+                                            Trước {routeData.plannedStartTime ? new Date(new Date(routeData.plannedStartTime).getTime() - 15 * 60000).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : "--"}
                                         </span>
                                         <span className="text-brand-primary font-semibold text-[13px]">
                                             {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleDateString("vi-VN") : "--"}
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex justify-between items-start gap-4 pt-2">
                                     <span className="text-slate-500 shrink-0 mt-0.5">Điểm trả khách</span>
                                     <div className="flex flex-col items-end text-right">
