@@ -8,20 +8,26 @@ import { toast } from "react-toastify";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
 
-interface OperationPoint {
+interface Department {
   id: string;
   code: string;
   name: string;
   type: string;
   address: string;
-  city: string;
+  provinceId: string;
+  districtId: string;
+  wardId: string;
+  timeAtDepartment: number;
+  openingTime: string;
+  closingTime: string;
   latitude: number;
   longitude: number;
   status: string;
+  shuttleService: boolean;
 }
 
 export function MerchantOperationPointPage() {
-  const [points, setPoints] = useState<OperationPoint[]>([]);
+  const [points, setPoints] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -30,19 +36,25 @@ export function MerchantOperationPointPage() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedPoint, setSelectedPoint] = useState<OperationPoint | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<Department | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
     code: "",
     name: "",
-    type: "OPERATION_POINT",
+    type: "DEPARTMENT",
     address: "",
-    city: "",
+    provinceId: "",
+    districtId: "",
+    wardId: "",
+    timeAtDepartment: 0,
+    openingTime: "00:00",
+    closingTime: "23:59",
     latitude: 0,
     longitude: 0,
-    status: "ACTIVE"
+    status: "ACTIVE",
+    shuttleService: true
   });
 
 
@@ -50,7 +62,7 @@ export function MerchantOperationPointPage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/fetch?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?pageNumber=${pageNumber}&pageSize=${pageSize}`,
         {
           headers: createAuthorizedEnvelopeHeaders()
         }
@@ -61,7 +73,7 @@ export function MerchantOperationPointPage() {
         setTotalItems(result.data.totalCount || 0);
       }
     } catch (err: any) {
-      toast.error("Không thể tải danh sách điểm: " + err.message);
+      toast.error("Không thể tải danh sách chi nhánh: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -77,28 +89,40 @@ export function MerchantOperationPointPage() {
     setFormData({
       code: "",
       name: "",
-      type: "OPERATION_POINT",
+      type: "DEPARTMENT",
       address: "",
-      city: "",
+      provinceId: "",
+      districtId: "",
+      wardId: "",
+      timeAtDepartment: 0,
+      openingTime: "00:00",
+      closingTime: "23:59",
       latitude: 0,
       longitude: 0,
-      status: "ACTIVE"
+      status: "ACTIVE",
+      shuttleService: true
     });
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (point: OperationPoint) => {
+  const handleOpenEdit = (point: Department) => {
     setIsEditing(true);
     setSelectedPoint(point);
     setFormData({
       code: point.code,
       name: point.name,
-      type: point.type || "OPERATION_POINT",
+      type: point.type || "DEPARTMENT",
       address: point.address,
-      city: point.city,
-      latitude: point.latitude,
-      longitude: point.longitude,
-      status: point.status || "ACTIVE"
+      provinceId: point.provinceId || "",
+      districtId: point.districtId || "",
+      wardId: point.wardId || "",
+      timeAtDepartment: point.timeAtDepartment || 0,
+      openingTime: point.openingTime || "00:00",
+      closingTime: point.closingTime || "23:59",
+      latitude: point.latitude || 0,
+      longitude: point.longitude || 0,
+      status: point.status || "ACTIVE",
+      shuttleService: point.shuttleService !== false
     });
     setIsModalOpen(true);
   };
@@ -111,10 +135,10 @@ export function MerchantOperationPointPage() {
       const endpoint = isEditing ? "update" : "create";
       const body = {
         ...meta,
-        data: isEditing ? { ...formData, operationPointId: selectedPoint?.id } : formData
+        data: isEditing ? { ...formData, id: selectedPoint?.id } : formData
       };
 
-      const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/${endpoint}`, {
+      const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/department/${endpoint}`, {
         method: 'POST',
         headers: {
           ...createAuthorizedEnvelopeHeaders(meta),
@@ -124,7 +148,7 @@ export function MerchantOperationPointPage() {
       });
 
       if (response.ok) {
-        toast.success(isEditing ? "Cập nhật thành công" : "Thêm điểm thành công");
+        toast.success(isEditing ? "Cập nhật thành công" : "Thêm chi nhánh thành công");
         setIsModalOpen(false);
         fetchPoints(page);
       } else {
@@ -143,7 +167,7 @@ export function MerchantOperationPointPage() {
       {/* Header Section */}
        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
          <div>
-           <h2 className="text-xl font-black tracking-tight text-slate-900">Điểm đón & Trả khách</h2>
+           <h2 className="text-xl font-black tracking-tight text-slate-900">Chi nhánh</h2>
            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Hạ tầng vận hành Logistics Hub</p>
          </div>
          <button
@@ -151,7 +175,7 @@ export function MerchantOperationPointPage() {
              className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all self-start"
          >
              <Plus size={14} />
-             Thêm điểm mới
+             Thêm chi nhánh
          </button>
        </div>
 
@@ -167,8 +191,8 @@ export function MerchantOperationPointPage() {
                 <MapPin size={48} />
             </div>
             <div className="text-center">
-                <h3 className="text-xl font-black text-slate-950 mb-1 tracking-tight">Chưa có điểm đón/trả</h3>
-                <p className="text-sm text-slate-400 font-bold max-w-xs mx-auto">Thiết lập mạng lưới các điểm dừng chân để bắt đầu khai thác tuyến đường.</p>
+                <h3 className="text-xl font-black text-slate-950 mb-1 tracking-tight">Chưa có chi nhánh</h3>
+                <p className="text-sm text-slate-400 font-bold max-w-xs mx-auto">Thiết lập mạng lưới các chi nhánh để bắt đầu khai thác tuyến đường.</p>
             </div>
             <button
                 onClick={handleOpenCreate}
@@ -183,7 +207,7 @@ export function MerchantOperationPointPage() {
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-slate-50/50">
-                            <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Điểm đón/trả</th>
+                            <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Chi nhánh</th>
                             <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Loại hình</th>
                             <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Địa điểm</th>
                             <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tọa độ</th>
@@ -207,7 +231,7 @@ export function MerchantOperationPointPage() {
                                  </td>
                                  <td className="px-6 py-3">
                                      <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                         {point.type === 'OPERATION_POINT' ? 'TRẠM DỪNG' : point.type}
+                                         {point.type === 'DEPARTMENT' ? 'CHI NHÁNH' : point.type}
                                      </span>
                                  </td>
                                  <td className="px-6 py-3">
@@ -258,7 +282,7 @@ export function MerchantOperationPointPage() {
                         </div>
                         <div>
                             <h3 className="text-lg font-black text-slate-950 tracking-tight">
-                                {isEditing ? "Cập nhật Điểm đón/trả" : "Thêm Điểm đón/trả mới"}
+                                {isEditing ? "Cập nhật Chi nhánh" : "Thêm Chi nhánh mới"}
                             </h3>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                                 {isEditing ? `Ref: ${selectedPoint?.code}` : "Expand operational network"}
@@ -307,13 +331,13 @@ export function MerchantOperationPointPage() {
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Thành phố / Tỉnh</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Thành phố / Tỉnh (ID)</label>
                             <input
                                 required
                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
-                                value={formData.city}
-                                onChange={(e) => setFormData({...formData, city: e.target.value})}
-                                placeholder="VD: Hồ Chí Minh"
+                                value={formData.provinceId}
+                                onChange={(e) => setFormData({...formData, provinceId: e.target.value})}
+                                placeholder="VD: 79 (Hồ Chí Minh)"
                             />
                         </div>
                         <div>
@@ -368,7 +392,7 @@ export function MerchantOperationPointPage() {
                             className="px-8 py-3 bg-black text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
                         >
                             {submitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
-                            Lưu điểm đón
+                            Lưu chi nhánh
                         </button>
                     </div>
                 </div>

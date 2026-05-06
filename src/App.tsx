@@ -177,7 +177,7 @@ function App() {
           <Route path="feedback" element={<MerchantFeedbackPage />} />
           <Route path="staff" element={<MerchantStaffManagementPage />} />
           <Route path="locations" element={<MerchantLocationManagementPage />} />
-          <Route path="operation-points" element={<MerchantOperationPointPage />} />
+          <Route path="departments" element={<MerchantOperationPointPage />} />
           <Route path="maintenance" element={<MerchantMaintenancePage />} />
           <Route path="profile" element={<MerchantProfilePage />} />
           <Route path="settings" element={<MerchantSettingsPage />} />

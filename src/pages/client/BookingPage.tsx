@@ -49,20 +49,20 @@ export default function BookingPage() {
     const [step, setStep] = useState<number>(1)
     const [routeData, setRouteData] = useState<Partial<RouteItem>>(() => {
         if (!passedRoute) return {
-            origin: "Hồ Chí Minh",
-            destination: "Đà Lạt",
-            plannedStartTime: new Date().toISOString(),
-            plannedEndTime: new Date(Date.now() + 6 * 3600000).toISOString(),
-            price: 350000,
-            vehicleType: "LIMOUSINE",
+            originName: "Hồ Chí Minh",
+            destinationName: "Đà Lạt",
+            departureTime: new Date().toISOString(),
+            ticketPrice: 350000,
             pickupBranch: "292 Đinh Bộ Lĩnh, Bình Thạnh",
-            routeCode: "HCM-DL-99",
-            stopPoints: []
+            tripCode: "HCM-DL-99",
+            routePoints: [],
+            availableSeats: 40,
+            hasFloor: true,
+            rawArrivalTime: "06:00"
         };
 
         return {
             ...passedRoute,
-            price: passedRoute.price || (passedRoute as any).ticketPrice,
             stopPoints: passedRoute.stopPoints || (passedRoute as any).routePoints?.map((rp: any) => ({
                 ...rp,
                 stopOrder: rp.operationOrder,
@@ -120,7 +120,6 @@ export default function BookingPage() {
                     setRouteData(prev => ({
                         ...prev,
                         ...data,
-                        price: data.ticketPrice || data.price || prev.price,
                         stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
                             ...rp,
                             stopOrder: rp.operationOrder || rp.stopOrder,
@@ -192,7 +191,7 @@ export default function BookingPage() {
         return new Intl.NumberFormat("vi-VN").format(v) + " ₫"
     }
 
-    const totalAmount = selectedSeats.length * (routeData.price || 0)
+    const totalAmount = selectedSeats.length * (routeData.ticketPrice || 0)
 
     // Step validation
     const canGoToStep2 = selectedSeats.length > 0
@@ -330,9 +329,9 @@ export default function BookingPage() {
                             <ArrowLeft className="w-6 h-6 text-white" />
                         </button>
                         <div className="text-white">
-                            <h1 className="text-sm sm:text-base font-black tracking-tight">{routeData.origin} - {routeData.destination}</h1>
+                            <h1 className="text-sm sm:text-base font-black tracking-tight">{routeData.originName} - {routeData.destinationName}</h1>
                             <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">
-                                {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }) : '--/--'}
+                                {routeData.departureTime ? new Date(routeData.departureTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }) : '--/--'}
                             </p>
                         </div>
                     </div>
@@ -614,7 +613,7 @@ export default function BookingPage() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center pb-4 border-b border-gray-50">
                                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Chuyến xe</span>
-                                        <span className="text-sm font-black">{routeData.origin} → {routeData.destination}</span>
+                                        <span className="text-sm font-black">{routeData.originName} → {routeData.destinationName}</span>
                                     </div>
                                     <div className="flex justify-between items-center pb-4 border-b border-gray-50">
                                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ghế đã chọn</span>
@@ -633,21 +632,39 @@ export default function BookingPage() {
                     {/* RIGHT AREA: Summary Sidebar (Always visible on large screens) */}
                     <div className="hidden lg:block lg:col-span-4 space-y-6">
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sticky top-28">
-                            <div className="flex justify-between items-center mb-8">
+                                <div className="flex justify-between items-center mb-8">
                                 <h2 className="text-lg font-bold text-gray-900">Thông tin chuyến đi</h2>
                                 <Info size={16} className="text-gray-300" />
                             </div>
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hành trình</span>
-                                    <span className="text-sm font-bold text-slate-900">{routeData.origin} - {routeData.destination}</span>
+                                    <span className="text-sm font-bold text-slate-900">{routeData.originName} - {routeData.destinationName}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Khởi hành</span>
                                     <span className="text-sm font-bold text-brand-primary">
-                                        {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                        {routeData.rawDepartureTime || (routeData.departureTime ? new Date(routeData.departureTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--')}
                                     </span>
                                 </div>
+                                {routeData.rawArrivalTime && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Đến nơi (Dự kiến)</span>
+                                        <span className="text-sm font-bold text-slate-600">{routeData.rawArrivalTime}</span>
+                                    </div>
+                                )}
+                                {routeData.pickupBranch && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Điểm đón</span>
+                                        <span className="text-sm font-bold text-slate-600 truncate max-w-[200px]">{routeData.pickupBranch}</span>
+                                    </div>
+                                )}
+                                {routeData.merchantName && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Nhà xe</span>
+                                        <span className="text-sm font-bold text-brand-primary">{routeData.merchantName}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Số ghế</span>
                                     <span className="text-sm font-black text-brand-primary">{selectedSeats.length > 0 ? selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id).join(", ") : "Chưa chọn"}</span>

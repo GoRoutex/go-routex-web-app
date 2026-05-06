@@ -7,11 +7,12 @@ import {
 } from "lucide-react";
 
 import { toast } from "react-toastify";
-import { ROUTE_ENDPOINTS, OPERATION_POINT_ENDPOINTS } from "../../utils/api-constants";
+import { ROUTE_ENDPOINTS } from "../../utils/api-constants";
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
 
 
 import { getAccessToken, parseJwt } from "../../utils/auth";
+import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 
 interface RoutePoint {
     id?: string;
@@ -34,6 +35,7 @@ interface RouteItem {
     originName: string;
     destinationCode: string;
     destinationName: string;
+    duration: number;
     status: string;
     creator: string;
     routePoints?: RoutePoint[];
@@ -68,6 +70,7 @@ export function MerchantScheduleManagementPage() {
         creator: "",
         originName: "",
         destinationName: "",
+        duration: 0,
         operationPoints: [] as RoutePoint[]
     });
 
@@ -156,6 +159,7 @@ export function MerchantScheduleManagementPage() {
             creator: localStorage.getItem("userName") || "",
             originName: "",
             destinationName: "",
+            duration: 0,
             operationPoints: []
         });
         setIsModalOpen(true);
@@ -196,6 +200,7 @@ export function MerchantScheduleManagementPage() {
                     creator: detailedRoute.creator || "",
                     originName: detailedRoute.originName || detailedRoute.origin || "",
                     destinationName: detailedRoute.destinationName || detailedRoute.destination || "",
+                    duration: detailedRoute.duration || 0,
                     operationPoints: (detailedRoute.routePoints || detailedRoute.operationPoints || []).map((p: any) => ({
                         ...p,
                         // Ensure we have the real UUID for later update/save
@@ -207,6 +212,7 @@ export function MerchantScheduleManagementPage() {
                     creator: route.creator || "",
                     originName: route.originName || "",
                     destinationName: route.destinationName,
+                    duration: route.duration || 0,
                     operationPoints: (route.routePoints || []).map((p: any) => ({
                         ...p,
                         realOperationPointId: p.operationPointId || p.id,
@@ -220,6 +226,7 @@ export function MerchantScheduleManagementPage() {
                 creator: route.creator || "",
                 originName: route.originName || "",
                 destinationName: route.destinationName || "",
+                duration: route.duration || 0,
                 operationPoints: route.routePoints || []
             });
         } finally {
@@ -337,6 +344,7 @@ export function MerchantScheduleManagementPage() {
                     originName: formData.originName,
                     destinationName: formData.destinationName,
                     status: selectedRoute?.status || "ACTIVE",
+                    duration: formData.duration,
                     routePoints: formData.operationPoints.map(p => ({
                         id: p.id || p.realOperationPointId,
                         operationOrder: p.operationOrder,
@@ -349,6 +357,7 @@ export function MerchantScheduleManagementPage() {
                     creator: formData.creator,
                     originName: formData.originName,
                     destinationName: formData.destinationName,
+                    duration: formData.duration,
                     operationPoints: formData.operationPoints.map(p => ({
                         operationOrder: p.operationOrder,
                         note: p.note,
@@ -516,7 +525,7 @@ export function MerchantScheduleManagementPage() {
                             <thead>
                                 <tr className="bg-slate-50/50">
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tuyến vận hành</th>
-                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Phân loại mẫu</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Thời lượng</th>
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Hạ tầng</th>
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                                     <th className="px-5 py-3 text-right">Thao tác</th>
@@ -548,12 +557,12 @@ export function MerchantScheduleManagementPage() {
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
                                             <div className="flex flex-col">
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                                                    <Clock size={12} className="text-slate-300" />
-                                                    Lộ trình mẫu
+                                                <div className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                                                    <Clock size={12} className="text-brand-primary" />
+                                                    {route.duration || 0} phút
                                                 </div>
                                                 <p className="text-[9px] font-bold text-slate-400">
-                                                    Gán chuyến xe hàng ngày
+                                                    Ước tính di chuyển
                                                 </p>
                                             </div>
                                         </td>
@@ -661,6 +670,19 @@ export function MerchantScheduleManagementPage() {
                                                     onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
                                                     placeholder="Tên quản trị viên"
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Thời gian di chuyển (Phút)</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all pr-12"
+                                                        value={formData.duration}
+                                                        onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
+                                                        placeholder="VD: 360"
+                                                    />
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">MIN</div>
+                                                </div>
                                             </div>
                                             <div className="p-4 bg-brand-primary/5 rounded-2xl border border-brand-primary/10">
                                                 <p className="text-[9px] font-bold text-brand-primary uppercase tracking-widest leading-relaxed">

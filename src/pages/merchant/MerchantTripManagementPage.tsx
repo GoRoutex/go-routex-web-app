@@ -1,31 +1,37 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Plus, Clock, ArrowRight,
-    Edit3,
-    ChevronLeft, ChevronRight, X, Loader2, Save,
-    Navigation, Building, Info, Calendar, MapPin, Search, Activity, MoreHorizontal, Timer
+    X, Loader2, Save,
+    Navigation, Building, Calendar, Activity, MoreHorizontal, Timer,
+    User, Truck
 } from "lucide-react";
 
 import { toast } from "react-toastify";
-import { ROUTE_ENDPOINTS, TRIP_ENDPOINTS } from "../../utils/api-constants";
+import { ROUTE_ENDPOINTS, TRIP_ENDPOINTS, VEHICLE_ENDPOINTS, STAFF_ENDPOINTS } from "../../utils/api-constants";
 import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
 
 interface TripItem {
-    id: string;
-    routeId: string;
+    tripId: string;
+    merchantId: string;
+    tripCode: string;
+    pickupBranch: string | null;
     departureTime: string;
     rawDepartureTime: string;
     rawDepartureDate: string;
-    durationMinutes: number;
     status: string;
-    originName?: string;
-    destinationName?: string;
+    route: {
+        routeId: string;
+        originName: string;
+        destinationName: string;
+        duration: number;
+    };
 }
 
 interface RouteItem {
     id: string;
     originName: string;
     destinationName: string;
+    duration: number;
 }
 
 export function MerchantTripManagementPage() {
@@ -47,12 +53,25 @@ export function MerchantTripManagementPage() {
         departureTime: new Date().toISOString(),
         rawDepartureTime: "",
         rawDepartureDate: "",
-        durationMinutes: 0
+        pickupBranch: ""
+    });
+
+    const [vehicles, setVehicles] = useState<any[]>([]);
+    const [drivers, setDrivers] = useState<any[]>([]);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [assigning, setAssigning] = useState(false);
+    const [assignData, setAssignData] = useState({
+        tripId: "",
+        vehicleId: "",
+        driverId: "",
+        creator: localStorage.getItem("userName") || "System"
     });
 
     useEffect(() => {
         fetchTrips(page);
         fetchRoutes();
+        fetchVehicles();
+        fetchDrivers();
     }, [page]);
 
     const fetchTrips = async (pageNumber: number) => {
@@ -91,14 +110,50 @@ export function MerchantTripManagementPage() {
         }
     };
 
+    const fetchVehicles = async () => {
+        try {
+            const response = await fetch(`${VEHICLE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100`, {
+                headers: createAuthorizedEnvelopeHeaders()
+            });
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setVehicles(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi tải danh sách xe:", err);
+        }
+    };
+
+    const fetchDrivers = async () => {
+        try {
+            const response = await fetch(`${STAFF_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100`, {
+                headers: createAuthorizedEnvelopeHeaders()
+            });
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                // Filter only drivers if possible, or just keep all staff
+                setDrivers(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi tải danh sách nhân viên:", err);
+        }
+    };
+
     const handleOpenCreate = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
         setIsEditing(false);
         setFormData({
             routeId: "",
-            departureTime: new Date().toISOString(),
-            rawDepartureTime: "",
-            rawDepartureDate: "",
-            durationMinutes: 0
+            departureTime: now.toISOString(),
+            rawDepartureDate: `${day}/${month}/${year}`,
+            rawDepartureTime: `${hours}:${minutes}`,
+            pickupBranch: ""
         });
         setIsModalOpen(true);
     };
@@ -107,11 +162,11 @@ export function MerchantTripManagementPage() {
         setIsEditing(true);
         setSelectedTrip(trip);
         setFormData({
-            routeId: trip.routeId,
+            routeId: trip.route?.routeId || "",
             departureTime: trip.departureTime,
             rawDepartureTime: trip.rawDepartureTime,
             rawDepartureDate: trip.rawDepartureDate,
-            durationMinutes: trip.durationMinutes
+            pickupBranch: trip.pickupBranch || ""
         });
         setIsModalOpen(true);
     };
@@ -126,7 +181,7 @@ export function MerchantTripManagementPage() {
                 channel: "ONL",
                 data: {
                     ...formData,
-                    tripId: isEditing ? selectedTrip?.id : undefined
+                    tripId: isEditing ? selectedTrip?.tripId : undefined
                 }
             };
 
@@ -151,6 +206,51 @@ export function MerchantTripManagementPage() {
             toast.error("Lỗi: " + err.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleOpenAssign = (trip: TripItem) => {
+        setAssignData({
+            tripId: trip.tripId,
+            vehicleId: "",
+            driverId: "",
+            creator: localStorage.getItem("userName") || "System"
+        });
+        setIsAssignModalOpen(true);
+    };
+
+    const handleAssignSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAssigning(true);
+        try {
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                channel: "ONL",
+                data: assignData
+            };
+
+            const response = await fetch(TRIP_ENDPOINTS.ASSIGN, {
+                method: 'POST',
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success("Điều phối thành công");
+                setIsAssignModalOpen(false);
+                fetchTrips(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi khi điều phối");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        } finally {
+            setAssigning(false);
         }
     };
 
@@ -213,14 +313,14 @@ export function MerchantTripManagementPage() {
                             <thead>
                                 <tr className="bg-slate-50/50">
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình & Thời gian</th>
-                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Thời lượng</th>
+                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Điểm đón</th>
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                                     <th className="px-5 py-3 text-right">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {trips.map((trip) => (
-                                    <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => handleOpenEdit(trip)}>
+                                    <tr key={trip.tripId} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => handleOpenEdit(trip)}>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -228,20 +328,28 @@ export function MerchantTripManagementPage() {
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-sm font-black text-slate-900">{trip.originName || "Tuyến đường"}</span>
+                                                        <span className="text-sm font-black text-slate-900">{trip.route?.originName || "Tuyến đường"}</span>
                                                         <ArrowRight size={12} className="text-slate-300" />
-                                                        <span className="text-sm font-black text-slate-900">{trip.destinationName || trip.routeId}</span>
+                                                        <span className="text-sm font-black text-slate-900">{trip.route?.destinationName}</span>
                                                     </div>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                        <Clock size={10} /> {new Date(trip.departureTime).toLocaleString('vi-VN')}
-                                                    </p>
+                                                    <div className="flex items-center gap-3">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <Activity size={10} className="text-brand-primary" /> {trip.tripCode}
+                                                        </p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <Clock size={10} /> {new Date(trip.departureTime).toLocaleString('vi-VN')}
+                                                        </p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <Timer size={10} /> {trip.route?.duration} phút
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-2 text-slate-600">
-                                                <Timer size={14} className="text-slate-300" />
-                                                <span className="text-sm font-bold">{trip.durationMinutes} phút</span>
+                                                <Building size={14} className="text-slate-300" />
+                                                <span className="text-sm font-bold">{trip.pickupBranch || "Chưa xác định"}</span>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
@@ -250,9 +358,22 @@ export function MerchantTripManagementPage() {
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
-                                                <MoreHorizontal size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {trip.status === 'SCHEDULED' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenAssign(trip);
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-brand-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-sm"
+                                                    >
+                                                        <Truck size={14} /> ĐIỀU PHỐI
+                                                    </button>
+                                                )}
+                                                <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -284,16 +405,35 @@ export function MerchantTripManagementPage() {
                         <form onSubmit={handleSubmit} className="p-8 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="col-span-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Văn phòng đón khách (Pickup Branch)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white"
+                                        value={formData.pickupBranch}
+                                        onChange={(e) => setFormData({ ...formData, pickupBranch: e.target.value })}
+                                        placeholder="VD: Văn phòng Hàng Xanh"
+                                    />
+                                </div>
+
+                                <div className="col-span-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chọn Tuyến đường mẫu</label>
                                     <select
                                         required
                                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
                                         value={formData.routeId}
-                                        onChange={(e) => setFormData({ ...formData, routeId: e.target.value })}
+                                        onChange={(e) => {
+                                            const routeId = e.target.value;
+                                            const selectedRoute = routes.find(r => r.id === routeId);
+                                            setFormData({
+                                                ...formData,
+                                                routeId,
+                                            });
+                                        }}
                                     >
                                         <option value="">-- Chọn tuyến đường --</option>
                                         {routes.map(r => (
-                                            <option key={r.id} value={r.id}>{r.originName} → {r.destinationName}</option>
+                                            <option key={r.id} value={r.id}>{r.originName} → {r.destinationName} ({r.duration || 0} phút)</option>
                                         ))}
                                     </select>
                                 </div>
@@ -304,19 +444,24 @@ export function MerchantTripManagementPage() {
                                         type="datetime-local"
                                         required
                                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white"
-                                        value={formData.departureTime.slice(0, 16)}
-                                        onChange={(e) => setFormData({ ...formData, departureTime: new Date(e.target.value).toISOString() })}
-                                    />
-                                </div>
+                                        value={formData.departureTime ? (() => {
+                                            const d = new Date(formData.departureTime);
+                                            return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                        })() : ""}
+                                        onChange={(e) => {
+                                            const val = e.target.value; // YYYY-MM-DDTHH:mm
+                                            if (!val) return;
 
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Thời lượng (Phút)</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white"
-                                        value={formData.durationMinutes}
-                                        onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) })}
+                                            const [datePart, timePart] = val.split('T');
+                                            const [year, month, day] = datePart.split('-');
+
+                                            setFormData({
+                                                ...formData,
+                                                departureTime: new Date(val).toISOString(),
+                                                rawDepartureDate: `${day}/${month}/${year}`,
+                                                rawDepartureTime: timePart
+                                            });
+                                        }}
                                     />
                                 </div>
 
@@ -350,6 +495,73 @@ export function MerchantTripManagementPage() {
                                 <button type="submit" disabled={submitting} className="px-10 py-4 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
                                     {submitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                                     {isEditing ? "Cập nhật" : "Tạo chuyến xe"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Assign Vehicle/Driver Modal */}
+            {isAssignModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" onClick={() => setIsAssignModalOpen(false)} />
+                    <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-950 tracking-tight">Điều phối vận hành</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gán phương tiện & tài xế cho chuyến xe</p>
+                            </div>
+                            <button onClick={() => setIsAssignModalOpen(false)} className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAssignSubmit} className="p-8 space-y-6">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                                        <Truck size={14} /> Chọn Phương tiện (Xe)
+                                    </label>
+                                    <select
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                        value={assignData.vehicleId}
+                                        onChange={(e) => setAssignData({ ...assignData, vehicleId: e.target.value })}
+                                    >
+                                        <option value="">-- Chọn xe vận hành --</option>
+                                        {vehicles.map(v => (
+                                            <option key={v.id} value={v.id}>{v.licensePlate} ({v.type || 'N/A'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                                        <User size={14} /> Chọn Tài xế (Driver)
+                                    </label>
+                                    <select
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                        value={assignData.driverId}
+                                        onChange={(e) => setAssignData({ ...assignData, driverId: e.target.value })}
+                                    >
+                                        <option value="">-- Chọn tài xế điều phối --</option>
+                                        {drivers.map(d => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.userInfo?.fullName || "Chưa đặt tên"} ({d.userInfo?.phone || 'Không có SĐT'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 border-t border-slate-50 flex items-center justify-end gap-3">
+                                <button type="button" onClick={() => setIsAssignModalOpen(false)} className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                                    Hủy
+                                </button>
+                                <button type="submit" disabled={assigning} className="px-10 py-4 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                                    {assigning ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                    Xác nhận Điều phối
                                 </button>
                             </div>
                         </form>

@@ -14,10 +14,14 @@ export const TRIP_ENDPOINTS = {
     UPDATE: `${API_BASE_URL}/trips/update`,
     DELETE: `${API_BASE_URL}/trips/delete`, // Assuming delete exists or will be needed
     DETAIL: `${API_BASE_URL}/trips/detail`,
+    ASSIGN: `${API_BASE_URL}/trips/assign`,
 };
 
-export const OPERATION_POINT_ENDPOINTS = {
-    FETCH: `${API_BASE_URL}/operation-point/fetch`,
+export const DEPARTMENT_ENDPOINTS = {
+    FETCH: `${API_BASE_URL}/department/fetch`,
+    CREATE: `${API_BASE_URL}/department/create`,
+    UPDATE: `${API_BASE_URL}/department/update`,
+    DELETE: `${API_BASE_URL}/department/delete`,
 };
 
 export const VEHICLE_ENDPOINTS = {
@@ -33,5 +37,5 @@ export const VEHICLE_TEMPLATE_ENDPOINTS = {
 };
 
 export const STAFF_ENDPOINTS = {
-    FETCH: `${API_BASE_URL}/staff/fetch`,
+    FETCH: `${API_BASE_URL}/drivers/fetch`,
 };

@@ -40,7 +40,7 @@ const merchantNavGroups: NavGroup[] = [
         items: [
             { label: "Đội xe của tôi", to: "/merchant/vehicles", icon: Bus },
             { label: "Mẫu cấu hình xe", to: "/merchant/vehicle-templates", icon: Copy },
-            { label: "Điểm đón/trả", to: "/merchant/operation-points", icon: MapPin },
+            { label: "Chi nhánh", to: "/merchant/departments", icon: MapPin },
             { label: "Quản lý Tuyến đường", to: "/merchant/schedules", icon: MapPin },
             { label: "Quản lý Chuyến xe", to: "/merchant/trips", icon: Calendar },
             { label: "Quản lý vé", to: "/merchant/tickets", icon: Ticket },
