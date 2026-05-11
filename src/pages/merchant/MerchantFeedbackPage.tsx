@@ -17,7 +17,17 @@ export function MerchantFeedbackPage() {
     const [selectedReview, setSelectedReview] = useState<any>(null);
     const [detailLoading, setDetailLoading] = useState(false);
 
-    const fetchReviews = async (pageNum: number) => {
+    useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedReview(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  const fetchReviews = async (pageNum: number) => {
         try {
             setLoading(true);
             setError(null);
@@ -279,6 +289,48 @@ export function MerchantFeedbackPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Pagination Container */}
+            {!loading && feedbacks.length > 0 && (
+                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Tổng số phản hồi: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                            {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPage(p)}
+                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
+                                        page === p 
+                                        ? "bg-slate-900 text-white shadow-lg" 
+                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            disabled={page * pageSize >= totalItems}
+                            onClick={() => setPage(page + 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
                     </div>
                 </div>
             )}

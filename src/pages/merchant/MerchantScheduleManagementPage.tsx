@@ -16,25 +16,30 @@ import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 
 interface RoutePoint {
     id?: string;
-    operationOrder: string;
+    stopOrder: string;
     routeId?: string;
     note: string;
-    operationPointId: string; // This will now store the Code for display
-    realOperationPointId?: string; // This will store the actual UUID for the backend
-    code?: string;
+    departmentId: string;
+    realOperationPointId?: string;
+    provinceId?: string;
     stopName: string;
     stopAddress: string;
     stopCity: string;
     stopLatitude: number;
     stopLongitude: number;
+    timeAtDepartment: number;
 }
 
 interface RouteItem {
-    id: string; // Fallback
+    id: string;
     originCode: string;
     originName: string;
     destinationCode: string;
     destinationName: string;
+    originProvinceId?: string;
+    destinationProvinceId?: string;
+    originDepartmentId?: string;
+    destinationDepartmentId?: string;
     duration: number;
     status: string;
     creator: string;
@@ -55,30 +60,37 @@ export function MerchantScheduleManagementPage() {
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);
     const [totalItems, setTotalItems] = useState(0);
-
-    // Modal states
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
     const [isEditing, setIsEditing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [fetchingDetail, setFetchingDetail] = useState(false);
+
+    // Modal states
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
     const [allOperationPoints, setAllOperationPoints] = useState<any[]>([]);
-    const [fetchingResources, setFetchingResources] = useState(false);
+    const [originDepartments, setOriginDepartments] = useState<any[]>([]);
+    const [destinationDepartments, setDestinationDepartments] = useState<any[]>([]);
 
     // Form states matching create payload
     const [formData, setFormData] = useState({
         creator: "",
         originName: "",
         destinationName: "",
+        originProvinceId: "",
+        originDepartmentId: "",
+        destinationProvinceId: "",
+        destinationDepartmentId: "",
         duration: 0,
-        operationPoints: [] as RoutePoint[]
+        departments: [] as RoutePoint[]
     });
 
     const fetchRoutes = async (pageNumber: number) => {
         setLoading(true);
         try {
             const response = await fetch(
-                `${ROUTE_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+                `${ROUTE_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&status=${statusFilter}&search=${searchTerm}`,
                 {
                     headers: createAuthorizedEnvelopeHeaders()
                 }
@@ -98,14 +110,17 @@ export function MerchantScheduleManagementPage() {
     const fetchProvinces = async () => {
         try {
             const response = await fetch(
-                `${ADMIN_MERCHANT_ACTION_BASE_URL}/provinces/master/fetch?pageNumber=1&pageSize=100`,
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/provinces/fetch?pageNumber=1&pageSize=100`,
                 {
                     headers: createAuthorizedEnvelopeHeaders()
                 }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
-                setProvinces(result.data.items);
+                const sorted = [...result.data.items].sort((a, b) =>
+                    (a.name || "").localeCompare(b.name || "", 'vi', { sensitivity: 'base' })
+                );
+                setProvinces(sorted);
             }
         } catch (err) {
             console.error("Lỗi fetch provinces:", err);
@@ -116,13 +131,11 @@ export function MerchantScheduleManagementPage() {
         try {
             const params = new URLSearchParams({
                 pageNumber: "1",
-                pageSize: "100"
+                pageSize: "200"
             });
             const response = await fetch(
-                `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/fetch?${params.toString()}`,
-                {
-                    headers: createAuthorizedEnvelopeHeaders()
-                }
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?${params.toString()}`,
+                { headers: createAuthorizedEnvelopeHeaders() }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
@@ -133,21 +146,57 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const fetchDepartmentsByProvince = async (provinceId: string, type: 'origin' | 'destination') => {
+        if (!provinceId) {
+            if (type === 'origin') setOriginDepartments([]);
+            else setDestinationDepartments([]);
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({
+                pageNumber: "1",
+                pageSize: "200",
+                provinceId: provinceId
+            });
+            const response = await fetch(
+                `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?${params.toString()}`,
+                { headers: createAuthorizedEnvelopeHeaders() }
+            );
+            const result = await response.json();
+            const items = result.data?.items || [];
+            if (type === 'origin') setOriginDepartments(items);
+            else setDestinationDepartments(items);
+        } catch (err) {
+            console.error("Lỗi fetch departments:", err);
+        }
+    };
+
     const fetchAllResources = async () => {
-        setFetchingResources(true);
-        await fetchOperationPoints();
-        setFetchingResources(false);
+        await Promise.all([
+            fetchOperationPoints(),
+            fetchProvinces()
+        ]);
     };
 
 
 
     useEffect(() => {
         fetchRoutes(page);
-    }, [page]);
+    }, [page, statusFilter, searchTerm]);
 
     useEffect(() => {
-        fetchProvinces();
         fetchAllResources();
+    }, []);
+
+    useEffect(() => {
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
     }, []);
 
 
@@ -159,9 +208,15 @@ export function MerchantScheduleManagementPage() {
             creator: localStorage.getItem("userName") || "",
             originName: "",
             destinationName: "",
+            originProvinceId: "",
+            originDepartmentId: "",
+            destinationProvinceId: "",
+            destinationDepartmentId: "",
             duration: 0,
-            operationPoints: []
+            departments: []
         });
+        setOriginDepartments([]);
+        setDestinationDepartments([]);
         setIsModalOpen(true);
     };
 
@@ -196,28 +251,73 @@ export function MerchantScheduleManagementPage() {
             const detailedRoute = result.data;
 
             if (detailedRoute) {
+                const originDeptId = detailedRoute.originDepartmentId || "";
+                const destDeptId = detailedRoute.destinationDepartmentId || "";
+
+                const originBranch = allOperationPoints.find(d => (d.id || d.operationPointId) === originDeptId);
+                const destBranch = allOperationPoints.find(d => (d.id || d.operationPointId) === destDeptId);
+
+                const originProvId = detailedRoute.originProvinceId || originBranch?.provinceId || "";
+                const destProvId = detailedRoute.destinationProvinceId || destBranch?.provinceId || "";
+
                 setFormData({
                     creator: detailedRoute.creator || "",
                     originName: detailedRoute.originName || detailedRoute.origin || "",
                     destinationName: detailedRoute.destinationName || detailedRoute.destination || "",
+                    originProvinceId: originProvId,
+                    originDepartmentId: originDeptId,
+                    destinationProvinceId: destProvId,
+                    destinationDepartmentId: destDeptId,
                     duration: detailedRoute.duration || 0,
-                    operationPoints: (detailedRoute.routePoints || detailedRoute.operationPoints || []).map((p: any) => ({
-                        ...p,
-                        // Ensure we have the real UUID for later update/save
-                        realOperationPointId: p.operationPointId || p.id,
-                    }))
+                    departments: (detailedRoute.routePoints || detailedRoute.operationPoints || detailedRoute.departments || []).map((p: any) => {
+                        const deptId = p.departmentId || p.operationPointId || p.id;
+                        const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
+                        return {
+                            ...p,
+                            operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                            departmentId: deptId,
+                            realOperationPointId: deptId,
+                            provinceId: p.provinceId || deptInfo?.provinceId || "",
+                            timeAtDepartment: p.timeAtDepartment || 0,
+                        };
+                    })
                 });
+                if (originProvId) fetchDepartmentsByProvince(originProvId, 'origin');
+                if (destProvId) fetchDepartmentsByProvince(destProvId, 'destination');
             } else {
+                const originDeptId = route.originDepartmentId || "";
+                const destDeptId = route.destinationDepartmentId || "";
+
+                const originBranch = allOperationPoints.find(d => (d.id || d.operationPointId) === originDeptId);
+                const destBranch = allOperationPoints.find(d => (d.id || d.operationPointId) === destDeptId);
+
+                const originProvId = route.originProvinceId || originBranch?.provinceId || "";
+                const destProvId = route.destinationProvinceId || destBranch?.provinceId || "";
+
                 setFormData({
                     creator: route.creator || "",
                     originName: route.originName || "",
                     destinationName: route.destinationName,
+                    originProvinceId: originProvId,
+                    originDepartmentId: originDeptId,
+                    destinationProvinceId: destProvId,
+                    destinationDepartmentId: destDeptId,
                     duration: route.duration || 0,
-                    operationPoints: (route.routePoints || []).map((p: any) => ({
-                        ...p,
-                        realOperationPointId: p.operationPointId || p.id,
-                    }))
+                    departments: (route.routePoints || []).map((p: any) => {
+                        const deptId = p.departmentId || p.operationPointId || p.id;
+                        const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
+                        return {
+                            ...p,
+                            operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                            departmentId: deptId,
+                            realOperationPointId: deptId,
+                            provinceId: p.provinceId || deptInfo?.provinceId || "",
+                            timeAtDepartment: p.timeAtDepartment || 0,
+                        };
+                    })
                 });
+                if (originProvId) fetchDepartmentsByProvince(originProvId, 'origin');
+                if (destProvId) fetchDepartmentsByProvince(destProvId, 'destination');
             }
         } catch (err: any) {
             toast.error("Lỗi khi tải chi tiết: " + err.message);
@@ -226,8 +326,23 @@ export function MerchantScheduleManagementPage() {
                 creator: route.creator || "",
                 originName: route.originName || "",
                 destinationName: route.destinationName || "",
+                originProvinceId: route.originProvinceId || "",
+                originDepartmentId: route.originDepartmentId || "",
+                destinationProvinceId: route.destinationProvinceId || "",
+                destinationDepartmentId: route.destinationDepartmentId || "",
                 duration: route.duration || 0,
-                operationPoints: route.routePoints || []
+                departments: (route.routePoints || []).map((p: any) => {
+                    const deptId = p.departmentId || p.operationPointId || p.id;
+                    const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
+                    return {
+                        ...p,
+                        operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                        departmentId: deptId,
+                        realOperationPointId: deptId,
+                        provinceId: p.provinceId || deptInfo?.provinceId || "",
+                        timeAtDepartment: p.timeAtDepartment || 0,
+                    };
+                })
             });
         } finally {
             setFetchingDetail(false);
@@ -236,93 +351,67 @@ export function MerchantScheduleManagementPage() {
 
     const handleAddPoint = () => {
         const newPoint: RoutePoint = {
-            operationOrder: (formData.operationPoints.length + 1).toString(),
+            stopOrder: (formData.departments.length + 1).toString(),
             note: "",
-            operationPointId: "",
+            departmentId: "",
             stopName: "",
             stopAddress: "",
             stopCity: "",
             stopLatitude: 0,
-            stopLongitude: 0
+            stopLongitude: 0,
+            timeAtDepartment: 0
         };
         setFormData({
             ...formData,
-            operationPoints: [...formData.operationPoints, newPoint]
+            departments: [...formData.departments, newPoint]
         });
     };
 
     const handleRemovePoint = (index: number) => {
-        const updated = formData.operationPoints.filter((_, i) => i !== index);
+        const updated = formData.departments.filter((_, i) => i !== index);
         const reordered = updated.map((p, i) => ({ ...p, operationOrder: (i + 1).toString() }));
-        setFormData({ ...formData, operationPoints: reordered });
+        setFormData({ ...formData, departments: reordered });
     };
 
     const updatePoint = (index: number, field: keyof RoutePoint, value: any) => {
-        const updated = [...formData.operationPoints];
+        const updated = [...formData.departments];
         updated[index] = { ...updated[index], [field]: value };
-        setFormData({ ...formData, operationPoints: updated });
-    };
-
-    const handleFetchPointDetail = async (index: number, type: 'code' | 'name') => {
-        const point = formData.operationPoints[index];
-        const searchValue = type === 'code' ? point.operationPointId : point.stopName;
-
-        if (!searchValue.trim()) return;
-
-        try {
-            const queryParam = type === 'code'
-                ? `code=${encodeURIComponent(searchValue)}`
-                : `name=${encodeURIComponent(searchValue)}`;
-
-            const response = await fetch(
-                `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/detail?${queryParam}`,
-                {
-                    headers: createAuthorizedEnvelopeHeaders()
-                }
-            );
-
-            if (!response.ok) {
-                // If code search fails, try searching by ID as fallback
-                if (type === 'code') {
-                    const fallbackResponse = await fetch(
-                        `${ADMIN_MERCHANT_ACTION_BASE_URL}/operation-point/detail?operationPointId=${encodeURIComponent(searchValue)}`,
-                        { headers: createAuthorizedEnvelopeHeaders() }
-                    );
-                    if (fallbackResponse.ok) {
-                        const result = await fallbackResponse.json();
-                        populatePointData(index, result.data);
-                        return;
-                    }
-                }
-                toast.error("Không tìm thấy thông điểm dừng này");
-                return;
-            }
-
-            const result = await response.json();
-            populatePointData(index, result.data);
-        } catch (err) {
-            toast.error("Lỗi khi tìm kiếm điểm dừng");
-        }
+        setFormData({ ...formData, departments: updated });
     };
 
     const populatePointData = (index: number, data: any) => {
         if (!data) return;
-        const updated = [...formData.operationPoints];
+        const updated = [...formData.departments];
         updated[index] = {
             ...updated[index],
-            // Use the code for display in the input field
-            operationPointId: data.code || updated[index].operationPointId,
+            // Use the id for display in the input field
+            departmentId: data.id || data.operationPointId || updated[index].departmentId,
             // Store the real internal ID (UUID) for the backend
             realOperationPointId: data.operationPointId || data.id,
-            code: data.code || "",
             stopName: data.name || updated[index].stopName,
             stopAddress: data.address || updated[index].stopAddress,
             stopCity: data.city || updated[index].stopCity,
             stopLatitude: data.latitude || updated[index].stopLatitude,
             stopLongitude: data.longitude || updated[index].stopLongitude,
+            provinceId: data.provinceId || updated[index].provinceId
         };
-        setFormData({ ...formData, operationPoints: updated });
-        toast.success(`Đã tìm thấy: ${data.name} (${data.code || 'N/A'})`);
+        setFormData({ ...formData, departments: updated });
+        toast.success(`Đã tìm thấy: ${data.name}`);
+    };
+
+    const clearPointData = (index: number) => {
+        const updated = [...formData.departments];
+        updated[index] = {
+            ...updated[index],
+            departmentId: "",
+            realOperationPointId: "",
+            stopName: "",
+            stopAddress: "",
+            stopCity: "",
+            stopLatitude: 0,
+            stopLongitude: 0,
+        };
+        setFormData({ ...formData, departments: updated });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -330,45 +419,39 @@ export function MerchantScheduleManagementPage() {
         setSubmitting(true);
         try {
             const meta = createRequestMeta();
-            const endpoint = isEditing ? "update" : "create";
-
             const body: any = {
                 ...meta,
-                channel: "OFF", // Match curl examples
+                channel: "OFF",
+            };
+
+            const dataPayload: any = {
+                creator: formData.creator || (isEditing ? selectedRoute?.creator : ""),
+                originName: formData.originName,
+                destinationName: formData.destinationName,
+                originDepartmentId: formData.originDepartmentId,
+                destinationDepartmentId: formData.destinationDepartmentId,
+                duration: formData.duration,
+                routePoints: formData.departments.map(p => ({
+                    stopOrder: p.stopOrder,
+                    note: p.note || "",
+                    departmentId: p.realOperationPointId || p.departmentId,
+                    stopName: p.stopName,
+                    stopAddress: p.stopAddress,
+                    stopCity: p.stopCity,
+                    stopLatitude: p.stopLatitude,
+                    stopLongitude: p.stopLongitude,
+                    timeAtDepartment: p.timeAtDepartment
+                }))
             };
 
             if (isEditing && selectedRoute) {
                 body.routeId = selectedRoute.id;
-                body.creator = formData.creator || selectedRoute.creator;
                 body.data = {
-                    originName: formData.originName,
-                    destinationName: formData.destinationName,
-                    status: selectedRoute?.status || "ACTIVE",
-                    duration: formData.duration,
-                    routePoints: formData.operationPoints.map(p => ({
-                        id: p.id || p.realOperationPointId,
-                        operationOrder: p.operationOrder,
-                        routeId: selectedRoute.id,
-                        note: p.note || ""
-                    }))
+                    ...dataPayload,
+                    status: selectedRoute?.status || "ACTIVE"
                 };
             } else {
-                body.data = {
-                    creator: formData.creator,
-                    originName: formData.originName,
-                    destinationName: formData.destinationName,
-                    duration: formData.duration,
-                    operationPoints: formData.operationPoints.map(p => ({
-                        operationOrder: p.operationOrder,
-                        note: p.note,
-                        operationPointId: p.realOperationPointId || p.operationPointId,
-                        stopName: p.stopName,
-                        stopAddress: p.stopAddress,
-                        stopCity: p.stopCity,
-                        stopLatitude: p.stopLatitude,
-                        stopLongitude: p.stopLongitude
-                    }))
-                };
+                body.data = dataPayload;
             }
 
             const response = await fetch(isEditing ? ROUTE_ENDPOINTS.UPDATE : ROUTE_ENDPOINTS.CREATE, {
@@ -454,7 +537,7 @@ export function MerchantScheduleManagementPage() {
             </div>
 
             {/* KPI Panels Section */}
-            {!loading && routes.length > 0 && (
+            {!loading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Panel 1: Total Routes */}
                     <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-slate-50/50 group">
@@ -496,13 +579,49 @@ export function MerchantScheduleManagementPage() {
                 </div>
             )}
 
+            {/* Filter Section */}
+            <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="relative flex-1">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Tìm kiếm tuyến đường..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setPage(1);
+                        }}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none font-bold"
+                    />
+                </div>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-100 flex-1 md:flex-none">
+                        <Activity size={14} className="text-slate-400" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 pr-2 mr-1 hidden sm:block">Trạng thái</span>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setPage(1);
+                            }}
+                            className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-slate-900 outline-none cursor-pointer pr-2 py-2 min-w-[120px]"
+                        >
+                            <option value="">Tất cả (ALL)</option>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="SUSPENDED">SUSPENDED</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Content */}
             {loading ? (
                 <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 rounded-[2.5rem] border border-dashed border-slate-200">
                     <Loader2 className="animate-spin text-brand-primary" size={32} />
                     <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest">Đang kết nối cơ sở dữ liệu...</p>
                 </div>
-            ) : routes.length === 0 ? (
+            ) : totalItems === 0 ? (
                 <div className="h-[450px] flex flex-col items-center justify-center gap-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
                     <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 flex items-center justify-center text-slate-200">
                         <Navigation size={48} />
@@ -677,8 +796,8 @@ export function MerchantScheduleManagementPage() {
                                                     <input
                                                         type="number"
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all pr-12"
-                                                        value={formData.duration}
-                                                        onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
+                                                        value={formData.duration === 0 ? "" : formData.duration}
+                                                        onChange={(e) => setFormData({ ...formData, duration: e.target.value === "" ? 0 : parseInt(e.target.value) })}
                                                         placeholder="VD: 360"
                                                     />
                                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">MIN</div>
@@ -694,178 +813,252 @@ export function MerchantScheduleManagementPage() {
                                     </div>
                                 </div>
 
-                                {/* Section 2: Journey & Transit Points */}
-                                <div className="lg:col-span-8 space-y-10">
-                                    {/* Section 2: Journey & Designer */}
-                                    <div className="lg:col-span-8 space-y-8">
-                                        <div className="bg-slate-50/30 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
-                                            <div className="flex items-center justify-between mb-10">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-                                                        <Navigation size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Chi tiết lộ trình</h4>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Thứ tự các điểm xe sẽ ghé qua</p>
+                                {/* Section 2: Journey & Designer */}
+                                <div className="lg:col-span-8 space-y-8">
+                                    <div className="bg-slate-50/30 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                                        <div className="flex items-center justify-between mb-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+                                                    <Navigation size={18} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Chi tiết lộ trình</h4>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Thứ tự các điểm xe sẽ ghé qua</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddPoint}
+                                                className="flex items-center gap-2 text-[9px] font-black text-white px-5 py-2.5 bg-brand-primary rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
+                                            >
+                                                <Plus size={14} /> THÊM TRẠM DỪNG
+                                            </button>
+                                        </div>
+
+                                        {/* Vertical Timeline Designer */}
+                                        <div className="relative pl-10 space-y-12">
+                                            {/* Vertical Line */}
+                                            <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-brand-primary via-slate-200 to-slate-900 rounded-full" />
+
+                                            {/* Node 1: Origin */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-brand-primary border-4 border-white shadow-lg z-10 flex items-center justify-center">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                </div>
+                                                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="flex-1">
+                                                            <label className="text-[9px] font-black text-brand-primary uppercase tracking-widest mb-2 block">Tỉnh/Thành xuất phát</label>
+                                                            <select
+                                                                required
+                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                                                value={formData.originProvinceId}
+                                                                onChange={(e) => {
+                                                                    const provId = e.target.value;
+                                                                    const provName = provinces.find(p => p.id === provId)?.name || "";
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        originProvinceId: provId,
+                                                                        originDepartmentId: "",
+                                                                        originName: provName
+                                                                    });
+                                                                    fetchDepartmentsByProvince(provId, 'origin');
+                                                                }}
+                                                            >
+                                                                <option value="">-- Chọn Tỉnh/Thành đi --</option>
+                                                                {provinces.map(p => (
+                                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="text-[9px] font-black text-brand-primary uppercase tracking-widest mb-2 block">Chi nhánh xuất phát</label>
+                                                            <select
+                                                                required
+                                                                disabled={!formData.originProvinceId}
+                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer disabled:opacity-50"
+                                                                value={formData.originDepartmentId}
+                                                                onChange={(e) => {
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        originDepartmentId: e.target.value
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <option value="">-- Chọn chi nhánh đi --</option>
+                                                                {originDepartments.map(p => (
+                                                                    <option key={p.id || p.departmentId} value={p.id || p.departmentId || p.operationPointId}>{p.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddPoint}
-                                                    className="flex items-center gap-2 text-[9px] font-black text-white px-5 py-2.5 bg-brand-primary rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
-                                                >
-                                                    <Plus size={14} /> THÊM TRẠM DỪNG
-                                                </button>
                                             </div>
 
-                                            {/* Vertical Timeline Designer */}
-                                            <div className="relative pl-10 space-y-12">
-                                                {/* Vertical Line */}
-                                                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-brand-primary via-slate-200 to-slate-900 rounded-full" />
-
-                                                {/* Node 1: Origin */}
-                                                <div className="relative">
-                                                    <div className="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-brand-primary border-4 border-white shadow-lg z-10 flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                            {/* Intermediate Nodes: Transit Points */}
+                                            <div className="space-y-8">
+                                                {formData.departments.length === 0 ? (
+                                                    <div className="bg-white/40 border-2 border-dashed border-slate-100 rounded-[2rem] p-8 text-center">
+                                                        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Chưa có trạm trung chuyển nào được gán</p>
                                                     </div>
-                                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                                                        <div className="flex flex-col md:flex-row md:items-center gap-6">
-                                                            <div className="flex-1">
-                                                                <label className="text-[9px] font-black text-brand-primary uppercase tracking-widest mb-2 block">Điểm xuất phát (Tỉnh/Thành)</label>
-                                                                <select
-                                                                    required
-                                                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
-                                                                    value={formData.originName}
-                                                                    onChange={(e) => setFormData({ ...formData, originName: e.target.value })}
+                                                ) : (
+                                                    formData.departments.map((point, index) => (
+                                                        <div key={index} className="relative group/node">
+                                                            <div className="absolute -left-[31px] top-8 w-6 h-6 rounded-full bg-white border-2 border-slate-200 shadow-md z-10 flex items-center justify-center group-hover/node:border-brand-primary transition-colors">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover/node:bg-brand-primary transition-colors" />
+                                                            </div>
+
+                                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm group-hover/node:border-brand-primary/20 transition-all relative">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemovePoint(index)}
+                                                                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-950 text-white flex items-center justify-center shadow-lg opacity-0 group-hover/node:opacity-100 transition-all hover:scale-110 active:scale-95 z-20"
                                                                 >
-                                                                    <option value="">-- Chọn tỉnh/thành đi --</option>
-                                                                    {provinces.map(p => (
-                                                                        <option key={p.id} value={p.name}>{p.name}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hidden md:block">
-                                                                <Navigation className="text-slate-200" size={24} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Intermediate Nodes: Transit Points */}
-                                                <div className="space-y-8">
-                                                    {formData.operationPoints.length === 0 ? (
-                                                        <div className="bg-white/40 border-2 border-dashed border-slate-100 rounded-[2rem] p-8 text-center">
-                                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Chưa có trạm trung chuyển nào được gán</p>
-                                                        </div>
-                                                    ) : (
-                                                        formData.operationPoints.map((point, index) => (
-                                                            <div key={index} className="relative group/node">
-                                                                <div className="absolute -left-[31px] top-8 w-6 h-6 rounded-full bg-white border-2 border-slate-200 shadow-md z-10 flex items-center justify-center group-hover/node:border-brand-primary transition-colors">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover/node:bg-brand-primary transition-colors" />
-                                                                </div>
-
-                                                                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/20 group-hover/node:border-brand-primary/10 transition-all relative">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemovePoint(index)}
-                                                                        className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-950 text-white flex items-center justify-center shadow-lg opacity-0 group-hover/node:opacity-100 transition-all hover:scale-110 active:scale-95"
-                                                                    >
-                                                                        <X size={14} />
-                                                                    </button>
-
-                                                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                                                                        {/* Left Part: ID & Search */}
-                                                                        <div className="md:col-span-4 space-y-4">
-                                                                            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                                                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block flex items-center gap-1.5">
-                                                                                    <Info size={10} /> Mã Trạm (ID)
-                                                                                </label>
-                                                                                <input
-                                                                                    className="w-full bg-white px-4 py-2.5 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/20 outline-none shadow-sm"
-                                                                                    value={point.operationPointId}
-                                                                                    onChange={(e) => updatePoint(index, 'operationPointId', e.target.value)}
-                                                                                    onBlur={() => handleFetchPointDetail(index, 'code')}
-                                                                                    placeholder="VD: HCM-OP-001"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="relative group/search">
-                                                                                <select
-                                                                                    className="w-full bg-white px-4 py-2.5 rounded-xl text-[10px] font-black appearance-none cursor-pointer border border-slate-100 hover:border-brand-primary/20 transition-all outline-none pr-10 shadow-sm"
-                                                                                    onChange={(e) => {
-                                                                                        const selected = allOperationPoints.find(p => (p.operationPointId || p.id) === e.target.value);
-                                                                                        if (selected) populatePointData(index, selected);
-                                                                                    }}
-                                                                                    value=""
-                                                                                >
-                                                                                    <option value="" disabled>Tìm nhanh...</option>
-                                                                                    {allOperationPoints.map(p => (
-                                                                                        <option key={p.id} value={p.operationPointId || p.id}>{p.name} ({p.code})</option>
-                                                                                    ))}
-                                                                                </select>
-                                                                                <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-hover/search:text-brand-primary transition-colors" />
-                                                                            </div>
+                                                                    <X size={14} />
+                                                                </button>
+                                                                <div className="space-y-6">
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                        <div className="flex-1">
+                                                                            <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 block">Tỉnh/Thành trạm dừng</label>
+                                                                            <select
+                                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                                                                value={point.provinceId || ""}
+                                                                                onChange={(e) => {
+                                                                                    const provId = e.target.value;
+                                                                                    const updated = [...formData.departments];
+                                                                                    updated[index] = {
+                                                                                        ...updated[index],
+                                                                                        provinceId: provId,
+                                                                                        departmentId: "",
+                                                                                        realOperationPointId: "",
+                                                                                        stopName: "",
+                                                                                        stopAddress: "",
+                                                                                        stopCity: "",
+                                                                                        stopLatitude: 0,
+                                                                                        stopLongitude: 0,
+                                                                                    };
+                                                                                    setFormData({ ...formData, departments: updated });
+                                                                                }}
+                                                                            >
+                                                                                <option value="">-- Chọn Tỉnh/Thành --</option>
+                                                                                {provinces.map(p => (
+                                                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                                                ))}
+                                                                            </select>
                                                                         </div>
-
-                                                                        {/* Right Part: Details */}
-                                                                        <div className="md:col-span-8 bg-slate-50/30 p-5 rounded-[2rem] border border-slate-100 grid grid-cols-2 gap-5">
-                                                                            <div className="col-span-2">
-                                                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block flex items-center gap-1.5">
-                                                                                    <MapPin size={10} /> Tên Trạm Dừng
-                                                                                </label>
+                                                                        <div className="flex-1">
+                                                                            <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 block">Chi nhánh tại trạm</label>
+                                                                            <select
+                                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                                                                value={point.departmentId}
+                                                                                onChange={(e) => {
+                                                                                    const val = e.target.value;
+                                                                                    if (!val) {
+                                                                                        clearPointData(index);
+                                                                                    } else {
+                                                                                        const selected = allOperationPoints.find(p => (p.id || p.operationPointId) === val);
+                                                                                        if (selected) populatePointData(index, selected);
+                                                                                        else updatePoint(index, 'departmentId', val);
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <option value="">-- Chọn chi nhánh --</option>
+                                                                                {allOperationPoints
+                                                                                    .filter(p => !point.provinceId || p.provinceId === point.provinceId)
+                                                                                    .map(p => (
+                                                                                        <option key={p.id || p.departmentId} value={p.id || p.departmentId || p.operationPointId}>{p.name}</option>
+                                                                                    ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                        <div className="flex-1">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tên hiển thị trạm dừng (Stop Name)</label>
+                                                                            <div className="flex items-center gap-4">
                                                                                 <input
-                                                                                    className="w-full bg-white px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/20 transition-all shadow-sm"
+                                                                                    className="flex-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
                                                                                     value={point.stopName}
                                                                                     onChange={(e) => updatePoint(index, 'stopName', e.target.value)}
-                                                                                    placeholder="Nhập tên bến bãi..."
+                                                                                    placeholder="VD: Trạm dừng chân ABC"
                                                                                 />
                                                                             </div>
-                                                                            <div>
-                                                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Khu Vực</label>
-                                                                                <input
-                                                                                    className="w-full bg-white px-4 py-3 rounded-xl text-[11px] font-black border border-slate-100 focus:border-brand-primary/20 shadow-sm"
-                                                                                    value={point.stopCity}
-                                                                                    onChange={(e) => updatePoint(index, 'stopCity', e.target.value)}
-                                                                                    placeholder="Tỉnh / Thành"
-                                                                                />
-                                                                            </div>
-                                                                            <div>
-                                                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Thứ tự ghé</label>
-                                                                                <div className="bg-slate-900 text-white px-4 py-3 rounded-xl text-[11px] font-black text-center shadow-lg shadow-black/10 uppercase tracking-widest">
-                                                                                    STOP #{point.operationOrder}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Thời gian tại trạm (phút)</label>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className="relative flex-1">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all pr-12"
+                                                                                        value={point.timeAtDepartment}
+                                                                                        onChange={(e) => updatePoint(index, 'timeAtDepartment', parseInt(e.target.value) || 0)}
+                                                                                        placeholder="VD: +45 hoặc -30"
+                                                                                    />
+                                                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400">MIN</div>
+                                                                                </div>
+                                                                                <div className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl text-[10px] font-black min-w-[100px] text-center uppercase tracking-widest shadow-lg h-full flex items-center justify-center">
+                                                                                    STOP #{point.stopOrder}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        ))
-                                                    )}
-                                                </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
 
-                                                {/* Node 3: Destination */}
-                                                <div className="relative pt-4">
-                                                    <div className="absolute -left-[31px] top-6 w-6 h-6 rounded-full bg-slate-900 border-4 border-white shadow-lg z-10 flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                                                    </div>
-                                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                                                        <div className="flex flex-col md:flex-row md:items-center gap-6">
-                                                            <div className="flex-1">
-                                                                <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 block">Điểm kết thúc (Tỉnh/Thành)</label>
-                                                                <select
-                                                                    required
-                                                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
-                                                                    value={formData.destinationName}
-                                                                    onChange={(e) => setFormData({ ...formData, destinationName: e.target.value })}
-                                                                >
-                                                                    <option value="">-- Chọn tỉnh/thành đến --</option>
-                                                                    {provinces.map(p => (
-                                                                        <option key={p.id} value={p.name}>{p.name}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 hidden md:block shadow-xl">
-                                                                <MapPin className="text-white" size={24} />
-                                                            </div>
+                                            {/* Node Last: Destination */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-slate-900 border-4 border-white shadow-lg z-10 flex items-center justify-center">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                </div>
+                                                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="flex-1">
+                                                            <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 block">Tỉnh/Thành đích</label>
+                                                            <select
+                                                                required
+                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                                                value={formData.destinationProvinceId}
+                                                                onChange={(e) => {
+                                                                    const provId = e.target.value;
+                                                                    const provName = provinces.find(p => p.id === provId)?.name || "";
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        destinationProvinceId: provId,
+                                                                        destinationDepartmentId: "",
+                                                                        destinationName: provName
+                                                                    });
+                                                                    fetchDepartmentsByProvince(provId, 'destination');
+                                                                }}
+                                                            >
+                                                                <option value="">-- Chọn Tỉnh/Thành đến --</option>
+                                                                {provinces.map(p => (
+                                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <label className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 block">Chi nhánh đích</label>
+                                                            <select
+                                                                required
+                                                                disabled={!formData.destinationProvinceId}
+                                                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer disabled:opacity-50"
+                                                                value={formData.destinationDepartmentId}
+                                                                onChange={(e) => {
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        destinationDepartmentId: e.target.value
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <option value="">-- Chọn chi nhánh đến --</option>
+                                                                {destinationDepartments.map(p => (
+                                                                    <option key={p.id || p.departmentId} value={p.id || p.departmentId || p.operationPointId}>{p.name}</option>
+                                                                ))}
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -909,17 +1102,30 @@ export function MerchantScheduleManagementPage() {
                     <button
                         disabled={page === 1}
                         onClick={() => setPage(page - 1)}
-                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
                     >
                         <ChevronLeft size={18} />
                     </button>
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-lg">
-                        {page}
+
+                    <div className="flex items-center gap-2">
+                        {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPage(p)}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${page === p
+                                    ? "bg-slate-900 text-white shadow-lg"
+                                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                                    }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
                     </div>
+
                     <button
                         disabled={page * pageSize >= totalItems}
                         onClick={() => setPage(page + 1)}
-                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
                     >
                         <ChevronRight size={18} />
                     </button>

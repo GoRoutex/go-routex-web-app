@@ -150,6 +150,17 @@ export function MerchantStaffManagementPage() {
         }
     }, [userSearchTerm, isEditing, showUserDropdown]);
 
+    useEffect(() => {
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsModalOpen(false);
+                setShowUserDropdown(false);
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
+
 
 
     const handleOpenCreate = () => {
@@ -730,17 +741,31 @@ export function MerchantStaffManagementPage() {
                         <button
                             disabled={page === 1}
                             onClick={() => setPage(page - 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
                         >
                             <ChevronLeft size={18} />
                         </button>
-                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow-lg">
-                            {page}
+                        
+                        <div className="flex items-center gap-2">
+                            {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPage(p)}
+                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
+                                        page === p 
+                                        ? "bg-slate-900 text-white shadow-lg" 
+                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
                         </div>
+
                         <button
                             disabled={page * pageSize >= totalItems}
                             onClick={() => setPage(page + 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all"
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
                         >
                             <ChevronRight size={18} />
                         </button>

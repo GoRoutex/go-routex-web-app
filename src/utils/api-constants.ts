@@ -39,3 +39,7 @@ export const VEHICLE_TEMPLATE_ENDPOINTS = {
 export const STAFF_ENDPOINTS = {
     FETCH: `${API_BASE_URL}/drivers/fetch`,
 };
+
+export const PROVINCE_ENDPOINTS = {
+    SEARCH: `${API_BASE_URL}/provinces/search`,
+};

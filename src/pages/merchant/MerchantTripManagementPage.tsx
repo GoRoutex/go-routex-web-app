@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
     Plus, Clock, ArrowRight,
-    X, Loader2, Save,
+    X, Loader2, Save, Search,
     Navigation, Building, Calendar, Activity, MoreHorizontal, Timer,
-    User, Truck
+    User, Truck, Trash2, Edit3
 } from "lucide-react";
 
 import { toast } from "react-toastify";
@@ -13,11 +13,13 @@ import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/
 interface TripItem {
     tripId: string;
     merchantId: string;
+    creator: string | null;
     tripCode: string;
     pickupBranch: string | null;
     departureTime: string;
     rawDepartureTime: string;
     rawDepartureDate: string;
+    rawArrivalTime?: string;
     status: string;
     route: {
         routeId: string;
@@ -41,12 +43,18 @@ export function MerchantTripManagementPage() {
     const [page, setPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [statusFilter, setStatusFilter] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
     const pageSize = 10;
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState<TripItem | null>(null);
+
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [tripDetail, setTripDetail] = useState<TripItem | null>(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
 
     const [formData, setFormData] = useState({
         routeId: "",
@@ -69,16 +77,31 @@ export function MerchantTripManagementPage() {
 
     useEffect(() => {
         fetchTrips(page);
+    }, [page, statusFilter, searchTerm]);
+
+    useEffect(() => {
         fetchRoutes();
         fetchVehicles();
         fetchDrivers();
-    }, [page]);
+    }, []);
+
+    useEffect(() => {
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsModalOpen(false);
+                setIsAssignModalOpen(false);
+                setIsDetailModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
 
     const fetchTrips = async (pageNumber: number) => {
         setLoading(true);
         try {
             const response = await fetch(
-                `${TRIP_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+                `${TRIP_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&status=${statusFilter}&search=${searchTerm}`,
                 {
                     headers: createAuthorizedEnvelopeHeaders()
                 }
@@ -86,8 +109,8 @@ export function MerchantTripManagementPage() {
             const result = await response.json();
             if (result.data && result.data.items) {
                 setTrips(result.data.items);
-                setTotalItems(result.data.pagination.totalElements || result.data.items.length);
-                setTotalPages(result.data.pagination.totalPages || 1);
+                setTotalItems(result.data.pagination?.totalElements || result.data.items.length);
+                setTotalPages(result.data.pagination?.totalPages || 1);
             }
         } catch (err) {
             toast.error("Không thể tải danh sách chuyến xe");
@@ -96,9 +119,29 @@ export function MerchantTripManagementPage() {
         }
     };
 
+    const fetchTripDetail = async (tripId: string) => {
+        setLoadingDetail(true);
+        try {
+            const response = await fetch(`${TRIP_ENDPOINTS.DETAIL}?tripId=${tripId}`, {
+                headers: createAuthorizedEnvelopeHeaders()
+            });
+            const result = await response.json();
+            if (result.data) {
+                setTripDetail(result.data);
+                setIsDetailModalOpen(true);
+            } else {
+                toast.error("Không tìm thấy thông tin chi tiết");
+            }
+        } catch (err) {
+            toast.error("Lỗi khi tải chi tiết chuyến xe");
+        } finally {
+            setLoadingDetail(false);
+        }
+    };
+
     const fetchRoutes = async () => {
         try {
-            const response = await fetch(`${ROUTE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100`, {
+            const response = await fetch(`${ROUTE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100&status=ACTIVE`, {
                 headers: createAuthorizedEnvelopeHeaders()
             });
             const result = await response.json();
@@ -254,6 +297,42 @@ export function MerchantTripManagementPage() {
         }
     };
 
+    const handleDeleteTrip = async (trip: TripItem) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa chuyến xe ${trip.tripCode}?`)) {
+            return;
+        }
+
+        try {
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                channel: "ONL",
+                data: {
+                    tripId: trip.tripId
+                }
+            };
+
+            const response = await fetch(TRIP_ENDPOINTS.DELETE, {
+                method: 'POST',
+                headers: {
+                    ...createAuthorizedEnvelopeHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success("Xóa chuyến xe thành công");
+                fetchTrips(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi khi xóa chuyến xe");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
@@ -290,6 +369,45 @@ export function MerchantTripManagementPage() {
                 </div>
             )}
 
+            {/* Filter Section */}
+            <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="relative flex-1">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Tìm kiếm chuyến xe..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setPage(1);
+                        }}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none font-bold"
+                    />
+                </div>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-100 flex-1 md:flex-none">
+                        <Activity size={14} className="text-slate-400" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 pr-2 mr-1 hidden sm:block">Trạng thái</span>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setPage(1);
+                            }}
+                            className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-slate-900 outline-none cursor-pointer pr-2 py-2 min-w-[150px]"
+                        >
+                            <option value="">Tất cả (ALL)</option>
+                            <option value="SCHEDULED">SCHEDULED</option>
+                            <option value="ASSIGNED">ASSIGNED</option>
+                            <option value="DEPARTED">DEPARTED</option>
+                            <option value="BOARDING">BOARDING</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Content Table */}
             {loading ? (
                 <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 rounded-[2.5rem] border border-dashed border-slate-200">
@@ -320,7 +438,7 @@ export function MerchantTripManagementPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {trips.map((trip) => (
-                                    <tr key={trip.tripId} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => handleOpenEdit(trip)}>
+                                    <tr key={trip.tripId} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => fetchTripDetail(trip.tripId)}>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -370,8 +488,23 @@ export function MerchantTripManagementPage() {
                                                         <Truck size={14} /> ĐIỀU PHỐI
                                                     </button>
                                                 )}
-                                                <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100">
-                                                    <MoreHorizontal size={18} />
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteTrip(trip);
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm"
+                                                >
+                                                    <Trash2 size={14} /> XÓA
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenEdit(trip);
+                                                    }}
+                                                    className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100"
+                                                >
+                                                    <Edit3 size={18} />
                                                 </button>
                                             </div>
                                         </td>
@@ -424,7 +557,6 @@ export function MerchantTripManagementPage() {
                                         value={formData.routeId}
                                         onChange={(e) => {
                                             const routeId = e.target.value;
-                                            const selectedRoute = routes.find(r => r.id === routeId);
                                             setFormData({
                                                 ...formData,
                                                 routeId,
@@ -568,6 +700,164 @@ export function MerchantTripManagementPage() {
                     </div>
                 </div>
             )}
+            {/* Trip Detail Modal */}
+            {isDetailModalOpen && tripDetail && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" onClick={() => setIsDetailModalOpen(false)} />
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-950 tracking-tight">Chi tiết chuyến xe</h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest">{tripDetail.tripCode}</p>
+                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{tripDetail.status}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsDetailModalOpen(false)} className="w-10 h-10 rounded-2xl bg-white text-slate-400 flex items-center justify-center shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {/* Route Journey */}
+                            <div className="relative pl-8 border-l-2 border-dashed border-slate-100 space-y-8">
+                                <div className="relative">
+                                    <div className="absolute -left-[37px] top-1 w-4 h-4 rounded-full bg-brand-primary border-4 border-white shadow-md" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Điểm đi</p>
+                                    <h4 className="text-lg font-black text-slate-900">{tripDetail.route?.originName}</h4>
+                                    <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-2">
+                                        <Building size={12} /> {tripDetail.pickupBranch || "Chưa gán chi nhánh"}
+                                    </p>
+                                </div>
+
+                                <div className="relative">
+                                    <div className="absolute -left-[37px] top-1 w-4 h-4 rounded-full bg-slate-900 border-4 border-white shadow-md" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Điểm đến</p>
+                                    <h4 className="text-lg font-black text-slate-900">{tripDetail.route?.destinationName}</h4>
+                                </div>
+                            </div>
+
+                            {/* Schedule Info Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Calendar size={12} /> Lịch trình khởi hành
+                                    </p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-slate-900">{tripDetail.rawDepartureTime}</p>
+                                        <p className="text-xs font-bold text-slate-500">{tripDetail.rawDepartureDate}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Timer size={12} /> Dự kiến kết thúc
+                                    </p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-slate-900">{tripDetail.rawArrivalTime || "Chưa tính toán"}</p>
+                                        <p className="text-xs font-bold text-slate-500">Thời gian đi: {tripDetail.route?.duration} phút</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Additional Details */}
+                            <div className="bg-slate-950 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">ID Hệ thống</p>
+                                        <p className="text-xs font-mono opacity-80">{tripDetail.tripId}</p>
+                                    </div>
+                                    <div className="bg-white/10 p-3 rounded-2xl">
+                                        <Activity size={20} className="text-brand-primary" />
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10 relative z-10">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Người tạo</p>
+                                    <p className="text-sm font-black tracking-tight">{tripDetail.creator || "Hệ thống"}</p>
+                                </div>
+                                <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
+                                    <Navigation size={120} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                            <p className="text-[10px] font-bold text-slate-400 italic">* Thông tin được cập nhật theo thời gian thực từ hệ thống GPS</p>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => {
+                                        setIsDetailModalOpen(false);
+                                        handleOpenEdit(tripDetail);
+                                    }}
+                                    className="px-6 py-3 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                                >
+                                    Sửa chuyến xe
+                                </button>
+                                <button onClick={() => setIsDetailModalOpen(false)} className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Loading detail overlay */}
+            {loadingDetail && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
+                    <Loader2 className="w-10 h-10 text-brand-primary animate-spin" />
+                </div>
+            )}
+
+            {/* Pagination Container */}
+            {!loading && trips.length > 0 && (
+                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Tổng số chuyến xe: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{totalPages}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                            {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPage(p)}
+                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
+                                        page === p 
+                                        ? "bg-slate-900 text-white shadow-lg" 
+                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(page + 1)}
+                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
+}
+
+function ChevronLeft({ size }: { size: number }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
+}
+
+function ChevronRight({ size }: { size: number }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

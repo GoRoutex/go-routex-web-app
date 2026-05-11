@@ -29,7 +29,6 @@ type OperationPointType = "OPERATION_POINT" | "PUBLIC_STATION";
 
 type OperationPointRow = {
   id: string;
-  code: string;
   name: string;
   type: OperationPointType | string;
   address: string;
@@ -72,7 +71,6 @@ const statusMeta: Record<
 };
 
 const formTemplate: OperationPointForm = {
-  code: "",
   name: "",
   type: DEFAULT_OPERATION_POINT_TYPE,
   address: "",
@@ -156,20 +154,17 @@ const mapOperationPointRow = (
   pageNumber: number,
 ): OperationPointRow => {
   const item = rawItem as Record<string, unknown>;
-  const code = extractStringValue(item, ["code", "pointCode", "operationCode"]);
   const name = extractStringValue(item, ["name", "pointName", "title"]);
   const type =
     extractStringValue(item, ["type", "pointType"]) ||
     DEFAULT_OPERATION_POINT_TYPE;
   const id =
     extractStringValue(item, ["id", "pointId", "operationPointId", "uuid"]) ||
-    code ||
     name ||
     `operation-point-${pageNumber}-${index + 1}`;
 
   return {
     id,
-    code,
     name,
     type,
     address: extractStringValue(item, ["address", "streetAddress", "location"]),
@@ -323,7 +318,7 @@ export function OperationPointManagementPage() {
     const q = search.trim().toLowerCase();
     if (!q) return items;
     return items.filter((item) =>
-      [item.code, item.name, item.address, item.city, item.status, item.type]
+      [item.name, item.address, item.city, item.status, item.type]
         .join(" ")
         .toLowerCase()
         .includes(q),
@@ -379,7 +374,6 @@ export function OperationPointManagementPage() {
   const openEdit = (item: OperationPointRow) => {
     setEditingId(item.id);
     setForm({
-      code: item.code,
       name: item.name,
       type: isSupportedOperationPointType(item.type)
         ? normalizeOperationPointType(item.type)
@@ -497,7 +491,6 @@ export function OperationPointManagementPage() {
 
   const handleSubmit = async () => {
     const payload = {
-      code: form.code.trim(),
       name: form.name.trim(),
       type: normalizeOperationPointType(form.type),
       address: form.address.trim(),
@@ -507,7 +500,7 @@ export function OperationPointManagementPage() {
       status: form.status,
     };
 
-    if (!payload.code || !payload.name || !payload.address || !payload.city) {
+    if (!payload.name || !payload.address || !payload.city) {
       window.alert("Vui lòng nhập đầy đủ mã, tên, địa chỉ và thành phố.");
       return;
     }
@@ -726,11 +719,8 @@ export function OperationPointManagementPage() {
                       aria-label="Chọn tất cả"
                     />
                   </th>
-                  <th className="w-[10%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Mã
-                  </th>
-                  <th className="w-[15%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Tên điểm
+                  <th className="w-[25%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    Tên & Loại
                   </th>
                   <th className="w-[10%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Thành phố
@@ -775,21 +765,18 @@ export function OperationPointManagementPage() {
                           checked={selectedIds.includes(item.id)}
                           onChange={() => toggleSelectedId(item.id)}
                           className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary/20"
-                          aria-label={`Chọn điểm vận hành ${item.code || item.name || item.id}`}
+                          aria-label={`Chọn điểm vận hành ${item.name || item.id}`}
                         />
                       </td>
                       <td className="px-4 py-4">
                         <div className="text-[12px] font-black text-slate-900">
-                          {item.code || "Chưa có"}
+                          {item.name || "Chưa có"}
                         </div>
                         <div className="mt-0.5 text-[11px] text-slate-400">
                           {item.type
                             ? getOperationPointTypeLabel(item.type)
                             : "Chưa xác định"}
                         </div>
-                      </td>
-                      <td className="px-4 py-4 text-[12px] font-medium text-slate-700">
-                        {item.name || "Chưa có"}
                       </td>
                       <td className="px-4 py-4 text-[12px] font-medium text-slate-600">
                         {item.city || "Chưa có"}
@@ -934,22 +921,7 @@ export function OperationPointManagementPage() {
 
             <div className="max-h-[calc(90vh-84px)] overflow-y-auto p-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
-                    Mã điểm
-                  </span>
-                  <input
-                    value={form.code}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        code: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
-                    placeholder="OP-001"
-                  />
-                </label>
+
 
                 <label className="space-y-2">
                   <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">

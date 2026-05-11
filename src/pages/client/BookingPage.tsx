@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-    ArrowLeft, AlertCircle, Info, ChevronRight, MapPin
+    ArrowLeft, AlertCircle, Info, ChevronRight
 } from 'lucide-react'
-import type { RouteItem } from '../../Components/client/Ticket'
+import type { TripItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-const DETAIL_API_URL = "http://localhost:8080/api/v1/management/route-service/detail";
+const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
 const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
 
 // Dynamic Seat Generation
@@ -43,11 +43,11 @@ import seatSelecting from '../../assets/seat_selecting.svg'
 export default function BookingPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const passedRoute = location.state?.routeData as RouteItem
+    const passedRoute = location.state?.routeData as TripItem
 
     // --- State Management ---
     const [step, setStep] = useState<number>(1)
-    const [routeData, setRouteData] = useState<Partial<RouteItem>>(() => {
+    const [routeData, setRouteData] = useState<Partial<TripItem>>(() => {
         if (!passedRoute) return {
             originName: "Hồ Chí Minh",
             destinationName: "Đà Lạt",
@@ -91,19 +91,17 @@ export default function BookingPage() {
     // Pickup / Dropoff
     const [pickupId, setPickupId] = useState<string>("")
     const [dropoffId, setDropoffId] = useState<string>("")
-    const [pickupType, setPickupType] = useState<"office" | "transfer">("office")
-    const [dropoffType, setDropoffType] = useState<"office" | "transfer">("office")
 
     // --- Effects ---
     useEffect(() => {
         const fetchDetail = async () => {
-            const routeId = passedRoute?.id;
-            if (!routeId) return;
+            const tripId = passedRoute?.id;
+            if (!tripId) return;
 
             setLoading(true);
             try {
                 const meta = createRequestMeta();
-                const response = await fetch(`${DETAIL_API_URL}?routeId=${routeId}`, {
+                const response = await fetch(`${DETAIL_API_URL}?tripId=${tripId}`, {
                     method: 'GET',
                     headers: {
                         ...createAuthorizedEnvelopeHeaders(meta),
@@ -128,7 +126,7 @@ export default function BookingPage() {
                     }));
 
                     // Fetch Seat Diagram
-                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&routeId=${routeId}`, {
+                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&tripId=${tripId}`, {
                         method: 'GET',
                         headers: {
                             'accept': '*/*',
@@ -145,7 +143,7 @@ export default function BookingPage() {
                             id: item.seatId,
                             number: item.code,
                             status: item.status === 'AVAILABLE' ? 'available' : 'occupied',
-                            floor: item.floor === 'LOWER' ? 'lower' : item.floor === 'UPPER' ? 'upper' : item.floor === 'NONE' ? 'none' : 'lower',
+                            floor: (item.floor === 'LOWER' || item.floor === 'DOWN') ? 'lower' : (item.floor === 'UPPER' || item.floor === 'UP') ? 'upper' : item.floor === 'NONE' ? 'none' : 'lower',
                             rowNo: item.rowNo,
                             colNo: item.colNo
                         }));
@@ -213,7 +211,7 @@ export default function BookingPage() {
 
     const handleCheckout = async () => {
         if (!canCheckout) return
-        
+
         try {
             setLoading(true);
             const meta = createRequestMeta();
@@ -221,7 +219,7 @@ export default function BookingPage() {
                 ...meta,
                 channel: "ONL",
                 data: {
-                    routeId: routeData.id,
+                    tripId: routeData.id,
                     seatNos: selectedSeats.map(id => seats.find((s: any) => s.id === id)?.number || id),
                     holdBy: localStorage.getItem("userId") || custPhone
                 },
@@ -231,7 +229,7 @@ export default function BookingPage() {
                     customerEmail: custEmail
                 }
             };
-            
+
             const response = await fetch("http://localhost:8084/api/v1/booking-service/trips/hold-seat", {
                 method: "POST",
                 headers: {
@@ -240,11 +238,11 @@ export default function BookingPage() {
                 },
                 body: JSON.stringify(body)
             });
-            
+
             if (response.ok) {
                 const result = await response.json();
                 const booking = result.booking;
-                
+
                 navigate('/payment', {
                     state: {
                         routeData,
@@ -632,7 +630,7 @@ export default function BookingPage() {
                     {/* RIGHT AREA: Summary Sidebar (Always visible on large screens) */}
                     <div className="hidden lg:block lg:col-span-4 space-y-6">
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sticky top-28">
-                                <div className="flex justify-between items-center mb-8">
+                            <div className="flex justify-between items-center mb-8">
                                 <h2 className="text-lg font-bold text-gray-900">Thông tin chuyến đi</h2>
                                 <Info size={16} className="text-gray-300" />
                             </div>

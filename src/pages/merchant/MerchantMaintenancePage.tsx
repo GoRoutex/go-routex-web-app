@@ -64,6 +64,11 @@ export function MerchantMaintenancePage() {
     actualCost: 0
   });
 
+  // Pagination States
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
@@ -95,21 +100,22 @@ export function MerchantMaintenancePage() {
     }
   };
 
-  const fetchPlans = async () => {
+  const fetchPlans = async (pageNumber: number) => {
     try {
       setLoading(true);
       setError(null);
       const headers = createAuthorizedEnvelopeHeaders();
 
       const queryParams = new URLSearchParams({
-        pageNumber: "1",
-        pageSize: "50",
+        pageNumber: pageNumber.toString(),
+        pageSize: pageSize.toString(),
       });
 
       if (dateRange.from) queryParams.append("fromPlannedDate", dateRange.from);
       if (dateRange.to) queryParams.append("toPlannedDate", dateRange.to);
       if (selectedStatus) queryParams.append("status", selectedStatus);
       if (selectedType) queryParams.append("type", selectedType);
+      if (searchTerm) queryParams.append("search", searchTerm);
 
       const response = await fetch(`${MAINTENANCE_API_URL}/fetch?${queryParams.toString()}`, {
         method: 'GET',
@@ -130,6 +136,8 @@ export function MerchantMaintenancePage() {
       }));
 
       setPlans(mappedData);
+      const total = body.data?.pagination?.totalElements || body.data?.totalCount || body.totalItems || body.totalCount || mappedData.length;
+      setTotalItems(total);
     } catch (err: any) {
       console.error("Fetch plans error:", err);
       setError(err.message);
@@ -177,9 +185,21 @@ export function MerchantMaintenancePage() {
   };
 
   useEffect(() => {
-    fetchPlans();
+    fetchPlans(page);
     fetchVehicles();
-  }, [selectedStatus, selectedType, dateRange]);
+  }, [page, selectedStatus, selectedType, dateRange, searchTerm]);
+
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFormOpen(false);
+        setIsDetailOpen(false);
+        setIsDeleting(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const handleOpenCreate = () => {
     setSelectedPlan(null);
@@ -248,7 +268,7 @@ export function MerchantMaintenancePage() {
       if (response.ok) {
         toast.success(isUpdate ? "Cập nhật thành công!" : "Tạo kế hoạch mới thành công!");
         setIsFormOpen(false);
-        fetchPlans();
+        fetchPlans(page);
       } else {
         const errData = await response.json();
         throw new Error(errData.message || "Lỗi khi xử lý yêu cầu");
@@ -285,7 +305,7 @@ export function MerchantMaintenancePage() {
       if (response.ok) {
         toast.success("Đã xóa kế hoạch bảo trì");
         setIsDeleting(false);
-        fetchPlans();
+        fetchPlans(page);
       } else {
         throw new Error("Không thể xóa kế hoạch");
       }
@@ -403,7 +423,10 @@ export function MerchantMaintenancePage() {
               placeholder="Tìm theo biển số, nội dung..."
               className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
@@ -465,7 +488,7 @@ export function MerchantMaintenancePage() {
             <p className="text-slate-500 text-sm mt-1">{error}</p>
           </div>
           <button
-            onClick={fetchPlans}
+            onClick={() => fetchPlans(page)}
             className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
           >
             Thử lại
@@ -945,6 +968,56 @@ export function MerchantMaintenancePage() {
           </div>
         </div>
       )}
+
+      {/* Pagination Container */}
+      {!loading && plans.length > 0 && (
+        <div className="flex items-center justify-between pt-10 border-t border-slate-100">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Tổng số kế hoạch: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
+                    page === p 
+                    ? "bg-slate-900 text-white shadow-lg" 
+                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={page * pageSize >= totalItems}
+              onClick={() => setPage(page + 1)}
+              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function ChevronLeft({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
+}
+
+function ChevronRight({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

@@ -36,6 +36,12 @@ export function MerchantVehicleTemplatePage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Pagination States
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState<Partial<VehicleTemplate>>({
     code: "",
     name: "",
@@ -51,12 +57,12 @@ export function MerchantVehicleTemplatePage() {
   });
 
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (pageNumber: number) => {
     try {
       setLoading(true);
       setError(null);
       const headers = createAuthorizedEnvelopeHeaders();
-      const url = `${VEHICLE_TEMPLATE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=10&status=ACTIVE`;
+      const url = `${VEHICLE_TEMPLATE_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&search=${searchTerm}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -76,6 +82,8 @@ export function MerchantVehicleTemplatePage() {
       }));
 
       setTemplates(mappedTemplates);
+      const total = body.data?.pagination?.totalElements || body.data?.totalCount || body.totalItems || body.totalCount || mappedTemplates.length;
+      setTotalItems(total);
     } catch (err: any) {
       console.error("Fetch templates error:", err);
       setError(err.message);
@@ -163,7 +171,6 @@ export function MerchantVehicleTemplatePage() {
     setSubmitting(true);
     try {
       const isUpdate = !!selectedTemplate;
-      const endpoint = isUpdate ? "update" : "create";
       const meta = createRequestMeta();
       const body = {
         ...meta,
@@ -185,7 +192,7 @@ export function MerchantVehicleTemplatePage() {
       if (response.ok) {
         toast.success(isUpdate ? "Cập nhật mẫu xe thành công!" : "Thêm mẫu xe mới thành công!");
         setIsEditModalOpen(false);
-        fetchTemplates();
+        fetchTemplates(page);
       } else {
         const errData = await response.json();
         throw new Error(errData.message || (errData.error && errData.error.description) || "Lỗi khi lưu mẫu xe");
@@ -222,7 +229,7 @@ export function MerchantVehicleTemplatePage() {
       if (response.ok) {
         toast.success("Xóa mẫu xe thành công!");
         setIsDeleteConfirmOpen(false);
-        fetchTemplates();
+        fetchTemplates(page);
       } else {
         const errData = await response.json();
         throw new Error(errData.message || "Không thể xóa mẫu xe");
@@ -245,7 +252,19 @@ export function MerchantVehicleTemplatePage() {
 
 
   useEffect(() => {
-    fetchTemplates();
+    fetchTemplates(page);
+  }, [page, searchTerm]);
+
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsEditModalOpen(false);
+        setIsDetailModalOpen(false);
+        setIsDeleteConfirmOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
   return (
@@ -271,6 +290,11 @@ export function MerchantVehicleTemplatePage() {
             type="text"
             placeholder="Tìm kiếm mẫu xe, phân hạng..."
             className="w-full pl-11 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-black focus:ring-2 focus:ring-brand-primary/5 outline-none"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
         <button className="flex items-center gap-2 px-4 py-2 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">
@@ -294,7 +318,7 @@ export function MerchantVehicleTemplatePage() {
             <p className="text-slate-500 text-sm mt-1">{error}</p>
           </div>
           <button
-            onClick={fetchTemplates}
+            onClick={() => fetchTemplates(page)}
             className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
           >
             Thử lại
@@ -679,6 +703,56 @@ export function MerchantVehicleTemplatePage() {
           </div>
         </div>
       )}
+
+      {/* Pagination Container */}
+      {!loading && templates.length > 0 && (
+        <div className="flex items-center justify-between pt-10 border-t border-slate-100">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Tổng số mẫu xe: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
+                    page === p 
+                    ? "bg-slate-900 text-white shadow-lg" 
+                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={page * pageSize >= totalItems}
+              onClick={() => setPage(page + 1)}
+              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function ChevronLeft({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
+}
+
+function ChevronRight({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

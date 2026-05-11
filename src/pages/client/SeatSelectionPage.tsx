@@ -5,47 +5,75 @@ import {
     Bus, MapPin, ShieldCheck,
     X, ArrowRight, Loader2
 } from 'lucide-react'
-import type { RouteItem } from '../../Components/client/Ticket'
+import type { TripItem, StopPoint } from '../../Components/client/Ticket'
 import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
 
-const DETAIL_API_URL = "http://localhost:8080/api/v1/management/route-service/detail";
+const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
 const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
 
 // Dummy Data for Seat Map: 2 floors (Lower A, Upper B)
 // Dynamic Seat Generation
-const generateSeats = (totalSeats = 40, hasFloor = true) => {
+
+export interface Seat {
+    id: string;
+    number: string;
+    status: 'available' | 'occupied' | 'held';
+    floor: 'lower' | 'upper';
+    rowNo?: number;
+    colNo?: number;
+}
+
+export interface TripData extends Omit<Partial<TripItem>, 'stopPoints'> {
+    origin?: string;
+    destination?: string;
+    plannedStartTime?: string;
+    plannedEndTime?: string;
+    price?: number;
+    vehicleType?: string;
+    pickupBranch?: string | null;
+    routeCode?: string;
+    ticketPrice?: number;
+    routePoints?: Record<string, unknown>[];
+    stopPoints?: StopPoint[];
+    hasFloor?: boolean;
+    tripCode?: string;
+    availableSeats?: number;
+    vehiclePlate?: string;
+}
+
+const generateSeats = (totalSeats = 40, hasFloor = true): Seat[] => {
     if (hasFloor) {
         const countPerFloor = Math.ceil(totalSeats / 2);
         const lower = Array.from({ length: countPerFloor }).map((_, i) => ({
             id: `A${(i + 1).toString().padStart(2, '0')}`,
             number: `A${(i + 1).toString().padStart(2, '0')}`,
-            status: 'available',
-            floor: 'lower'
+            status: 'available' as const,
+            floor: 'lower' as const
         }))
         const upper = Array.from({ length: totalSeats - countPerFloor }).map((_, i) => ({
             id: `B${(i + 1).toString().padStart(2, '0')}`,
             number: `B${(i + 1).toString().padStart(2, '0')}`,
-            status: 'available',
-            floor: 'upper'
+            status: 'available' as const,
+            floor: 'upper' as const
         }))
         return [...lower, ...upper]
     }
-    
+
     return Array.from({ length: totalSeats }).map((_, i) => ({
         id: `S${(i + 1).toString().padStart(2, '0')}`,
         number: `S${(i + 1).toString().padStart(2, '0')}`,
-        status: 'available',
-        floor: 'lower'
+        status: 'available' as const,
+        floor: 'lower' as const
     }))
 }
 
 export default function SeatSelectionPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const routeData = location.state?.routeData as RouteItem
+    const tripData = location.state?.routeData as TripItem
 
-    const [trip, setTrip] = useState<Partial<RouteItem>>(() => {
-        if (!routeData) return {
+    const [trip, setTrip] = useState<TripData>(() => {
+        if (!tripData) return {
             origin: "Hồ Chí Minh",
             destination: "Đà Lạt",
             plannedStartTime: new Date().toISOString(),
@@ -58,27 +86,31 @@ export default function SeatSelectionPage() {
 
         // Ensure we use the mapped fields if they came from search
         return {
-            ...routeData,
-            price: routeData.price || (routeData as any).ticketPrice,
-            stopPoints: routeData.stopPoints || (routeData as any).routePoints?.map((rp: any) => ({
+            ...tripData,
+            price: tripData.price || (tripData as TripData).ticketPrice,
+            stopPoints: tripData.stopPoints || (tripData as TripData).routePoints?.map((rp: Record<string, unknown>) => ({
                 ...rp,
                 stopOrder: rp.operationOrder,
                 note: rp.note || rp.stopName
-            }))
+            } as unknown as StopPoint))
         };
     })
 
     const [loading, setLoading] = useState(false)
+    const [seats, setSeats] = useState<Seat[]>(() => generateSeats(40, true))
+    const [selectedSeats, setSelectedSeats] = useState<string[]>([])
+    const [holdExpiration, setHoldExpiration] = useState<number | null>(null)
+    const [timeLeft, setTimeLeft] = useState(0)
 
     useEffect(() => {
         const fetchDetail = async () => {
-            const routeId = routeData?.id;
-            if (!routeId) return;
+            const tripId = tripData?.id;
+            if (!tripId) return;
 
             setLoading(true);
             try {
                 const meta = createRequestMeta();
-                const response = await fetch(`${DETAIL_API_URL}?routeId=${routeId}`, {
+                const response = await fetch(`${DETAIL_API_URL}?tripId=${tripId}`, {
                     method: 'GET',
                     headers: {
                         ...createAuthorizedEnvelopeHeaders(meta),
@@ -96,18 +128,17 @@ export default function SeatSelectionPage() {
                         ...prev,
                         ...data,
                         price: data.ticketPrice || data.price || prev.price,
-                        stopPoints: (data.routePoints || data.stopPoints)?.map((rp: any) => ({
+                        stopPoints: ((data.routePoints || data.stopPoints) as Record<string, unknown>[] | undefined)?.map((rp: Record<string, unknown>) => ({
                             ...rp,
                             stopOrder: rp.operationOrder || rp.stopOrder,
                             note: rp.note || rp.stopName
-                        })) || prev.stopPoints
+                        } as unknown as StopPoint)) || prev.stopPoints
                     }));
 
                     // Fetch Seat Diagram
-                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&routeId=${routeId}`, {
+                    const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&tripId=${tripId}`, {
                         method: 'GET',
                         headers: {
-                            'accept': '*/*',
                             'X-Request-Id': meta.requestId,
                             'X-Request-DateTime': meta.requestDateTime,
                             'X-Channel': 'ONL'
@@ -117,19 +148,19 @@ export default function SeatSelectionPage() {
                     if (seatResponse.ok) {
                         const seatResult = await seatResponse.json();
                         const items = seatResult.data?.items || [];
-                        const mappedSeats = items.map((item: any) => ({
-                            id: item.seatId,
-                            number: item.code,
+                        const mappedSeats = items.map((item: Record<string, unknown>) => ({
+                            id: String(item.seatId),
+                            number: String(item.code),
                             status: item.status === 'AVAILABLE' ? 'available' : 'occupied',
-                            floor: item.floor === 'LOWER' ? 'lower' : item.floor === 'UPPER' ? 'upper' : 'lower',
-                            rowNo: item.rowNo,
-                            colNo: item.colNo
-                        }));
-                        setSeats(mappedSeats.length > 0 ? mappedSeats : generateSeats(data.availableSeats || 40, data.hasFloor || true));
+                            floor: (item.floor === 'LOWER' || item.floor === 'DOWN') ? 'lower' : (item.floor === 'UPPER' || item.floor === 'UP') ? 'upper' : 'lower',
+                            rowNo: Number(item.rowNo),
+                            colNo: Number(item.colNo)
+                        })) as Seat[];
+                        setSeats(mappedSeats.length > 0 ? mappedSeats : generateSeats(data.availableSeats || 40, data.hasFloor ?? true));
                     } else {
                         // Fallback
                         const seatsCount = data.availableSeats || 40;
-                        const floors = data.hasFloor || true;
+                        const floors = data.hasFloor ?? true;
                         setSeats(generateSeats(seatsCount, floors));
                     }
                 }
@@ -141,12 +172,7 @@ export default function SeatSelectionPage() {
         };
 
         fetchDetail();
-    }, [routeData?.id]);
-
-    const [seats, setSeats] = useState<any[]>(() => generateSeats(40, true))
-    const [selectedSeats, setSelectedSeats] = useState<string[]>([])
-    const [holdExpiration, setHoldExpiration] = useState<number | null>(null)
-    const [timeLeft, setTimeLeft] = useState(0)
+    }, [tripData?.id]);
 
 
     useEffect(() => {
@@ -198,11 +224,11 @@ export default function SeatSelectionPage() {
 
     const handleContinue = () => {
         if (selectedSeats.length === 0) return
-        navigate('/booking', { 
-            state: { 
+        navigate('/booking', {
+            state: {
                 selectedSeats,
-                routeData: trip 
-            } 
+                routeData: trip
+            }
         })
     }
 
@@ -225,10 +251,10 @@ export default function SeatSelectionPage() {
                         <div>
                             <h1 className="text-white font-black text-2xl tracking-tight mb-1">Chọn ghế của bạn</h1>
                             <div className="flex items-center gap-3">
-                                <span className="text-brand-primary text-[10px] font-black uppercase tracking-widest">{trip.routeCode}</span>
+                                <span className="text-brand-primary text-[10px] font-black uppercase tracking-widest">{trip.tripCode}</span>
                                 <div className="w-1 h-1 rounded-full bg-slate-800" />
                                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                    {(trip as any).vehiclePlate ? `Biển số: ${(trip as any).vehiclePlate}` : (trip.vehicleType === 'LIMOUSINE' ? 'Premium Air' : 'Routex Direct')}
+                                    {trip.vehiclePlate ? `Biển số: ${trip.vehiclePlate}` : (trip.vehicleType === 'LIMOUSINE' ? 'Premium Air' : 'Routex Direct')}
                                     {trip.hasFloor && " • Xe 2 tầng"}
                                 </span>
                             </div>
@@ -286,97 +312,49 @@ export default function SeatSelectionPage() {
                     </div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-12 items-center">
-                    
-                    {/* Visual Bus Map Container */}
-                    <div className="flex-1 w-full bg-white rounded-[48px] p-16 shadow-2xl shadow-slate-200/40 border border-slate-50 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-[80px] opacity-50 -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                        
-                        <div className="flex flex-col md:flex-row gap-16 justify-center">
-                            {/* Lower Floor */}
-                            <div className="flex flex-col items-center">
-                                <div className="mb-10 text-center">
-                                    <span className="px-4 py-1.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">Hạng Phổ Thông - Tầng 01</span>
-                                    <div className="w-full h-1 bg-slate-100 rounded-full mt-4 max-w-[80px] mx-auto" />
-                                </div>
-                                
-                                {(() => {
-                                    const lowerSeats = seats.filter(s => s.floor === 'lower');
-                                    if (lowerSeats.length === 0) return null;
-                                    
-                                    const maxCols = Math.max(1, ...lowerSeats.map(s => s.colNo || 1));
-                                    const maxRows = Math.max(1, ...lowerSeats.map(s => s.rowNo || 1));
-                                    const useGrid = lowerSeats.some(s => s.colNo && s.rowNo);
-                                    
-                                    return (
-                                        <div 
-                                            className={`p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
-                                            style={useGrid ? { 
-                                                gridTemplateColumns: `repeat(${maxCols}, minmax(3rem, 1fr))`,
-                                                gridTemplateRows: `repeat(${maxRows}, minmax(3rem, 1fr))`
-                                            } : {}}
-                                        >
-                                            {lowerSeats.map((seat) => (
-                                                <button
-                                                    key={seat.id}
-                                                    disabled={seat.status === 'occupied'}
-                                                    onClick={() => toggleSeat(seat.id)}
-                                                    style={useGrid ? { 
-                                                        gridColumn: seat.colNo || 'auto',
-                                                        gridRow: seat.rowNo || 'auto'
-                                                    } : {}}
-                                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative shrink-0
-                                                        ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
-                                                        seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
-                                                        'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
-                                                    `}
-                                                >
-                                                    {seat.number}
-                                                    {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )
-                                })()}
-                            </div>
 
-                            {/* Upper Floor */}
-                            {seats.some(s => s.floor === 'upper') && (
+                        {/* Visual Bus Map Container */}
+                        <div className="flex-1 w-full bg-white rounded-[48px] p-16 shadow-2xl shadow-slate-200/40 border border-slate-50 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-[80px] opacity-50 -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                            <div className="flex flex-col md:flex-row gap-16 justify-center">
+                                {/* Lower Floor */}
                                 <div className="flex flex-col items-center">
                                     <div className="mb-10 text-center">
-                                        <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-[10px] font-black text-indigo-400 uppercase tracking-widest border border-indigo-100">Hạng Thương Gia - Tầng 02</span>
-                                        <div className="w-full h-1 bg-indigo-50 rounded-full mt-4 max-w-[80px] mx-auto" />
+                                        <span className="px-4 py-1.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">Hạng Phổ Thông - Tầng 01</span>
+                                        <div className="w-full h-1 bg-slate-100 rounded-full mt-4 max-w-[80px] mx-auto" />
                                     </div>
-                                    
+
                                     {(() => {
-                                        const upperSeats = seats.filter(s => s.floor === 'upper');
-                                        if (upperSeats.length === 0) return null;
-                                        
-                                        const maxCols = Math.max(1, ...upperSeats.map(s => s.colNo || 1));
-                                        const maxRows = Math.max(1, ...upperSeats.map(s => s.rowNo || 1));
-                                        const useGrid = upperSeats.some(s => s.colNo && s.rowNo);
+                                        const lowerSeats = seats.filter(s => s.floor === 'lower');
+                                        if (lowerSeats.length === 0) return null;
+
+                                        const maxCols = Math.max(1, ...lowerSeats.map(s => s.colNo || 1));
+                                        const maxRows = Math.max(1, ...lowerSeats.map(s => s.rowNo || 1));
+                                        const useGrid = lowerSeats.some(s => s.colNo && s.rowNo);
 
                                         return (
-                                            <div 
-                                                className={`p-10 bg-indigo-50/20 rounded-[3rem] border border-indigo-50 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
-                                                style={useGrid ? { 
+                                            <div
+                                                className={`p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
+                                                style={useGrid ? {
                                                     gridTemplateColumns: `repeat(${maxCols}, minmax(3rem, 1fr))`,
                                                     gridTemplateRows: `repeat(${maxRows}, minmax(3rem, 1fr))`
                                                 } : {}}
                                             >
-                                                {upperSeats.map((seat) => (
+                                                {lowerSeats.map((seat) => (
                                                     <button
                                                         key={seat.id}
                                                         disabled={seat.status === 'occupied'}
                                                         onClick={() => toggleSeat(seat.id)}
-                                                        style={useGrid ? { 
+                                                        style={useGrid ? {
                                                             gridColumn: seat.colNo || 'auto',
                                                             gridRow: seat.rowNo || 'auto'
                                                         } : {}}
                                                         className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative shrink-0
-                                                            ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
-                                                            seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
-                                                            'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
-                                                        `}
+                                                        ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
+                                                                seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
+                                                                    'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
+                                                    `}
                                                     >
                                                         {seat.number}
                                                         {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
@@ -386,89 +364,137 @@ export default function SeatSelectionPage() {
                                         )
                                     })()}
                                 </div>
+
+                                {/* Upper Floor */}
+                                {seats.some(s => s.floor === 'upper') && (
+                                    <div className="flex flex-col items-center">
+                                        <div className="mb-10 text-center">
+                                            <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-[10px] font-black text-indigo-400 uppercase tracking-widest border border-indigo-100">Hạng Thương Gia - Tầng 02</span>
+                                            <div className="w-full h-1 bg-indigo-50 rounded-full mt-4 max-w-[80px] mx-auto" />
+                                        </div>
+
+                                        {(() => {
+                                            const upperSeats = seats.filter(s => s.floor === 'upper');
+                                            if (upperSeats.length === 0) return null;
+
+                                            const maxCols = Math.max(1, ...upperSeats.map(s => s.colNo || 1));
+                                            const maxRows = Math.max(1, ...upperSeats.map(s => s.rowNo || 1));
+                                            const useGrid = upperSeats.some(s => s.colNo && s.rowNo);
+
+                                            return (
+                                                <div
+                                                    className={`p-10 bg-indigo-50/20 rounded-[3rem] border border-indigo-50 shadow-inner ${useGrid ? 'grid gap-x-4 gap-y-5' : 'flex flex-wrap gap-4 justify-center max-w-[300px]'}`}
+                                                    style={useGrid ? {
+                                                        gridTemplateColumns: `repeat(${maxCols}, minmax(3rem, 1fr))`,
+                                                        gridTemplateRows: `repeat(${maxRows}, minmax(3rem, 1fr))`
+                                                    } : {}}
+                                                >
+                                                    {upperSeats.map((seat) => (
+                                                        <button
+                                                            key={seat.id}
+                                                            disabled={seat.status === 'occupied'}
+                                                            onClick={() => toggleSeat(seat.id)}
+                                                            style={useGrid ? {
+                                                                gridColumn: seat.colNo || 'auto',
+                                                                gridRow: seat.rowNo || 'auto'
+                                                            } : {}}
+                                                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 relative shrink-0
+                                                            ${seat.status === 'available' ? 'bg-white border border-slate-200 text-slate-400 hover:border-brand-primary hover:text-brand-primary hover:shadow-lg hover:bg-white' :
+                                                                    seat.status === 'held' ? 'bg-slate-900 border-none text-white shadow-2xl scale-110 z-10' :
+                                                                        'bg-slate-100 border-none text-slate-200 cursor-not-allowed opacity-40'}
+                                                        `}
+                                                        >
+                                                            {seat.number}
+                                                            {seat.status === 'held' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-primary rounded-full ring-2 ring-white" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )
+                                        })()}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Aesthetic Divider */}
+                            <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent -translate-y-1/2 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                        </div>
+
+                        {/* Dashboard Sidebar */}
+                        <div className="w-full lg:w-[420px] space-y-10">
+
+                            {/* Elegant Legend */}
+                            <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/20">
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Chú thích trạng thái</h3>
+                                <div className="space-y-5">
+                                    <div className="flex items-center gap-4 group/l">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 font-black text-sm group-hover/l:border-brand-primary transition-colors">A1</div>
+                                        <div>
+                                            <p className="font-black text-slate-950 text-lg">Chỗ còn trống</p>
+                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Sẵn sàng đặt ngay</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                                            <ShieldCheck size={24} className="text-brand-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-slate-950 text-lg">Chỗ đang chọn</p>
+                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đặt tạm thời</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 opacity-40">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                            <X size={20} className="text-slate-300" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-slate-950 text-lg">Không khả dụng</p>
+                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đã được bán</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Trip Quick Info */}
+                            <div className="bg-slate-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+                                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-brand-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+                                <div className="relative z-10 flex flex-col gap-8">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 shadow-inner">
+                                            <Bus size={20} className="text-brand-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Phương tiện</p>
+                                            <p className="font-bold text-white tracking-tight">
+                                                {trip.vehicleType || "Limousine VIP Cloud"}
+                                                {trip.vehiclePlate && ` - ${trip.vehiclePlate}`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 shadow-inner">
+                                            <MapPin size={20} className="text-brand-secondary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Điểm đón khách</p>
+                                            <p className="font-bold text-white tracking-tight leading-snug">{trip.pickupBranch}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {holdExpiration && (
+                                <div className="bg-brand-primary/5 rounded-[2rem] p-8 border border-brand-primary/10 text-center">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Kết thúc giữ chỗ sau</p>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Clock className="w-4 h-4 text-brand-primary animate-pulse" />
+                                        <span className="text-3xl font-black text-slate-950 tracking-tighter">
+                                            {formatTime(timeLeft)}
+                                        </span>
+                                    </div>
+                                </div>
                             )}
                         </div>
-
-                        {/* Aesthetic Divider */}
-                        <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent -translate-y-1/2 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                     </div>
-
-                    {/* Dashboard Sidebar */}
-                    <div className="w-full lg:w-[420px] space-y-10">
-                        
-                        {/* Elegant Legend */}
-                        <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/20">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Chú thích trạng thái</h3>
-                            <div className="space-y-5">
-                                <div className="flex items-center gap-4 group/l">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 font-black text-sm group-hover/l:border-brand-primary transition-colors">A1</div>
-                                    <div>
-                                        <p className="font-black text-slate-950 text-lg">Chỗ còn trống</p>
-                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Sẵn sàng đặt ngay</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-                                        <ShieldCheck size={24} className="text-brand-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-black text-slate-950 text-lg">Chỗ đang chọn</p>
-                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đặt tạm thời</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 opacity-40">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                                        <X size={20} className="text-slate-300" />
-                                    </div>
-                                    <div>
-                                        <p className="font-black text-slate-950 text-lg">Không khả dụng</p>
-                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Đã được bán</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Trip Quick Info */}
-                        <div className="bg-slate-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
-                            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-brand-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
-                            <div className="relative z-10 flex flex-col gap-8">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 shadow-inner">
-                                        <Bus size={20} className="text-brand-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Phương tiện</p>
-                                        <p className="font-bold text-white tracking-tight">
-                                            {trip.vehicleType || "Limousine VIP Cloud"} 
-                                            {(trip as any).vehiclePlate && ` - ${(trip as any).vehiclePlate}`}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 shadow-inner">
-                                        <MapPin size={20} className="text-brand-secondary" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Điểm đón khách</p>
-                                        <p className="font-bold text-white tracking-tight leading-snug">{trip.pickupBranch}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {holdExpiration && (
-                            <div className="bg-brand-primary/5 rounded-[2rem] p-8 border border-brand-primary/10 text-center">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Kết thúc giữ chỗ sau</p>
-                                <div className="flex items-center justify-center gap-2">
-                                    <Clock className="w-4 h-4 text-brand-primary animate-pulse" />
-                                    <span className="text-3xl font-black text-slate-950 tracking-tighter">
-                                        {formatTime(timeLeft)}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                  </div>
                 )}
             </main>
 
