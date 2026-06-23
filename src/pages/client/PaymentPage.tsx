@@ -14,11 +14,11 @@ import {
 import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { CAMPAIGN_ENDPOINTS } from "../../utils/api-constants";
 
-import momoIcon from "../../assets/payment/momo.svg";
-import shopeePayIcon from "../../assets/payment/shopeePay.png";
-import visaIcon from "../../assets/payment/visa.png";
-import vnpayIcon from "../../assets/payment/vnpay.png";
-import zalopayIcon from "../../assets/payment/zalopay.svg";
+import momoIcon from "../../assets/Payment/momo.svg";
+import shopeePayIcon from "../../assets/Payment/shopeePay.png";
+import visaIcon from "../../assets/Payment/visa.png";
+import vnpayIcon from "../../assets/Payment/vnpay.png";
+import zalopayIcon from "../../assets/Payment/zalopay.svg";
 
 type PaymentMethodId = "zalopay" | "vnpay" | "shopeepay" | "momo" | "visa";
 
@@ -132,7 +132,7 @@ export default function PaymentPage() {
                 const amount = finalTotal;
                 const meta = createRequestMeta();
                 const bCode = booking?.bookingCode || booking?.code || booking?.id;
-                
+
                 const url = `http://localhost:8080/api/v1/payment-service/get-payment-url?bookingCode=${bCode}&method=${method}&amount=${amount}`;
 
                 const response = await fetch(url, {
