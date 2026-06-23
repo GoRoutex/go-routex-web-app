@@ -19,10 +19,7 @@ import {
   POINT_SERVICE_BASE_URL,
   ROUTE_SERVICE_BASE_URL,
 } from "../../utils/api";
-import {
-  createRequestEnvelopeHeaders,
-  createRequestMeta,
-} from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { PROVINCES_SERVICE_BASE_URL } from "../../utils/api";
 import {
   extractArrayValue,
@@ -465,21 +462,19 @@ const loadAllProvinceOptions = async (
   signal: AbortSignal,
 ): Promise<ProvinceOption[]> => {
   const allItems: ProvinceOption[] = [];
-  let pageNumber = 1;
-  let totalPages = 1;
 
-  while (pageNumber <= totalPages) {
+  const fetchPage = async (page: number): Promise<{ rawItems: any[]; totalPages: number }> => {
     const authToken = localStorage.getItem("authToken") || "";
     const url = new URL(PROVINCES_SERVICE_BASE_URL);
     url.pathname = `${url.pathname.replace(/\/$/, "")}/management/provinces-service/fetch`;
-    url.searchParams.set("pageNumber", String(pageNumber));
+    url.searchParams.set("pageNumber", String(page));
     url.searchParams.set("pageSize", String(PAGE_SIZE));
 
     const response = await fetch(url.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
-        ...createRequestEnvelopeHeaders(),
+        ...createXAuthorizedHeaders(),
         ...(authToken.trim()
           ? { Authorization: `Bearer ${authToken.trim()}` }
           : {}),
@@ -501,23 +496,39 @@ const loadAllProvinceOptions = async (
       "list",
     ]);
 
-    allItems.push(
-      ...rawItems.map((item, index) => mapProvinceOption(item, index)),
-    );
-
-    const resolvedTotalPages = extractNumberValue(body, [
+    let resolvedTotalPages = 1;
+    const extractedPages = extractNumberValue(body, [
       "totalPages",
       "pages",
       "pageCount",
       "total_page",
     ]);
-    if (typeof resolvedTotalPages === "number" && resolvedTotalPages > 0) {
-      totalPages = resolvedTotalPages;
+    if (typeof extractedPages === "number" && extractedPages > 0) {
+      resolvedTotalPages = extractedPages;
     } else if (rawItems.length < PAGE_SIZE) {
-      totalPages = pageNumber;
+      resolvedTotalPages = page;
     }
 
-    pageNumber += 1;
+    return { rawItems, totalPages: resolvedTotalPages };
+  };
+
+  const firstPageResult = await fetchPage(1);
+  allItems.push(
+    ...firstPageResult.rawItems.map((item, index) => mapProvinceOption(item, index)),
+  );
+
+  const totalPagesCount = firstPageResult.totalPages;
+  if (totalPagesCount > 1) {
+    const pagePromises: Promise<{ rawItems: any[]; totalPages: number }>[] = [];
+    for (let p = 2; p <= totalPagesCount; p++) {
+      pagePromises.push(fetchPage(p));
+    }
+    const additionalPages = await Promise.all(pagePromises);
+    for (const pageRes of additionalPages) {
+      allItems.push(
+        ...pageRes.rawItems.map((item, index) => mapProvinceOption(item, index)),
+      );
+    }
   }
 
   return allItems.filter((item, index, array) => {
@@ -560,21 +571,19 @@ const loadAllOperationPointOptions = async (
   signal: AbortSignal,
 ): Promise<OperationPointOption[]> => {
   const allItems: OperationPointOption[] = [];
-  let pageNumber = 1;
-  let totalPages = 1;
 
-  while (pageNumber <= totalPages) {
+  const fetchPage = async (page: number): Promise<{ rawItems: any[]; totalPages: number }> => {
     const authToken = localStorage.getItem("authToken") || "";
     const url = new URL(POINT_SERVICE_BASE_URL);
     url.pathname = `${url.pathname.replace(/\/$/, "")}/management/point-service/fetch`;
-    url.searchParams.set("pageNumber", String(pageNumber));
+    url.searchParams.set("pageNumber", String(page));
     url.searchParams.set("pageSize", String(PAGE_SIZE));
 
     const response = await fetch(url.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
-        ...createRequestEnvelopeHeaders(),
+        ...createXAuthorizedHeaders(),
         ...(authToken.trim()
           ? { Authorization: `Bearer ${authToken.trim()}` }
           : {}),
@@ -598,23 +607,39 @@ const loadAllOperationPointOptions = async (
       "list",
     ]);
 
-    allItems.push(
-      ...rawItems.map((item, index) => mapOperationPointOption(item, index)),
-    );
-
-    const resolvedTotalPages = extractNumberValue(body, [
+    let resolvedTotalPages = 1;
+    const extractedPages = extractNumberValue(body, [
       "totalPages",
       "pages",
       "pageCount",
       "total_page",
     ]);
-    if (typeof resolvedTotalPages === "number" && resolvedTotalPages > 0) {
-      totalPages = resolvedTotalPages;
+    if (typeof extractedPages === "number" && extractedPages > 0) {
+      resolvedTotalPages = extractedPages;
     } else if (rawItems.length < PAGE_SIZE) {
-      totalPages = pageNumber;
+      resolvedTotalPages = page;
     }
 
-    pageNumber += 1;
+    return { rawItems, totalPages: resolvedTotalPages };
+  };
+
+  const firstPageResult = await fetchPage(1);
+  allItems.push(
+    ...firstPageResult.rawItems.map((item, index) => mapOperationPointOption(item, index)),
+  );
+
+  const totalPagesCount = firstPageResult.totalPages;
+  if (totalPagesCount > 1) {
+    const pagePromises: Promise<{ rawItems: any[]; totalPages: number }>[] = [];
+    for (let p = 2; p <= totalPagesCount; p++) {
+      pagePromises.push(fetchPage(p));
+    }
+    const additionalPages = await Promise.all(pagePromises);
+    for (const pageRes of additionalPages) {
+      allItems.push(
+        ...pageRes.rawItems.map((item, index) => mapOperationPointOption(item, index)),
+      );
+    }
   }
 
   return allItems.filter((item, index, array) => {
@@ -1017,20 +1042,18 @@ export function RouteManagementPage() {
       try {
         const authToken = localStorage.getItem("authToken") || "";
         const allItems: RouteRow[] = [];
-        let currentPage = 1;
-        let totalPagesToFetch = 1;
 
-        while (currentPage <= totalPagesToFetch) {
+        const fetchRoutePage = async (page: number): Promise<{ rawItems: any[]; totalPages: number }> => {
           const url = new URL(ROUTE_SERVICE_BASE_URL);
           url.pathname = `${url.pathname.replace(/\/$/, "")}/route-service/fetch`;
-          url.searchParams.set("pageNumber", String(currentPage));
+          url.searchParams.set("pageNumber", String(page));
           url.searchParams.set("pageSize", String(PAGE_SIZE));
 
           const response = await fetch(url.toString(), {
             method: "GET",
             headers: {
               Accept: "application/json",
-              ...createRequestEnvelopeHeaders(),
+              ...createXAuthorizedHeaders(),
               ...(authToken.trim()
                 ? { Authorization: `Bearer ${authToken.trim()}` }
                 : {}),
@@ -1056,29 +1079,44 @@ export function RouteManagementPage() {
             "list",
           ]);
 
-          allItems.push(
-            ...rawItems.map((item, index) =>
-              mapRouteRow(item, index, currentPage),
-            ),
-          );
-
-          const resolvedTotalPages = extractNumberValue(body, [
+          let resolvedTotalPages = 1;
+          const extractedPages = extractNumberValue(body, [
             "totalPages",
             "pages",
             "pageCount",
             "total_page",
           ]);
-
-          if (
-            typeof resolvedTotalPages === "number" &&
-            resolvedTotalPages > 0
-          ) {
-            totalPagesToFetch = resolvedTotalPages;
+          if (typeof extractedPages === "number" && extractedPages > 0) {
+            resolvedTotalPages = extractedPages;
           } else if (rawItems.length < PAGE_SIZE) {
-            totalPagesToFetch = currentPage;
+            resolvedTotalPages = page;
           }
 
-          currentPage += 1;
+          return { rawItems, totalPages: resolvedTotalPages };
+        };
+
+        const firstPageResult = await fetchRoutePage(1);
+        allItems.push(
+          ...firstPageResult.rawItems.map((item, index) =>
+            mapRouteRow(item, index, 1),
+          ),
+        );
+
+        const totalPagesCount = firstPageResult.totalPages;
+        if (totalPagesCount > 1) {
+          const pagePromises: Promise<{ rawItems: any[]; totalPages: number }>[] = [];
+          for (let p = 2; p <= totalPagesCount; p++) {
+            pagePromises.push(fetchRoutePage(p));
+          }
+          const additionalPages = await Promise.all(pagePromises);
+          additionalPages.forEach((pageRes, pageIdx) => {
+            const pageNum = pageIdx + 2;
+            allItems.push(
+              ...pageRes.rawItems.map((item, index) =>
+                mapRouteRow(item, index, pageNum),
+              ),
+            );
+          });
         }
 
         setItems(allItems);
@@ -1440,7 +1478,7 @@ export function RouteManagementPage() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(meta),
+            ...createXAuthorizedHeaders(meta),
           },
           body: JSON.stringify({
             requestId: meta.requestId,
@@ -1736,7 +1774,7 @@ export function RouteManagementPage() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(meta),
+            ...createXAuthorizedHeaders(meta),
           },
           body: JSON.stringify({
             requestId: meta.requestId,
@@ -1800,44 +1838,43 @@ export function RouteManagementPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      <div className="flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10" data-reload-nonce={reloadNonce} data-province-loaded={provinceLoaded} data-op-loaded={operationPointLoaded}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
-            <Route className="h-3.5 w-3.5" />
-            Lịch chuyến
-          </div>
-          <h2 className="mt-2 text-[1.25rem] font-bold tracking-tight text-slate-900 sm:text-[1.5rem] uppercase">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">
             Quản lý lịch chuyến
           </h2>
+          <p className="text-sm text-slate-500 font-medium mt-1">
+            Thiết lập, theo dõi và quản lý lịch trình xe khởi hành, phân công tài xế.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+            className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Tạo lịch mới
+            <Plus size={14} />
+            Tạo lịch chuyến mới
           </button>
           <button
             type="button"
             onClick={() => setReloadNonce((value) => value + 1)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+            className="flex items-center gap-2 bg-white text-slate-600 px-5 py-2.5 rounded-xl font-bold border border-slate-100 shadow-sm hover:bg-slate-50 transition-all"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw size={14} className="text-slate-400" />
             Tải lại
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             label: "Tổng chuyến",
             value: String(totalElements),
-            note: `Đang được khai thác`,
+            note: "Đang được khai thác",
           },
           {
             label: "Đang hiển thị",
@@ -1857,255 +1894,258 @@ export function RouteManagementPage() {
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm"
+            className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               {item.label}
             </div>
-            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">
+            <div className="text-xl font-black text-slate-900">
               {item.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">{item.note}</div>
+            <div className="text-xs text-slate-500 font-medium mt-1">{item.note}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-[1.8rem] border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-col gap-2.5 px-5 pt-5 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 px-6 pt-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">
+            <h3 className="text-base font-black tracking-tight text-slate-900">
               Danh sách lịch chuyến đang vận hành
             </h3>
+            <p className="mt-1 text-xs text-slate-400 font-medium">
+              Quản lý danh sách lịch trình chạy xe, gán tài xế, biển số xe.
+            </p>
           </div>
 
-          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-500">
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
             Trang {pageInfo.current} / {pageInfo.total}
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-b border-slate-100 px-5 pb-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="mt-4 flex flex-col gap-3 border-b border-slate-50 px-6 pb-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             Quản lý danh sách lịch chuyến và điểm dừng vận hành
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5">
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm lịch chuyến, xe, tài xế..."
-              className="w-44 bg-transparent text-[12px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+              className="w-48 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
             />
           </div>
         </div>
 
-        <div className="px-5 py-5">
-          <div className="overflow-hidden rounded-[1.15rem] border border-slate-100">
-            <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-4.5 py-3">
-              <div className="relative">
-                <input
-                  type="date"
-                  value={scheduleDate}
-                  onChange={(event) => setScheduleDate(event.target.value)}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-3.5 pr-4 text-[12px] font-semibold text-slate-900 outline-none transition-colors scheme-light focus:border-slate-300 focus:ring-4 focus:ring-brand-primary/10"
-                />
-              </div>
-              <div className="relative min-w-44">
-                <select
-                  value={routeFilter}
-                  onChange={(event) => setRouteFilter(event.target.value)}
-                  className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-[12px] font-semibold text-slate-700 outline-none transition-colors focus:border-slate-300 focus:ring-4 focus:ring-brand-primary/10"
-                >
-                  <option value="ALL">Tất cả lịch chuyến</option>
-                  {routeOptions.map((route) => (
-                    <option key={route.value} value={route.value}>
-                      {route.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              </div>
-              <div className="ml-auto text-[12px] font-medium text-slate-500">
-                {filteredAndScopedItems.length} chuyến trong danh sách
-              </div>
+        <div className="overflow-hidden">
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+            <div className="relative">
+              <input
+                type="date"
+                value={scheduleDate}
+                onChange={(event) => setScheduleDate(event.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3.5 pr-4 text-[12px] font-semibold text-slate-900 outline-none transition-colors scheme-light focus:border-slate-350 focus:ring-4 focus:ring-slate-900/5"
+              />
             </div>
-
-            <div className="grid grid-cols-[0.95fr_1.65fr_0.9fr_1fr_0.55fr] gap-3 border-b border-slate-100 bg-white px-4.5 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-              <span>Mã chuyến</span>
-              <span>Thông tin lịch chuyến</span>
-              <span>Khởi hành</span>
-              <span>Trạng thái</span>
-              <span className="text-right">Thao tác</span>
+            <div className="relative min-w-44">
+              <select
+                value={routeFilter}
+                onChange={(event) => setRouteFilter(event.target.value)}
+                className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-[12px] font-semibold text-slate-700 outline-none transition-colors focus:border-slate-350 focus:ring-4 focus:ring-slate-900/5 cursor-pointer"
+              >
+                <option value="ALL">Tất cả lịch chuyến</option>
+                {routeOptions.map((route) => (
+                  <option key={route.value} value={route.value}>
+                    {route.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
-
-            {isLoading ? (
-              <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
-                <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tải các chuyến xe...
-                </div>
-              </div>
-            ) : error ? (
-              <div className="bg-white px-4 py-12">
-                <div className="flex items-start gap-3 rounded-[1.35rem] border border-rose-100 bg-rose-50/70 p-4 text-rose-700">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-bold">
-                      Không thể tải các chuyến xe
-                    </div>
-                    <div className="mt-1 text-[12px] font-medium leading-relaxed">
-                      {error}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setReloadNonce((value) => value + 1)}
-                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-rose-700 transition-colors hover:bg-rose-100"
-                  >
-                    Thử lại
-                  </button>
-                </div>
-              </div>
-            ) : displayedItems.length === 0 ? (
-              <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
-                <div className="text-center">
-                  <div className="text-[13px] font-bold text-slate-900">
-                    {search.trim() || scheduleDate || routeFilter !== "ALL"
-                      ? "Không tìm thấy chuyến xe phù hợp"
-                      : "Không có chuyến xe nào đang vận hành"}
-                  </div>
-                  <div className="mt-1 text-[12px] font-medium text-slate-500">
-                    Hãy thử đổi từ khóa tìm kiếm hoặc thêm chuyến mới.
-                  </div>
-                </div>
-              </div>
-            ) : (
-              displayedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[0.95fr_1.65fr_0.9fr_1fr_0.55fr] gap-3 border-b border-slate-100 px-4.5 py-4 last:border-b-0 hover:bg-slate-50/60"
-                >
-                  <div>
-                    <div className="text-[13px] font-black tracking-tight text-slate-900">
-                      {item.routeCode}
-                    </div>
-                    <div className="mt-1 text-[10px] text-slate-500">
-                      {item.stopLocation || item.pickupBranch || "Chưa có"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[14px] font-semibold text-slate-900">
-                      {item.routeName}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-500">
-                      Xe: {item.assignedVehicle || "Chưa có"} • Tài xế:{" "}
-                      {item.assignedDriver || "Chưa có"}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1 text-[12px] text-slate-700">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-                      {formatDateLabel(item.plannedStartTimeRaw) || "Chưa có"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 text-slate-500">
-                      <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-                      {item.departureTime || "--:--"}
-                    </span>
-                  </div>
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] ${statusMeta[item.status].badge}`}
-                    >
-                      {statusMeta[item.status].label ||
-                        item.statusText ||
-                        "Trạng thái"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
-                    {item.status === "IN_PROGRESS" ? null : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-primary"
-                          title="Sửa"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        {item.status === "PLANNED" ? (
-                          <button
-                            type="button"
-                            onClick={() => openAssignModal(item)}
-                            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                            title="Gán chuyến"
-                          >
-                            <Route className="h-4 w-4" />
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => cancelRoute(item)}
-                          className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
-                          title="Huỷ"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+            <div className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {filteredAndScopedItems.length} chuyến trong danh sách
+            </div>
           </div>
+
+          <div className="grid grid-cols-[0.95fr_1.65fr_0.9fr_1fr_0.75fr] gap-4 border-b border-slate-100 bg-white px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
+            <span>Mã chuyến</span>
+            <span>Thông tin lịch chuyến</span>
+            <span>Khởi hành</span>
+            <span>Trạng thái</span>
+            <span className="text-right">Thao tác</span>
+          </div>
+
+          {isLoading ? (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                Đang tải các chuyến xe...
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-white px-6 py-8">
+              <div className="flex items-start gap-3 rounded-[1.35rem] border border-rose-100 bg-rose-50/70 p-4 text-rose-700 animate-in fade-in">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-bold">
+                    Không thể tải các chuyến xe
+                  </div>
+                  <div className="mt-1 text-xs font-medium leading-relaxed">
+                    {error}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReloadNonce((value) => value + 1)}
+                  className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-rose-750 hover:bg-rose-100 transition-colors shadow-sm"
+                >
+                  Thử lại
+                </button>
+              </div>
+            </div>
+          ) : displayedItems.length === 0 ? (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-16">
+              <div className="text-center">
+                <div className="text-sm font-bold text-slate-900">
+                  {search.trim() || scheduleDate || routeFilter !== "ALL"
+                    ? "Không tìm thấy chuyến xe phù hợp"
+                    : "Không có chuyến xe nào đang vận hành"}
+                </div>
+                <div className="mt-1 text-xs font-medium text-slate-500">
+                  Hãy thử đổi từ khóa tìm kiếm hoặc thêm chuyến mới.
+                </div>
+              </div>
+            </div>
+          ) : (
+            displayedItems.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[0.95fr_1.65fr_0.9fr_1fr_0.75fr] gap-4 border-b border-slate-50 px-6 py-5 last:border-b-0 hover:bg-slate-50/50 transition-colors group items-center"
+              >
+                <div>
+                  <div className="text-sm font-black text-slate-900">
+                    {item.routeCode}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                    {item.stopLocation || item.pickupBranch || "Chưa có"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-slate-900">
+                    {item.routeName}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-400 font-bold">
+                    Xe: {item.assignedVehicle || "Chưa có"} • Tài xế:{" "}
+                    {item.assignedDriver || "Chưa có"}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 text-xs font-bold text-slate-500">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                    {formatDateLabel(item.plannedStartTimeRaw) || "Chưa có"}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-slate-400">
+                    <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                    {item.departureTime || "--:--"}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${statusMeta[item.status].badge}`}
+                  >
+                    {statusMeta[item.status].label ||
+                      item.statusText ||
+                      "Trạng thái"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {item.status === "IN_PROGRESS" ? null : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item)}
+                        className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
+                        title="Sửa"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      {item.status === "PLANNED" ? (
+                        <button
+                          type="button"
+                          onClick={() => openAssignModal(item)}
+                          className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-500 hover:text-white transition-all"
+                          title="Gán chuyến"
+                        >
+                          <Route className="h-4 w-4" />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => cancelRoute(item)}
+                        className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                        title="Huỷ"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="flex flex-col gap-3 border-t border-slate-50 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
             {filteredAndScopedItems.length > 0 ? (
               <>
-                Hiển thị {pageInfo.start}-{pageInfo.end} trên{" "}
-                {filteredAndScopedItems.length} lịch chuyến
+                Hiển thị {pageInfo.start}-{pageInfo.end} trên {filteredAndScopedItems.length} lịch chuyến
               </>
             ) : (
               "Không có dữ liệu để hiển thị"
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setPageNumber((value) => Math.max(1, value - 1))}
               disabled={currentPage === 1 || isLoading}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100 flex items-center gap-1"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft size={12} />
               Trước
             </button>
 
-            {pageButtons.map((pageItem, index) =>
-              pageItem === "ellipsis" ? (
-                <span
-                  key={`ellipsis-${index}`}
-                  className="inline-flex h-9 items-center justify-center px-2 text-slate-400"
-                >
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={pageItem}
-                  type="button"
-                  onClick={() => setPageNumber(pageItem)}
-                  disabled={isLoading}
-                  className={`inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-[11px] font-black transition-colors ${
-                    pageItem === currentPage
-                      ? "border-brand-primary bg-brand-primary text-white shadow-sm"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/20 hover:text-brand-primary"
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {pageItem}
-                </button>
-              ),
-            )}
+            <div className="flex items-center gap-1">
+              {pageButtons.map((pageItem, index) =>
+                pageItem === "ellipsis" ? (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="px-2 text-xs font-black text-slate-400"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={pageItem}
+                    type="button"
+                    onClick={() => setPageNumber(pageItem)}
+                    disabled={isLoading}
+                    className={`min-w-9 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
+                      pageItem === currentPage
+                        ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                        : "border border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100"
+                    }`}
+                  >
+                    {pageItem}
+                  </button>
+                ),
+              )}
+            </div>
 
             <button
               type="button"
@@ -2115,14 +2155,13 @@ export function RouteManagementPage() {
                 )
               }
               disabled={currentPage >= totalPages || isLoading}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100 flex items-center gap-1"
             >
               Sau
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight size={12} />
             </button>
           </div>
         </div>
-      </div>
 
       {createModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/40 px-4 py-8 backdrop-blur-sm">

@@ -4,23 +4,25 @@ import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { AuthLayout } from "../../Components/client/AuthLayout";
 import { API_BASE_URL, LOGIN_URL, PROFILE_ME_URL } from "../../utils/api";
 import { createRequestMeta } from "../../utils/requestMeta";
+import { parseJwt } from "../../utils/auth";
 import {
   extractAuthToken,
   extractDisplayName,
   extractProfileCompleted,
   extractRefreshToken,
-   extractMyProfileSnapshot,
+  extractMyProfileSnapshot,
   extractStringArrayValue,
   extractStringValue,
   extractUserId,
+  extractMerchantId,
 } from "../../utils/responseExtractors";
 
-const resolveDisplayNameFromProfile = async (
+const resolveProfileDetails = async (
   authToken: string,
   userId: string,
   fallbackDisplayName: string,
 ) => {
-  if (!userId.trim()) return fallbackDisplayName;
+  if (!userId.trim()) return { displayName: fallbackDisplayName, merchantId: "" };
 
   try {
     const response = await fetch(
@@ -36,13 +38,16 @@ const resolveDisplayNameFromProfile = async (
       },
     );
 
-    if (!response.ok) return fallbackDisplayName;
+    if (!response.ok) return { displayName: fallbackDisplayName, merchantId: "" };
 
     const responseBody: unknown = await response.json();
     const profile = extractMyProfileSnapshot(responseBody);
-    return profile.fullName || profile.customer.fullName || fallbackDisplayName;
+    return {
+      displayName: profile.fullName || profile.customer.fullName || fallbackDisplayName,
+      merchantId: profile.merchantId || extractMerchantId(responseBody) || ""
+    };
   } catch {
-    return fallbackDisplayName;
+    return { displayName: fallbackDisplayName, merchantId: "" };
   }
 };
 
@@ -108,14 +113,28 @@ export default function LoginPage() {
       const userId = extractUserId(responseBody);
       const fallbackDisplayName = extractDisplayName(responseBody, email.trim());
       const profileCompleted = extractProfileCompleted(responseBody);
-       const roles = extractStringArrayValue(responseBody, ["authorities", "roles"]);
+      const roles = extractStringArrayValue(responseBody, ["authorities", "roles"]);
       const avatarUrl = extractStringValue(responseBody, ["avatarUrl", "profileAvatarUrl", "avatar"]);
       const shouldCompleteProfile = profileCompleted === false;
-      const displayName = await resolveDisplayNameFromProfile(
+      
+      const loginMerchantId = extractMerchantId(responseBody);
+      
+      const { displayName, merchantId: profileMerchantId } = await resolveProfileDetails(
         authToken,
         userId,
         fallbackDisplayName,
       );
+
+      let decodedMerchantId = "";
+      if (authToken) {
+        const decoded = parseJwt(authToken);
+        if (decoded) {
+          decodedMerchantId = decoded.merchantId || decoded.sub || "";
+        }
+      }
+
+      // Fallback mechanism: JWT -> Login Response -> Profile Response
+      const finalMerchantId = decodedMerchantId || loginMerchantId || profileMerchantId;
 
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", displayName);
@@ -124,17 +143,24 @@ export default function LoginPage() {
       if (userId) {
         localStorage.setItem("userId", userId);
       }
+      if (finalMerchantId) {
+        localStorage.setItem("merchantId", finalMerchantId);
+      }
       if (typeof profileCompleted === "boolean") {
         localStorage.setItem("profileCompleted", String(profileCompleted));
       }
       if (authToken) {
         localStorage.setItem("authToken", authToken);
+      } else {
+        localStorage.removeItem("authToken");
       }
       if (refreshToken) {
         localStorage.setItem("refreshToken", refreshToken);
+      } else {
+        localStorage.removeItem("refreshToken");
       }
        if (roles.length > 0) {
-        localStorage.setItem("userRoles", JSON.stringify(roles));
+        localStorage.setItem("userRoles:v1", JSON.stringify(roles));
         localStorage.setItem("userRole", roles[0]);
       }
       if (avatarUrl) {

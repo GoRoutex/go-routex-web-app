@@ -4,7 +4,8 @@ import { MerchantSidebar } from './MerchantSidebar'
 import { RightSidebar } from '../RightSidebar';
 import { TopNav } from '../TopNav';
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from '../../utils/api';
-import { createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta';
+import { createXAuthorizedHeaders } from '../../utils/requestMeta';
+import { getMerchantId } from '../../utils/auth';
 
 export function MerchantLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -23,24 +24,11 @@ export function MerchantLayout() {
 
   const [merchantInfo, setMerchantInfo] = useState<{ displayName: string; logoUrl: string } | null>(null)
 
-  // Helper function để giải mã token lấy merchantId
-  const getMerchantIdFromToken = () => {
-    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
-    if (!token) return null;
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-      return payload.merchantId || payload.sub; // Ưu tiên merchantId trong claims
-    } catch (e) {
-      console.error("Lỗi giải mã token:", e);
-      return null;
-    }
-  };
+
 
   useEffect(() => {
     const fetchMerchantProfile = async () => {
-      const merchantId = getMerchantIdFromToken();
+      const merchantId = getMerchantId();
       if (!merchantId) {
         console.warn("Không tìm thấy merchantId trong token");
         return;
@@ -49,7 +37,7 @@ export function MerchantLayout() {
       try {
         // Gọi API lấy thông tin profile kèm merchantId query param
         const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/profile?merchantId=${merchantId}`, {
-          headers: createAuthorizedEnvelopeHeaders()
+          headers: createXAuthorizedHeaders() as HeadersInit
         });
         const result = await response.json();
         if (result.data) {

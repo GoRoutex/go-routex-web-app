@@ -25,28 +25,23 @@ export const createRequestMeta = (): RequestMeta => ({
     channel: "ONL",
 });
 
-export const createRequestEnvelopeHeaders = (meta = createRequestMeta()) => ({
-    "RT-REQUEST_ID": meta.requestId,
-    "RT-REQUEST_DATE_TIME": meta.requestDateTime,
-    "RT-CHANNEL": meta.channel,
-});
 
-export const createAuthorizedEnvelopeHeaders = (meta = createRequestMeta()) => {
-    const token = getAccessToken();
+export const createEnvelopeHeaders = (meta = createRequestMeta()) => {
     return {
-        ...createRequestEnvelopeHeaders(meta),
-        Authorization: token ? `Bearer ${token}` : "",
+        "RT-REQUEST-ID": meta.requestId,
+        "RT-REQUEST_DATE_TIME": meta.requestDateTime,
+        "RT-CHANNEL": meta.channel
     };
 };
 
 export const createXAuthorizedHeaders = (meta = createRequestMeta()) => {
     const token = getAccessToken();
-    return {
-        "X-Request-Id": meta.requestId,
-        "X-Request-DateTime": meta.requestDateTime,
-        "X-Channel": meta.channel,
-        "Authorization": token ? `Bearer ${token}` : "",
-        "accept": "*/*"
+    const headers: Record<string, string> = {
+        ...createEnvelopeHeaders(meta)
     };
+    if (token && token.trim().length > 0) {
+        headers["Authorization"] = `Bearer ${token.trim()}`;
+    }
+    return headers;
 };
 

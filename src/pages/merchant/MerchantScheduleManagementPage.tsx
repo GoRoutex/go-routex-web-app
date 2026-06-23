@@ -1,18 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Plus, MapPin, Clock, ArrowRight,
     Edit3,
-    ChevronLeft, ChevronRight, X, Loader2, Save,
-    Navigation, Building, Info, Search, Activity, MoreHorizontal
+    X, Loader2, Save,
+    Navigation, Building, Info, Search, Activity, MoreHorizontal,
+    Timer, TrendingUp, Sparkles, DollarSign, Users, CheckCircle,
+    ChevronDown, ChevronUp, Calendar
 } from "lucide-react";
 
 import { toast } from "react-toastify";
-import { ROUTE_ENDPOINTS } from "../../utils/api-constants";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { ROUTE_ENDPOINTS, TRIP_ENDPOINTS, AI_ENDPOINTS, STAFF_ENDPOINTS } from "../../utils/api-constants";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { Pagination } from "../../Components/common/Pagination";
+import {
+    ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
+    CartesianGrid, Tooltip
+} from "recharts";
 
-
-import { getAccessToken, parseJwt } from "../../utils/auth";
+import { getMerchantId } from "../../utils/auth";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 interface RoutePoint {
     id?: string;
@@ -54,6 +61,9 @@ interface Province {
 }
 
 export function MerchantScheduleManagementPage() {
+    const { notifications } = useNotifications();
+    const lastNotificationRef = useRef<string | null>(null);
+
     const [routes, setRoutes] = useState<RouteItem[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,6 +75,30 @@ export function MerchantScheduleManagementPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [fetchingDetail, setFetchingDetail] = useState(false);
+
+    // AI Dispatch states
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+    const [aiRoute, setAiRoute] = useState<RouteItem | null>(null);
+    const [forecastDays, setForecastDays] = useState(30);
+    const [forecasting, setForecasting] = useState(false);
+    const [forecastResults, setForecastResults] = useState<any[]>([]);
+    const [selectedForecastDates, setSelectedForecastDates] = useState<string[]>([]);
+    const [schedulerConfig, setSchedulerConfig] = useState({
+        base_price: 250000,
+        operating_cost_per_trip: 1200000,
+        bus_capacity: 34,
+        max_trips_allowed: 6,
+        min_load_factor: 0.40,
+        startHour: 5,
+        endHour: 22
+    });
+    const [optimizing, setOptimizing] = useState(false);
+    const [batchOptimizedSchedules, setBatchOptimizedSchedules] = useState<Record<string, any>>({});
+    const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+    const [optimizeProgress, setOptimizeProgress] = useState<{ current: number; total: number } | null>(null);
+    const [publishProgress, setPublishProgress] = useState<{ current: number; total: number } | null>(null);
+    const [dispatching, setDispatching] = useState(false);
+    const [drivers, setDrivers] = useState<any[]>([]);
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,7 +117,7 @@ export function MerchantScheduleManagementPage() {
         destinationProvinceId: "",
         destinationDepartmentId: "",
         duration: 0,
-        departments: [] as RoutePoint[]
+        routePoints: [] as RoutePoint[]
     });
 
     const fetchRoutes = async (pageNumber: number) => {
@@ -92,7 +126,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(
                 `${ROUTE_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&status=${statusFilter}&search=${searchTerm}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
@@ -112,12 +146,12 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/provinces/fetch?pageNumber=1&pageSize=100`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
-                const sorted = [...result.data.items].sort((a, b) =>
+                const sorted = result.data.items.toSorted((a: any, b: any) =>
                     (a.name || "").localeCompare(b.name || "", 'vi', { sensitivity: 'base' })
                 );
                 setProvinces(sorted);
@@ -135,7 +169,7 @@ export function MerchantScheduleManagementPage() {
             });
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?${params.toString()}`,
-                { headers: createAuthorizedEnvelopeHeaders() }
+                { headers: createXAuthorizedHeaders() }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
@@ -161,7 +195,7 @@ export function MerchantScheduleManagementPage() {
             });
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?${params.toString()}`,
-                { headers: createAuthorizedEnvelopeHeaders() }
+                { headers: createXAuthorizedHeaders() }
             );
             const result = await response.json();
             const items = result.data?.items || [];
@@ -172,10 +206,25 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const fetchDrivers = async () => {
+        try {
+            const response = await fetch(`${STAFF_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100&status=AVAILABLE`, {
+                headers: createXAuthorizedHeaders()
+            });
+            const result = await response.json();
+            if (result.data && result.data.items) {
+                setDrivers(result.data.items);
+            }
+        } catch (err) {
+            console.error("Lỗi tải danh sách nhân viên:", err);
+        }
+    };
+
     const fetchAllResources = async () => {
         await Promise.all([
             fetchOperationPoints(),
-            fetchProvinces()
+            fetchProvinces(),
+            fetchDrivers()
         ]);
     };
 
@@ -199,6 +248,19 @@ export function MerchantScheduleManagementPage() {
         return () => window.removeEventListener('keydown', handleEsc);
     }, []);
 
+    useEffect(() => {
+        if (notifications.length > 0) {
+            const latest = notifications[0];
+            if (latest._id !== lastNotificationRef.current) {
+                lastNotificationRef.current = latest._id;
+                if (latest.notificationType === 'AI_OPTIMIZATION_COMPLETED') {
+                    toast.success(`Tối ưu hóa thành công: ${latest.message}`);
+                    fetchRoutes(page);
+                }
+            }
+        }
+    }, [notifications, page]);
+
 
 
     const handleOpenCreate = () => {
@@ -213,7 +275,7 @@ export function MerchantScheduleManagementPage() {
             destinationProvinceId: "",
             destinationDepartmentId: "",
             duration: 0,
-            departments: []
+            routePoints: []
         });
         setOriginDepartments([]);
         setDestinationDepartments([]);
@@ -227,9 +289,7 @@ export function MerchantScheduleManagementPage() {
         setFetchingDetail(true);
 
         try {
-            const token = getAccessToken();
-            const decoded = token ? parseJwt(token) : null;
-            const merchantId = decoded?.merchantId;
+            const merchantId = getMerchantId();
             const routeId = route.id;
 
             if (!merchantId) {
@@ -241,7 +301,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/routes/fetch/detail?routeId=${routeId}&merchantId=${merchantId}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
 
@@ -269,12 +329,12 @@ export function MerchantScheduleManagementPage() {
                     destinationProvinceId: destProvId,
                     destinationDepartmentId: destDeptId,
                     duration: detailedRoute.duration || 0,
-                    departments: (detailedRoute.routePoints || detailedRoute.operationPoints || detailedRoute.departments || []).map((p: any) => {
+                    routePoints: (detailedRoute.routePoints || detailedRoute.operationPoints || detailedRoute.departments || []).map((p: any, i: number) => {
                         const deptId = p.departmentId || p.operationPointId || p.id;
                         const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
                         return {
                             ...p,
-                            operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                            stopOrder: (i + 1).toString(),
                             departmentId: deptId,
                             realOperationPointId: deptId,
                             provinceId: p.provinceId || deptInfo?.provinceId || "",
@@ -303,12 +363,12 @@ export function MerchantScheduleManagementPage() {
                     destinationProvinceId: destProvId,
                     destinationDepartmentId: destDeptId,
                     duration: route.duration || 0,
-                    departments: (route.routePoints || []).map((p: any) => {
+                    routePoints: (route.routePoints || []).map((p: any, i: number) => {
                         const deptId = p.departmentId || p.operationPointId || p.id;
                         const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
                         return {
                             ...p,
-                            operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                            stopOrder: (i + 1).toString(),
                             departmentId: deptId,
                             realOperationPointId: deptId,
                             provinceId: p.provinceId || deptInfo?.provinceId || "",
@@ -331,12 +391,12 @@ export function MerchantScheduleManagementPage() {
                 destinationProvinceId: route.destinationProvinceId || "",
                 destinationDepartmentId: route.destinationDepartmentId || "",
                 duration: route.duration || 0,
-                departments: (route.routePoints || []).map((p: any) => {
+                routePoints: (route.routePoints || []).map((p: any, i: number) => {
                     const deptId = p.departmentId || p.operationPointId || p.id;
                     const deptInfo = allOperationPoints.find(d => (d.id || d.operationPointId) === deptId);
                     return {
                         ...p,
-                        operationOrder: (p.stopOrder || p.operationOrder || "").toString(),
+                        stopOrder: (i + 1).toString(),
                         departmentId: deptId,
                         realOperationPointId: deptId,
                         provinceId: p.provinceId || deptInfo?.provinceId || "",
@@ -351,7 +411,7 @@ export function MerchantScheduleManagementPage() {
 
     const handleAddPoint = () => {
         const newPoint: RoutePoint = {
-            stopOrder: (formData.departments.length + 1).toString(),
+            stopOrder: (formData.routePoints.length + 1).toString(),
             note: "",
             departmentId: "",
             stopName: "",
@@ -363,25 +423,25 @@ export function MerchantScheduleManagementPage() {
         };
         setFormData({
             ...formData,
-            departments: [...formData.departments, newPoint]
+            routePoints: [...formData.routePoints, newPoint]
         });
     };
 
     const handleRemovePoint = (index: number) => {
-        const updated = formData.departments.filter((_, i) => i !== index);
-        const reordered = updated.map((p, i) => ({ ...p, operationOrder: (i + 1).toString() }));
-        setFormData({ ...formData, departments: reordered });
+        const updated = formData.routePoints.filter((_, i) => i !== index);
+        const reordered = updated.map((p, i) => ({ ...p, stopOrder: (i + 1).toString() }));
+        setFormData({ ...formData, routePoints: reordered });
     };
 
     const updatePoint = (index: number, field: keyof RoutePoint, value: any) => {
-        const updated = [...formData.departments];
+        const updated = [...formData.routePoints];
         updated[index] = { ...updated[index], [field]: value };
-        setFormData({ ...formData, departments: updated });
+        setFormData({ ...formData, routePoints: updated });
     };
 
     const populatePointData = (index: number, data: any) => {
         if (!data) return;
-        const updated = [...formData.departments];
+        const updated = [...formData.routePoints];
         updated[index] = {
             ...updated[index],
             // Use the id for display in the input field
@@ -395,12 +455,12 @@ export function MerchantScheduleManagementPage() {
             stopLongitude: data.longitude || updated[index].stopLongitude,
             provinceId: data.provinceId || updated[index].provinceId
         };
-        setFormData({ ...formData, departments: updated });
+        setFormData({ ...formData, routePoints: updated });
         toast.success(`Đã tìm thấy: ${data.name}`);
     };
 
     const clearPointData = (index: number) => {
-        const updated = [...formData.departments];
+        const updated = [...formData.routePoints];
         updated[index] = {
             ...updated[index],
             departmentId: "",
@@ -411,7 +471,7 @@ export function MerchantScheduleManagementPage() {
             stopLatitude: 0,
             stopLongitude: 0,
         };
-        setFormData({ ...formData, departments: updated });
+        setFormData({ ...formData, routePoints: updated });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -431,7 +491,7 @@ export function MerchantScheduleManagementPage() {
                 originDepartmentId: formData.originDepartmentId,
                 destinationDepartmentId: formData.destinationDepartmentId,
                 duration: formData.duration,
-                routePoints: formData.departments.map(p => ({
+                routePoints: formData.routePoints.map(p => ({
                     stopOrder: p.stopOrder,
                     note: p.note || "",
                     departmentId: p.realOperationPointId || p.departmentId,
@@ -457,7 +517,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(isEditing ? ROUTE_ENDPOINTS.UPDATE : ROUTE_ENDPOINTS.CREATE, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -496,7 +556,7 @@ export function MerchantScheduleManagementPage() {
             const response = await fetch(ROUTE_ENDPOINTS.DELETE, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -514,6 +574,265 @@ export function MerchantScheduleManagementPage() {
         }
     };
 
+    const handleOpenAiDispatch = (route: RouteItem) => {
+        setAiRoute(route);
+        setForecastResults([]);
+        setBatchOptimizedSchedules({});
+        setExpandedDates({});
+        setSelectedForecastDates([]);
+        setOptimizeProgress(null);
+        setPublishProgress(null);
+        setForecastDays(30);
+        setSchedulerConfig({
+            base_price: 250000,
+            operating_cost_per_trip: 1200000,
+            bus_capacity: 34,
+            max_trips_allowed: 6,
+            min_load_factor: 0.40,
+            startHour: 5,
+            endHour: 22
+        });
+        setIsAiModalOpen(true);
+    };
+
+    const runForecast = async () => {
+        if (!aiRoute) return;
+        setForecasting(true);
+        try {
+            const response = await fetch(AI_ENDPOINTS.FORECAST, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    route_id: aiRoute.id,
+                    periods: forecastDays
+                })
+            });
+
+            if (!response.ok) throw new Error("Dự báo thất bại");
+
+            const result = await response.json();
+            if (result.predictions && result.predictions.length > 0) {
+                setForecastResults(result.predictions);
+                // Auto-select all dates
+                const allDates = result.predictions.map((p: any) => p.date);
+                setSelectedForecastDates(allDates);
+                setBatchOptimizedSchedules({});
+                setExpandedDates({});
+                toast.success("Dự báo nhu cầu AI thành công!");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi khi chạy dự báo: " + err.message);
+        } finally {
+            setForecasting(false);
+        }
+    };
+
+    const runOptimization = async () => {
+        if (!aiRoute || selectedForecastDates.length === 0) {
+            toast.warning("Vui lòng chạy dự báo và chọn ít nhất một ngày vận hành.");
+            return;
+        }
+        if (isNaN(schedulerConfig.operating_cost_per_trip) || isNaN(schedulerConfig.max_trips_allowed) || isNaN(schedulerConfig.min_load_factor)) {
+            toast.warning("Vui lòng nhập đầy đủ các thông số cấu hình tối ưu lịch chạy.");
+            return;
+        }
+        setOptimizing(true);
+
+        try {
+            const merchantId = getMerchantId();
+            if (!merchantId) {
+                toast.error("Không tìm thấy thông tin nhà xe trong phiên đăng nhập");
+                return;
+            }
+
+            const demands = selectedForecastDates.map((date) => {
+                const match = forecastResults.find(p => p.date === date);
+                const demand = match ? Math.round(match.ensemble_demand * 10) / 10 : 0;
+                return { date, demand };
+            });
+
+            const userEmail = localStorage.getItem("userEmail") || "";
+
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                channel: "ONL",
+                userEmail: userEmail,
+                data: {
+                    routeId: aiRoute.id,
+                    demands: demands,
+                    operatingHours: [schedulerConfig.startHour, schedulerConfig.endHour],
+                    operatingCostPerTrip: schedulerConfig.operating_cost_per_trip,
+                    maxTripsAllowed: schedulerConfig.max_trips_allowed,
+                    minLoadFactor: schedulerConfig.min_load_factor
+                }
+            };
+
+            const response = await fetch(AI_ENDPOINTS.SCHEDULE, {
+                method: "POST",
+                headers: {
+                    ...createXAuthorizedHeaders(meta),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                throw new Error("Tối ưu hóa lịch trình thất bại");
+            }
+
+            const result = await response.json();
+            const payload = result.data || result;
+            const jobId = payload.jobId || "N/A";
+
+            toast.success(`Khởi động tối ưu AI thành công! Hệ thống đang xử lý tác vụ dưới nền. Mã tiến trình (Job ID): ${jobId}`);
+            setIsAiModalOpen(false); // Close AI modal as it runs in the background
+        } catch (err: any) {
+            toast.error("Lỗi khi gửi yêu cầu tối ưu: " + err.message);
+        } finally {
+            setOptimizing(false);
+        }
+    };
+
+    const handlePublishSchedule = async () => {
+        if (!aiRoute || Object.keys(batchOptimizedSchedules).length === 0) {
+            toast.warning("Vui lòng tối ưu hóa lịch chạy trước khi phát hành.");
+            return;
+        }
+        setDispatching(true);
+        setPublishProgress({ current: 0, total: 0 });
+
+        try {
+            const meta = createRequestMeta();
+            const tripsToCreate: any[] = [];
+            const tripAssociations: { vehicleId: string; date: string; departureTimeStr: string }[] = [];
+
+            selectedForecastDates.forEach((date) => {
+                const schedule = batchOptimizedSchedules[date];
+                if (!schedule || !schedule.optimal_trips) return;
+
+                schedule.optimal_trips.forEach((t: any) => {
+                    const [hours, minutes] = t.departure_time.split(":");
+                    const localISO = `${date}T${hours}:${minutes}:00+07:00`;
+                    const [year, month, day] = date.split("-");
+
+                    tripsToCreate.push({
+                        departureTime: localISO,
+                        rawDepartureTime: t.departure_time,
+                        rawDepartureDate: `${day}/${month}/${year}`
+                    });
+
+                    tripAssociations.push({
+                        vehicleId: t.assigned_vehicle?.vehicle_id || "",
+                        date: date,
+                        departureTimeStr: t.departure_time
+                    });
+                });
+            });
+
+            if (tripsToCreate.length === 0) {
+                toast.warning("Không có chuyến xe nào để phát hành.");
+                setDispatching(false);
+                return;
+            }
+
+            const body = {
+                ...meta,
+                channel: "ONL",
+                data: {
+                    routeId: aiRoute.id,
+                    trips: tripsToCreate
+                }
+            };
+
+            const response = await fetch(TRIP_ENDPOINTS.BATCH_CREATE, {
+                method: "POST",
+                headers: {
+                    ...createXAuthorizedHeaders(meta),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                const responseData = await response.json();
+                const tripIds = responseData.data?.tripIds || [];
+
+                if (tripIds.length > 0) {
+                    toast.info(`Đang tiến hành điều phối xe cho ${tripIds.length} chuyến...`);
+                    const creatorName = localStorage.getItem("userName") || "System";
+
+                    const assignableTrips = tripIds.map((tripId: string, index: number) => ({
+                        tripId,
+                        association: tripAssociations[index],
+                        originalIndex: index
+                    })).filter((item: any) => item.association && item.association.vehicleId);
+
+                    setPublishProgress({ current: 0, total: assignableTrips.length });
+
+                    const assignPromises = assignableTrips.map(async (item: any, idx: any) => {
+                        const { tripId, association } = item;
+                        const vehicleId = association.vehicleId;
+                        const driverId = drivers.length > 0 ? drivers[idx % drivers.length].id : "";
+
+                        if (!driverId) {
+                            throw new Error("Không có tài xế khả dụng để điều phối chuyến xe.");
+                        }
+
+                        const assignMeta = createRequestMeta();
+                        const assignBody = {
+                            ...assignMeta,
+                            channel: "ONL",
+                            data: {
+                                creator: creatorName,
+                                tripId: tripId,
+                                vehicleId: vehicleId,
+                                driverId: driverId
+                            }
+                        };
+
+                        const assignRes = await fetch(TRIP_ENDPOINTS.ASSIGN, {
+                            method: "POST",
+                            headers: {
+                                ...createXAuthorizedHeaders(assignMeta),
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(assignBody)
+                        });
+
+                        if (!assignRes.ok) {
+                            const errData = await assignRes.json();
+                            throw new Error(errData.message || `Lỗi điều phối xe cho chuyến xe tại ${association.date} lúc ${association.departureTimeStr}`);
+                        }
+
+                        setPublishProgress(prev => prev ? { ...prev, current: prev.current + 1 } : null);
+                        return { success: true };
+                    });
+
+                    await Promise.all(assignPromises);
+                }
+
+                toast.success(`Đã phát hành và điều phối thành công lô ${tripsToCreate.length} chuyến xe cho ${selectedForecastDates.length} ngày!`);
+                setIsAiModalOpen(false);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi khi tạo chuyến xe");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi phát hành lịch xe: " + err.message);
+        } finally {
+            setDispatching(false);
+            setPublishProgress(null);
+        }
+    };
+    const optimizedDates = Object.keys(batchOptimizedSchedules);
+    const totalTrips = optimizedDates.reduce((sum, d) => sum + (batchOptimizedSchedules[d]?.optimal_trips?.length || 0), 0);
+    const avgFleetUtilization = optimizedDates.length > 0
+        ? optimizedDates.reduce((sum, d) => sum + (batchOptimizedSchedules[d]?.fleet_utilization || 0), 0) / optimizedDates.length
+        : 0;
+    const totalExpectedProfit = optimizedDates.reduce((sum, d) => sum + (batchOptimizedSchedules[d]?.total_expected_profit || 0), 0);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -709,6 +1028,16 @@ export function MerchantScheduleManagementPage() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        handleOpenAiDispatch(route);
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                                    title="Tối ưu lịch xe bằng AI"
+                                                >
+                                                    <Sparkles size={12} /> Lập lịch AI
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         handleDelete(route);
                                                     }}
                                                     className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all shadow-sm"
@@ -897,12 +1226,12 @@ export function MerchantScheduleManagementPage() {
 
                                             {/* Intermediate Nodes: Transit Points */}
                                             <div className="space-y-8">
-                                                {formData.departments.length === 0 ? (
+                                                {formData.routePoints.length === 0 ? (
                                                     <div className="bg-white/40 border-2 border-dashed border-slate-100 rounded-[2rem] p-8 text-center">
                                                         <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Chưa có trạm trung chuyển nào được gán</p>
                                                     </div>
                                                 ) : (
-                                                    formData.departments.map((point, index) => (
+                                                    formData.routePoints.map((point, index) => (
                                                         <div key={index} className="relative group/node">
                                                             <div className="absolute -left-[31px] top-8 w-6 h-6 rounded-full bg-white border-2 border-slate-200 shadow-md z-10 flex items-center justify-center group-hover/node:border-brand-primary transition-colors">
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover/node:bg-brand-primary transition-colors" />
@@ -925,7 +1254,7 @@ export function MerchantScheduleManagementPage() {
                                                                                 value={point.provinceId || ""}
                                                                                 onChange={(e) => {
                                                                                     const provId = e.target.value;
-                                                                                    const updated = [...formData.departments];
+                                                                                    const updated = [...formData.routePoints];
                                                                                     updated[index] = {
                                                                                         ...updated[index],
                                                                                         provinceId: provId,
@@ -937,7 +1266,7 @@ export function MerchantScheduleManagementPage() {
                                                                                         stopLatitude: 0,
                                                                                         stopLongitude: 0,
                                                                                     };
-                                                                                    setFormData({ ...formData, departments: updated });
+                                                                                    setFormData({ ...formData, routePoints: updated });
                                                                                 }}
                                                                             >
                                                                                 <option value="">-- Chọn Tỉnh/Thành --</option>
@@ -963,11 +1292,13 @@ export function MerchantScheduleManagementPage() {
                                                                                 }}
                                                                             >
                                                                                 <option value="">-- Chọn chi nhánh --</option>
-                                                                                {allOperationPoints
-                                                                                    .filter(p => !point.provinceId || p.provinceId === point.provinceId)
-                                                                                    .map(p => (
+                                                                                {allOperationPoints.flatMap(p => {
+                                                                                    const matchesProvince = !point.provinceId || p.provinceId === point.provinceId;
+                                                                                    if (!matchesProvince) return [];
+                                                                                    return [
                                                                                         <option key={p.id || p.departmentId} value={p.id || p.departmentId || p.operationPointId}>{p.name}</option>
-                                                                                    ))}
+                                                                                    ];
+                                                                                })}
                                                                             </select>
                                                                         </div>
                                                                     </div>
@@ -1093,45 +1424,425 @@ export function MerchantScheduleManagementPage() {
                 </div>
             )}
 
-            {/* Pagination Container */}
-            <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Tổng số tuyến đường: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
-                </p>
-                <div className="flex items-center gap-2">
-                    <button
-                        disabled={page === 1}
-                        onClick={() => setPage(page - 1)}
-                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                    >
-                        <ChevronLeft size={18} />
-                    </button>
+            {/* AI Smart Dispatch Modal */}
+            {isAiModalOpen && aiRoute && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
+                    <div className="bg-white w-full max-w-6xl h-full max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
 
-                    <div className="flex items-center gap-2">
-                        {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
+                        {/* Modal Header */}
+                        <div className="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                                    <Sparkles size={22} className="animate-pulse" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-950 tracking-tight">AI Smart Dispatch</h3>
+                                    <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-1">
+                                        <Navigation size={12} className="text-slate-400" />
+                                        Tối ưu hóa & Lập lịch cho tuyến: <span className="text-indigo-600 font-extrabold">{aiRoute.originName} → {aiRoute.destinationName}</span>
+                                    </p>
+                                </div>
+                            </div>
                             <button
-                                key={p}
-                                onClick={() => setPage(p)}
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${page === p
-                                    ? "bg-slate-900 text-white shadow-lg"
-                                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                                    }`}
+                                onClick={() => setIsAiModalOpen(false)}
+                                className="w-10 h-10 rounded-2xl border border-slate-150 bg-white text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-100 transition-all flex items-center justify-center shadow-sm"
                             >
-                                {p}
+                                <X size={18} />
                             </button>
-                        ))}
-                    </div>
+                        </div>
 
-                    <button
-                        disabled={page * pageSize >= totalItems}
-                        onClick={() => setPage(page + 1)}
-                        className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                    >
-                        <ChevronRight size={18} />
-                    </button>
+                        {/* Modal Content - Dual Column Grid */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-8 bg-slate-50/40">
+
+                            {/* Row 1: Forecast and Settings */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                                {/* Left Side: Forecast Column */}
+                                <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <TrendingUp className="text-indigo-600" size={18} />
+                                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">1. Dự Báo Nhu Cầu Đi Lại (Demand Forecast)</h4>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">Prophet + LSTM</span>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row items-end gap-4">
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số ngày dự báo</label>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="range"
+                                                    min="7"
+                                                    max="90"
+                                                    value={forecastDays}
+                                                    onChange={(e) => setForecastDays(parseInt(e.target.value))}
+                                                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                                />
+                                                <span className="text-sm font-black text-slate-700 w-12 text-right">{forecastDays} ngày</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={runForecast}
+                                            disabled={forecasting}
+                                            className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-md shadow-indigo-600/10 disabled:opacity-50"
+                                        >
+                                            {forecasting ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                                            Chạy Dự Báo
+                                        </button>
+                                    </div>
+
+                                    {/* Forecast Chart */}
+                                    {forecastResults.length > 0 ? (
+                                        <div className="space-y-4">
+                                            <div className="relative h-64 w-full min-w-0">
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                                    <AreaChart data={forecastResults}>
+                                                        <defs>
+                                                            <linearGradient id="colorDemand" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                                                        <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                                                        <Tooltip
+                                                            contentStyle={{ backgroundColor: '#ffffff', borderRadius: '1rem', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                            labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
+                                                        />
+                                                        <Area type="monotone" dataKey="ensemble_demand" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDemand)" name="Nhu cầu khách" />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
+
+                                            {/* Date Selector */}
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">
+                                                        Chọn các ngày vận hành ({selectedForecastDates.length}/{forecastResults.length})
+                                                    </label>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedForecastDates(forecastResults.map(p => p.date))}
+                                                            className="text-[9px] font-black uppercase text-indigo-600 hover:underline"
+                                                        >
+                                                            Chọn tất cả
+                                                        </button>
+                                                        <span className="text-[9px] text-slate-350">|</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedForecastDates([])}
+                                                            className="text-[9px] font-black uppercase text-rose-500 hover:underline"
+                                                        >
+                                                            Bỏ chọn
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto custom-scrollbar border border-slate-200/60 rounded-xl bg-white p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                    {forecastResults.map((pred) => {
+                                                        const isSelected = selectedForecastDates.includes(pred.date);
+                                                        const demand = Math.round(pred.ensemble_demand * 10) / 10;
+                                                        return (
+                                                            <label
+                                                                key={pred.date}
+                                                                className={`flex items-center justify-between p-2 rounded-lg border text-[11px] cursor-pointer transition-all ${
+                                                                    isSelected
+                                                                        ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 font-bold"
+                                                                        : "bg-slate-50/30 border-slate-100 text-slate-650 hover:bg-slate-50 hover:border-slate-200"
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => {
+                                                                            if (isSelected) {
+                                                                                setSelectedForecastDates(selectedForecastDates.filter(d => d !== pred.date));
+                                                                            } else {
+                                                                                setSelectedForecastDates([...selectedForecastDates, pred.date]);
+                                                                            }
+                                                                        }}
+                                                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                                                                    />
+                                                                    <span className="font-mono truncate">{pred.date}</span>
+                                                                </div>
+                                                                <span className={`text-[9px] px-1 py-0.2 rounded font-black whitespace-nowrap ${
+                                                                    isSelected ? "bg-indigo-100 text-indigo-700" : "bg-slate-150 text-slate-500"
+                                                                }`}>
+                                                                    {demand} khách
+                                                                </span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-64 flex flex-col items-center justify-center text-slate-300 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                            <TrendingUp size={36} className="mb-2 text-slate-200" />
+                                            <p className="text-xs font-bold text-slate-400">Vui lòng bấm "Chạy Dự Báo" để tính toán nhu cầu đi lại.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Side: Schedule Configurations */}
+                                <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between space-y-6">
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                            <Timer className="text-indigo-600" size={18} />
+                                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">2. Cấu Hình Tối Ưu Hóa Lịch Trình</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1.5 block">Chi phí / chuyến (VND)</label>
+                                                <input
+                                                    type="number"
+                                                    value={isNaN(schedulerConfig.operating_cost_per_trip) ? "" : schedulerConfig.operating_cost_per_trip}
+                                                    onChange={(e) => setSchedulerConfig({ ...schedulerConfig, operating_cost_per_trip: e.target.value === "" ? NaN : parseInt(e.target.value) })}
+                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-150 rounded-xl text-xs font-black text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1.5 block">Chuyến tối đa / ngày</label>
+                                                <input
+                                                    type="number"
+                                                    value={isNaN(schedulerConfig.max_trips_allowed) ? "" : schedulerConfig.max_trips_allowed}
+                                                    onChange={(e) => setSchedulerConfig({ ...schedulerConfig, max_trips_allowed: e.target.value === "" ? NaN : parseInt(e.target.value) })}
+                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-150 rounded-xl text-xs font-black text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1.5 block">Hệ số lấp đầy tối thiểu</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.05"
+                                                    min="0.1"
+                                                    max="1"
+                                                    value={isNaN(schedulerConfig.min_load_factor) ? "" : schedulerConfig.min_load_factor}
+                                                    onChange={(e) => setSchedulerConfig({ ...schedulerConfig, min_load_factor: e.target.value === "" ? NaN : parseFloat(e.target.value) })}
+                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-150 rounded-xl text-xs font-black text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {optimizing && optimizeProgress && (
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-[9px] font-black text-slate-550 uppercase tracking-widest">
+                                                    <span>Đang xử lý tối ưu...</span>
+                                                    <span>{optimizeProgress.current} / {optimizeProgress.total} ngày</span>
+                                                </div>
+                                                <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-indigo-600 transition-all duration-300"
+                                                        style={{ width: `${(optimizeProgress.current / optimizeProgress.total) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={runOptimization}
+                                            disabled={optimizing || selectedForecastDates.length === 0}
+                                            className="w-full py-4 bg-slate-950 text-white hover:bg-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50"
+                                        >
+                                            {optimizing ? (
+                                                <>
+                                                    <Loader2 className="animate-spin animate-duration-1000" size={14} />
+                                                    Đang Tối Ưu Lịch Chạy...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Timer size={14} />
+                                                    Tối Ưu Lịch Chạy ({selectedForecastDates.length} Ngày)
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Row 2: Optimization Results */}
+                            {optimizedDates.length > 0 && (
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <CheckCircle className="text-emerald-500" size={18} />
+                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">3. Lịch Trình Tối Ưu Đề Xuất</h4>
+                                    </div>
+
+                                    {/* Key Performance Indicators */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng chuyến đề xuất</p>
+                                                <h5 className="text-2xl font-black text-slate-900">{totalTrips} chuyến</h5>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                                <Timer size={18} />
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hiệu suất đội xe trung bình</p>
+                                                <h5 className="text-2xl font-black text-slate-900">{Math.round(avgFleetUtilization * 100)}%</h5>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                <Users size={18} />
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng lợi nhuận ước tính</p>
+                                                <h5 className="text-2xl font-black text-emerald-600">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalExpectedProfit)}</h5>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                                                <DollarSign size={18} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Collapsible Daily Schedules */}
+                                    <div className="space-y-4">
+                                        {optimizedDates.map((date) => {
+                                            const daySchedule = batchOptimizedSchedules[date];
+                                            if (!daySchedule) return null;
+                                            const isExpanded = expandedDates[date] ?? true;
+                                            const dailyTripsCount = daySchedule.optimal_trips?.length || 0;
+                                            const dailyProfit = daySchedule.total_expected_profit || 0;
+
+                                            return (
+                                                <div key={date} className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm transition-all hover:shadow-md">
+                                                    {/* Day Header */}
+                                                    <div
+                                                        onClick={() => setExpandedDates(prev => ({ ...prev, [date]: !isExpanded }))}
+                                                        className="bg-slate-50/70 p-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-100 transition-all border-b border-slate-100/60"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <Calendar size={16} className="text-indigo-650" />
+                                                            <span className="font-mono font-black text-slate-900 text-sm">{date}</span>
+                                                            <span className="text-[11px] text-slate-400 font-bold">({dailyTripsCount} chuyến xe đề xuất)</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                                                                +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dailyProfit)}
+                                                            </span>
+                                                            {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Day Table */}
+                                                    {isExpanded && (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-left border-collapse">
+                                                                <thead>
+                                                                    <tr className="bg-slate-100/30 border-b border-slate-100">
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-12">STT</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-28">Giờ đi</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Xe phân bổ</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-24">Dự báo khách</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dynamic Price</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lợi nhuận</th>
+                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-36">Load Factor</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-100">
+                                                                    {daySchedule.optimal_trips.map((trip: any) => (
+                                                                        <tr key={trip.trip_index} className="hover:bg-slate-50/30 transition-colors">
+                                                                            <td className="px-5 py-2.5 text-xs font-black text-slate-650">{trip.trip_index}</td>
+                                                                            <td className="px-5 py-2.5 text-xs font-black text-indigo-600">{trip.departure_time}</td>
+                                                                            <td className="px-5 py-2.5 text-xs font-bold text-slate-700">
+                                                                                {trip.assigned_vehicle ? (
+                                                                                    <div>
+                                                                                        <span className="font-black text-slate-900 block">{trip.assigned_vehicle.vehicle_plate}</span>
+                                                                                        <span className="text-[9px] text-slate-400 block font-normal">{trip.assigned_vehicle.vehicle_model} ({trip.assigned_vehicle.seat_capacity} chỗ)</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span className="text-slate-400 italic">Chưa phân bổ</span>
+                                                                                )}
+                                                                            </td>
+                                                                            <td className="px-5 py-2.5 text-xs font-bold text-slate-700">{trip.expected_passengers} khách</td>
+                                                                            <td className="px-5 py-2.5 text-xs font-black text-slate-900">
+                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.ticket_price)}
+                                                                            </td>
+                                                                            <td className="px-5 py-2.5 text-xs font-bold text-emerald-600">
+                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.expected_profit)}
+                                                                            </td>
+                                                                            <td className="px-5 py-2.5">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                                        <div className="h-full bg-indigo-600" style={{ width: `${Math.min(100, trip.load_factor * 100)}%` }} />
+                                                                                    </div>
+                                                                                    <span className="text-xs font-bold text-slate-605">{Math.round(trip.load_factor * 100)}%</span>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-6 md:p-8 border-t border-slate-150 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setIsAiModalOpen(false)}
+                                className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all text-center w-full sm:w-auto"
+                            >
+                                Hủy Bỏ
+                            </button>
+
+                            {dispatching && publishProgress && publishProgress.total > 0 && (
+                                <div className="flex-1 max-w-md w-full px-4">
+                                    <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                                        <span>Đang điều phối xe...</span>
+                                        <span>{publishProgress.current} / {publishProgress.total}</span>
+                                    </div>
+                                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-indigo-600 transition-all duration-300"
+                                            style={{ width: `${(publishProgress.current / publishProgress.total) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={handlePublishSchedule}
+                                disabled={dispatching || optimizedDates.length === 0}
+                                className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 w-full sm:w-auto justify-center"
+                            >
+                                {dispatching ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />}
+                                Phát Hành Lịch Chạy ({totalTrips} Chuyến / {optimizedDates.length} Ngày)
+                            </button>
+                        </div>
+
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Pagination Container */}
+            <Pagination
+                currentPage={page}
+                totalPages={Math.ceil(totalItems / pageSize) || 1}
+                totalItems={totalItems}
+                onPageChange={setPage}
+                itemLabel="tuyến đường"
+            />
         </div>
     );
 }
-

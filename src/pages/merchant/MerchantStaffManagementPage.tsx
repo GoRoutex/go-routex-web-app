@@ -5,8 +5,9 @@ import {
     AlertCircle
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { ADMIN_MERCHANT_ACTION_BASE_URL, USER_MANAGEMENT_SERVICE_BASE_URL } from "../../utils/api";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { ADMIN_MERCHANT_ACTION_BASE_URL, SEARCH_USER_URL, USER_MANAGEMENT_SERVICE_BASE_URL } from "../../utils/api";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { Pagination } from "../../Components/common/Pagination";
 
 
 interface Driver {
@@ -58,11 +59,11 @@ export function MerchantStaffManagementPage() {
     const [submitting, setSubmitting] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
 
-    // System users for selection
-    const [systemUsers, setSystemUsers] = useState<any[]>([]);
+    // System user exact search
+    const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
     const [userSearchLoading, setUserSearchLoading] = useState(false);
     const [userSearchTerm, setUserSearchTerm] = useState("");
-    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
 
 
     // Form states
@@ -90,7 +91,7 @@ export function MerchantStaffManagementPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/fetch?pageNumber=${pageNumber}&pageSize=${pageSize}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders(createRequestMeta())
+                    headers: createXAuthorizedHeaders(createRequestMeta())
                 }
             );
             const result = await response.json();
@@ -117,44 +118,57 @@ export function MerchantStaffManagementPage() {
         }
     };
 
-    const fetchSystemUsers = async (search?: string) => {
+    useEffect(() => {
+        if (isEditing) return;
 
-        setUserSearchLoading(true);
-        try {
-            const meta = createRequestMeta();
-            const headers = createXAuthorizedHeaders(meta);
-            // Using page 1, size 50 as default to get a good list for selection
-            const url = `${USER_MANAGEMENT_SERVICE_BASE_URL}/fetch?pageNumber=1&pageSize=50${search ? `&fullName=${search}` : ''}`;
-            const response = await fetch(url, { headers });
-            const result = await response.json();
-            if (result.data && result.data.items) {
-                setSystemUsers(result.data.items);
-            }
-        } catch (err: any) {
-            console.error("Fetch system users error:", err);
-        } finally {
-            setUserSearchLoading(false);
+        const term = userSearchTerm.trim();
+        // Bỏ qua search nếu chuỗi rỗng hoặc là chuỗi được format từ việc chọn user (có chứa " - ")
+        if (!term || term.includes(" - ")) {
+            setSearchedUsers([]);
+            setHasSearched(false);
+            return;
         }
-    };
+
+        const timer = setTimeout(async () => {
+            setUserSearchLoading(true);
+            setSearchedUsers([]);
+            setHasSearched(false);
+            try {
+                const queryParam = `keyword=${encodeURIComponent(term)}&excludeRole=DRIVER&page=0&size=10`;
+                const url = `${SEARCH_USER_URL}/search?${queryParam}`;
+
+                const meta = createRequestMeta();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: createXAuthorizedHeaders(meta)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.data) {
+                    const dataItems = result.data.items || result.data;
+                    const userArray = Array.isArray(dataItems) ? dataItems : [dataItems];
+                    setSearchedUsers(userArray.filter(Boolean));
+                }
+            } catch (err: any) {
+                console.error("Search user error:", err);
+            } finally {
+                setUserSearchLoading(false);
+                setHasSearched(true);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [userSearchTerm, isEditing]);
 
     useEffect(() => {
         fetchDrivers(page);
     }, [page]);
 
     useEffect(() => {
-        if (!isEditing && showUserDropdown && userSearchTerm) {
-            const timer = setTimeout(() => {
-                fetchSystemUsers(userSearchTerm);
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [userSearchTerm, isEditing, showUserDropdown]);
-
-    useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setIsModalOpen(false);
-                setShowUserDropdown(false);
             }
         };
         window.addEventListener('keydown', handleEsc);
@@ -185,7 +199,8 @@ export function MerchantStaffManagementPage() {
             note: ""
         });
         setIsModalOpen(true);
-        fetchSystemUsers(); // Load users for selection
+        setSearchedUsers([]);
+        setHasSearched(false);
     };
 
 
@@ -195,7 +210,7 @@ export function MerchantStaffManagementPage() {
             const url = `${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/detail?driverId=${driverId}&userId=${userId}&employeeCode=${employeeCode}`;
             const meta = createRequestMeta();
             const response = await fetch(url, {
-                headers: createAuthorizedEnvelopeHeaders(meta)
+                headers: createXAuthorizedHeaders(meta)
             });
 
             if (!response.ok) throw new Error("Không thể tải chi tiết nhân sự");
@@ -258,7 +273,7 @@ export function MerchantStaffManagementPage() {
             const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/drivers/${endpoint}`, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -476,69 +491,62 @@ export function MerchantStaffManagementPage() {
                                                                 ? "bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed"
                                                                 : "bg-slate-50 border-slate-100 text-slate-900 focus:bg-white focus:border-brand-primary/20"
                                                                 }`}
-                                                            value={isEditing ? formData.userId : userSearchTerm || formData.userId}
+                                                            value={isEditing ? formData.userId || "" : userSearchTerm || formData.userId || ""}
                                                             onChange={(e) => {
                                                                 if (!isEditing) {
                                                                     setUserSearchTerm(e.target.value);
-                                                                    setShowUserDropdown(true);
-                                                                    // Optional: Debounce fetchSystemUsers(e.target.value) if needed
                                                                 }
                                                             }}
-                                                            onFocus={() => !isEditing && setShowUserDropdown(true)}
-                                                            placeholder={isEditing ? "UUID của tài khoản" : "Tìm theo tên hoặc số điện thoại..."}
+                                                            placeholder={isEditing ? "UUID của tài khoản" : "Nhập chính xác số điện thoại hoặc email..."}
                                                             readOnly={isEditing}
                                                         />
-                                                        {!isEditing && (
+                                                        {!isEditing && userSearchLoading && (
                                                             <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                                                                {userSearchLoading && <Loader2 size={16} className="animate-spin text-slate-400" />}
-                                                                <Search size={16} className="text-slate-300" />
+                                                                <Loader2 size={16} className="animate-spin text-brand-primary" />
                                                             </div>
                                                         )}
                                                     </div>
 
-                                                    {!isEditing && showUserDropdown && (
-                                                        <>
-                                                            <div className="fixed inset-0 z-[105]" onClick={() => setShowUserDropdown(false)} />
-                                                            <div className="absolute z-[110] left-0 right-0 mt-3 bg-white border border-slate-100 rounded-3xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.2)] max-h-72 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
-                                                                {systemUsers.length === 0 ? (
-                                                                    <div className="px-6 py-10 text-center">
-                                                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Không tìm thấy người dùng</p>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="py-2">
-                                                                        {systemUsers
-                                                                            .filter(u =>
-                                                                                !userSearchTerm ||
-                                                                                u.fullName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                                                                                u.phoneNumber?.includes(userSearchTerm)
-                                                                            )
-                                                                            .map((user) => (
+                                                        {!isEditing && hasSearched && !userSearchLoading && userSearchTerm.trim() && (
+                                                            <>
+                                                                <div className="fixed inset-0 z-[105]" onClick={() => { setSearchedUsers([]); setHasSearched(false); setUserSearchTerm(""); }} />
+                                                                <div className="absolute z-[110] left-0 right-0 mt-3 bg-white border border-slate-100 rounded-3xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.2)] max-h-72 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
+                                                                    {searchedUsers.length === 0 ? (
+                                                                        <div className="px-6 py-10 text-center">
+                                                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Không tìm thấy user tương ứng</p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="py-2">
+                                                                            {searchedUsers.map((user, index) => {
+                                                                                const currentUserId = user.userId || user.id;
+                                                                                return (
                                                                                 <div
-                                                                                    key={user.id}
+                                                                                    key={currentUserId || index}
                                                                                     className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none transition-colors group"
                                                                                     onClick={() => {
-                                                                                        setFormData({ ...formData, userId: user.id });
-                                                                                        setUserSearchTerm(`${user.fullName} - ${user.phoneNumber}`);
-                                                                                        setShowUserDropdown(false);
+                                                                                        setFormData({ ...formData, userId: currentUserId });
+                                                                                        setUserSearchTerm(`${user.fullName || "User"} - ${user.phoneNumber || user.email}`);
+                                                                                        setSearchedUsers([]);
+                                                                                        setHasSearched(false);
+                                                                                        toast.success("Đã chọn người dùng");
                                                                                     }}
                                                                                 >
                                                                                     <div className="flex items-center justify-between">
                                                                                         <div>
-                                                                                            <p className="text-sm font-black text-slate-900 group-hover:text-brand-primary transition-colors">{user.fullName || "Không có email"}</p>
-                                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{user.phoneNumber || "N/A"}</p>
+                                                                                            <p className="text-sm font-black text-slate-900 group-hover:text-brand-primary transition-colors">{user.fullName || "Không có tên"}</p>
+                                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{user.phoneNumber || user.email || "N/A"}</p>
                                                                                         </div>
                                                                                         <div className="text-right">
-                                                                                            <p className="text-[9px] font-mono text-slate-300 group-hover:text-slate-400 transition-colors">{user.id}</p>
+                                                                                            <p className="text-[9px] font-mono text-slate-300 group-hover:text-slate-400 transition-colors">{currentUserId}</p>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
-                                                                            ))}
-
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </>
-                                                    )}
+                                                                            )})}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                 </div>
 
                                                 <div>
@@ -546,7 +554,7 @@ export function MerchantStaffManagementPage() {
                                                     <input
                                                         required
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
-                                                        value={formData.employeeCode}
+                                                        value={formData.employeeCode || ""}
                                                         onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
                                                         placeholder="VD: NV-001"
                                                     />
@@ -556,7 +564,7 @@ export function MerchantStaffManagementPage() {
                                                     <input
                                                         type="text"
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
-                                                        value={formData.rating}
+                                                        value={formData.rating || ""}
                                                         onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
                                                     />
                                                 </div>
@@ -574,7 +582,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Tên người thân</label>
                                                     <input
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
-                                                        value={formData.emergencyContactName}
+                                                        value={formData.emergencyContactName || ""}
                                                         onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
                                                     />
                                                 </div>
@@ -582,7 +590,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số điện thoại khẩn</label>
                                                     <input
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all"
-                                                        value={formData.emergencyContactPhone}
+                                                        value={formData.emergencyContactPhone || ""}
                                                         onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
                                                     />
                                                 </div>
@@ -600,7 +608,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Hạng bằng</label>
                                                     <input
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
-                                                        value={formData.licenseClass}
+                                                        value={formData.licenseClass || ""}
                                                         onChange={(e) => setFormData({ ...formData, licenseClass: e.target.value })}
                                                         placeholder="E, D, FC..."
                                                     />
@@ -609,7 +617,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Số hiệu bằng</label>
                                                     <input
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none"
-                                                        value={formData.licenseNumber}
+                                                        value={formData.licenseNumber || ""}
                                                         onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                                                     />
                                                 </div>
@@ -618,7 +626,7 @@ export function MerchantStaffManagementPage() {
                                                     <input
                                                         type="date"
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
-                                                        value={formData.licenseIssueDate}
+                                                        value={formData.licenseIssueDate || ""}
                                                         onChange={(e) => setFormData({ ...formData, licenseIssueDate: e.target.value })}
                                                     />
                                                 </div>
@@ -627,7 +635,7 @@ export function MerchantStaffManagementPage() {
                                                     <input
                                                         type="date"
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
-                                                        value={formData.licenseExpiryDate}
+                                                        value={formData.licenseExpiryDate || ""}
                                                         onChange={(e) => setFormData({ ...formData, licenseExpiryDate: e.target.value })}
                                                     />
                                                 </div>
@@ -645,7 +653,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái hồ sơ</label>
                                                     <select
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
-                                                        value={formData.status}
+                                                        value={formData.status || "ACTIVE"}
                                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                                     >
                                                         <option value="ACTIVE">Hoạt động</option>
@@ -657,7 +665,7 @@ export function MerchantStaffManagementPage() {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Trạng thái công việc</label>
                                                     <select
                                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black"
-                                                        value={formData.operationStatus}
+                                                        value={formData.operationStatus || "AVAILABLE"}
                                                         onChange={(e) => setFormData({ ...formData, operationStatus: e.target.value })}
                                                     >
                                                         <option value="AVAILABLE">Sẵn sàng</option>
@@ -694,7 +702,7 @@ export function MerchantStaffManagementPage() {
                                         <textarea
                                             rows={3}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-brand-primary/20 transition-all resize-none"
-                                            value={formData.note}
+                                            value={formData.note || ""}
                                             onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                                             placeholder="Nhập ghi chú thêm về nhân sự này..."
                                         />
@@ -733,53 +741,14 @@ export function MerchantStaffManagementPage() {
 
             {/* Pagination Container */}
             {!loading && drivers.length > 0 && (
-                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Trang hệ thống: <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => setPage(page - 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        
-                        <div className="flex items-center gap-2">
-                            {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPage(p)}
-                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
-                                        page === p 
-                                        ? "bg-slate-900 text-white shadow-lg" 
-                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                                    }`}
-                                >
-                                    {p}
-                                </button>
-                            ))}
-                        </div>
-
-                        <button
-                            disabled={page * pageSize >= totalItems}
-                            onClick={() => setPage(page + 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(totalItems / pageSize) || 1}
+                    totalItems={totalItems}
+                    onPageChange={setPage}
+                    itemLabel="nhân viên"
+                />
             )}
         </div>
     );
-}
-
-function ChevronLeft({ size }: { size: number }) {
-    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
-}
-
-function ChevronRight({ size }: { size: number }) {
-    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

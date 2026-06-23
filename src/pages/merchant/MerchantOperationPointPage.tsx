@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import {
     Plus, MapPin,
-    ChevronLeft, ChevronRight, X, Loader2, Save,
-    Info, MoreHorizontal, Edit3, Navigation, Search, Clock, Activity
+    X, Loader2, Save,
+    Info, MoreHorizontal, Edit3, Navigation, Search, Clock, Activity,
+    ChevronRight
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { getMerchantId } from "../../utils/auth";
+import { Pagination } from "../../Components/common/Pagination";
 
 interface Department {
     id: string;
@@ -63,7 +66,7 @@ export function MerchantOperationPointPage() {
 
     // Form states
     const [formData, setFormData] = useState({
-        merchantId: localStorage.getItem("merchantId") || "",
+        merchantId: getMerchantId() || "",
         name: "",
         type: "DEPARTMENT",
         address: "",
@@ -91,7 +94,7 @@ export function MerchantOperationPointPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/department/fetch?${params.toString()}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
@@ -112,12 +115,12 @@ export function MerchantOperationPointPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/provinces/fetch?pageNumber=1&pageSize=100`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
             if (result.data && result.data.items) {
-                const sortedProvinces = [...result.data.items].sort((a, b) =>
+                const sortedProvinces = result.data.items.toSorted((a: any, b: any) =>
                     a.name.localeCompare(b.name, 'vi', { sensitivity: 'base' })
                 );
                 setProvinces(sortedProvinces);
@@ -139,7 +142,7 @@ export function MerchantOperationPointPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/wards/fetch?provinceId=${provinceId}&pageNumber=1&pageSize=200`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
@@ -164,7 +167,7 @@ export function MerchantOperationPointPage() {
             const response = await fetch(
                 `${ADMIN_MERCHANT_ACTION_BASE_URL}/wards/search?keyword=${encodeURIComponent(keyword)}&provinceId=${provinceId}&page=0&size=50`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
@@ -204,7 +207,7 @@ export function MerchantOperationPointPage() {
         setIsEditing(false);
         setSelectedPoint(null);
         setFormData({
-            merchantId: localStorage.getItem("merchantId") || "",
+            merchantId: getMerchantId() || "",
             name: "",
             type: "DEPARTMENT",
             address: "",
@@ -233,7 +236,7 @@ export function MerchantOperationPointPage() {
         try {
             const meta = createRequestMeta();
             const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/department/detail?departmentId=${point.id}`, {
-                headers: createAuthorizedEnvelopeHeaders(meta)
+                headers: createXAuthorizedHeaders(meta)
             });
 
             if (response.ok) {
@@ -241,7 +244,7 @@ export function MerchantOperationPointPage() {
                 const detail = result.data || point;
 
                 setFormData({
-                    merchantId: detail.merchantId || localStorage.getItem("merchantId") || "",
+                    merchantId: detail.merchantId || getMerchantId() || "",
                     name: detail.name,
                     type: detail.type || "DEPARTMENT",
                     address: detail.address,
@@ -286,7 +289,7 @@ export function MerchantOperationPointPage() {
             const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/department/${endpoint}`, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -741,44 +744,13 @@ export function MerchantOperationPointPage() {
 
             {/* Pagination Container */}
             {!loading && (
-                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Tổng cộng: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => setPage(page - 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        
-                        <div className="flex items-center gap-2">
-                            {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPage(p)}
-                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
-                                        page === p 
-                                        ? "bg-slate-900 text-white shadow-lg" 
-                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                                    }`}
-                                >
-                                    {p}
-                                </button>
-                            ))}
-                        </div>
-
-                        <button
-                            disabled={page * pageSize >= totalItems}
-                            onClick={() => setPage(page + 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all bg-white shadow-sm"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(totalItems / pageSize) || 1}
+                    totalItems={totalItems}
+                    onPageChange={setPage}
+                    itemLabel="chi nhánh"
+                />
             )}
         </div>
     );

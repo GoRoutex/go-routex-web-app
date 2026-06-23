@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bus, Edit2, Plus, Save, Search, Trash2, X } from "lucide-react";
+import {  Edit2, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { VEHICLE_SERVICE_BASE_URL } from "../../utils/api";
-import {
-  createRequestEnvelopeHeaders,
-  createRequestMeta,
-} from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import {
   extractArrayValue,
   extractBooleanValue,
@@ -213,7 +210,7 @@ export function VehicleManagementPage() {
           method: "GET",
           headers: {
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(),
+            ...createXAuthorizedHeaders(),
             ...(authToken.trim()
               ? { Authorization: `Bearer ${authToken.trim()}` }
               : {}),
@@ -390,7 +387,7 @@ export function VehicleManagementPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...createRequestEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
           ...(authToken.trim()
             ? { Authorization: `Bearer ${authToken.trim()}` }
             : {}),
@@ -450,7 +447,7 @@ export function VehicleManagementPage() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(meta),
+            ...createXAuthorizedHeaders(meta),
             ...(authToken.trim()
               ? { Authorization: `Bearer ${authToken.trim()}` }
               : {}),
@@ -510,33 +507,28 @@ export function VehicleManagementPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      <div className="flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10" data-reload-nonce={reloadNonce}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
-            <Bus className="h-3.5 w-3.5" />
-            Quản lý phương tiện
-          </div>
-          <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">
             Quản lý phương tiện
           </h2>
-          <p className="mt-1.5 max-w-2xl text-[12px] font-medium leading-relaxed text-slate-500">
-            CRUD đầy đủ cho xe, biển số, sức chứa, hãng xe và trạng thái khai
-            thác.
+          <p className="text-sm text-slate-500 font-medium mt-1">
+            CRUD đầy đủ cho xe, biển số, sức chứa, hãng xe và trạng thái khai thác.
           </p>
         </div>
 
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+          className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus size={14} />
           Thêm phương tiện
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             label: "Đang hoạt động",
@@ -561,161 +553,158 @@ export function VehicleManagementPage() {
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
+            className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               {item.label}
             </div>
-            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">
+            <div className="text-xl font-black text-slate-900">
               {item.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">{item.note}</div>
+            <div className="text-xs text-slate-500 font-medium mt-1">{item.note}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-[1.8rem] border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-col gap-2.5 px-5 pt-5 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 px-6 pt-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-base font-black tracking-tight text-slate-900">
               Danh sách phương tiện
             </h3>
-            <p className="mt-1 text-[12px] font-medium text-slate-500">
+            <p className="mt-1 text-xs text-slate-400 font-medium">
               Quản lý xe, sức chứa, hãng xe và khu vực đỗ.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-b border-slate-100 px-5 pb-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="mt-4 flex flex-col gap-3 border-b border-slate-50 px-6 pb-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             Danh sách phương tiện đang khai thác
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5">
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm biển số, loại xe..."
-              className="w-44 bg-transparent text-[12px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+              className="w-48 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
             />
           </div>
         </div>
 
-        <div className="px-5 py-5">
-          <div className="overflow-hidden rounded-[1.15rem] border border-slate-100">
-            <div className="grid grid-cols-[1fr_1fr_0.8fr_0.95fr_0.8fr_0.95fr_1.05fr_0.9fr] gap-3.5 border-b border-slate-100 bg-slate-50 px-4.5 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-              <span>Biển số</span>
-              <span>Loại xe</span>
-              <span>Hãng xe</span>
-              <span>Ghế</span>
-              <span>Sàn thấp</span>
-              <span>Trạng thái</span>
-              <span>Cập nhật</span>
-              <span>Thao tác</span>
-            </div>
-
-            {isLoading ? (
-              <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
-                <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" />
-                  Đang tải danh sách phương tiện...
-                </div>
-              </div>
-            ) : error ? (
-              <div className="bg-white px-4 py-12">
-                <div className="rounded-[1.35rem] border border-rose-100 bg-rose-50/70 p-4 text-rose-700">
-                  <div className="text-[13px] font-bold">
-                    Không thể tải danh sách phương tiện
-                  </div>
-                  <div className="mt-1 text-[12px] font-medium leading-relaxed">
-                    {error}
-                  </div>
-                </div>
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
-                <div className="text-center">
-                  <div className="text-[13px] font-bold text-slate-900">
-                    {search.trim()
-                      ? "Không tìm thấy phương tiện phù hợp"
-                      : "Chưa có phương tiện nào"}
-                  </div>
-                  <div className="mt-1 text-[12px] font-medium text-slate-500">
-                    {search.trim()
-                      ? "Hãy thử đổi từ khóa tìm kiếm hoặc tải lại dữ liệu."
-                      : "Nhấn Thêm phương tiện để tạo xe đầu tiên."}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              filteredItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[1fr_1fr_0.8fr_0.95fr_0.8fr_0.95fr_1.05fr_0.9fr] gap-3.5 border-b border-slate-100 px-4.5 py-3.5 last:border-b-0 hover:bg-slate-50/60"
-                >
-                  <div>
-                    <div className="text-[12px] font-bold text-slate-900">
-                      {item.vehiclePlate || "Chưa có"}
-                    </div>
-                    <div className="mt-0.5 text-[10px] text-slate-500">
-                      {item.creator || "Chưa rõ người tạo"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[12px] font-bold text-slate-900">
-                      {item.type || "Chưa có"}
-                    </div>
-                  </div>
-                  <div className="text-[12px] font-medium text-slate-600">
-                    {item.manufacturer || "Chưa có"}
-                  </div>
-                  <div className="text-[12px] font-bold text-slate-900">
-                    {formatSeatCapacity(item.seatCapacity)}
-                  </div>
-                  <div className="text-[12px] font-medium text-slate-600">
-                    {item.hasFloor ? "Có" : "Không"}
-                  </div>
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${statusMeta[item.status].badge}`}
-                    >
-                      {statusMeta[item.status].label}
-                    </span>
-                  </div>
-                  <div className="text-[12px] font-medium text-slate-500">
-                    {item.updatedAt}
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="inline-flex items-center gap-1 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-primary"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item)}
-                      className="inline-flex items-center gap-1 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
-                      title="Xoá"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+        <div className="overflow-hidden">
+          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_0.95fr_0.8fr_0.95fr_1.05fr_0.9fr] gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
+            <span>Biển số</span>
+            <span>Loại xe</span>
+            <span>Hãng xe</span>
+            <span>Ghế</span>
+            <span>Sàn thấp</span>
+            <span>Trạng thái</span>
+            <span>Cập nhật</span>
+            <span>Thao tác</span>
           </div>
+
+          {isLoading ? (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" />
+                Đang tải danh sách phương tiện...
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-white px-6 py-8">
+              <div className="rounded-[1.35rem] border border-rose-100 bg-rose-50/70 p-4 text-rose-700">
+                <div className="text-[13px] font-bold">
+                  Không thể tải danh sách phương tiện
+                </div>
+                <div className="mt-1 text-xs font-medium leading-relaxed">
+                  {error}
+                </div>
+              </div>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
+              <div className="text-center">
+                <div className="text-sm font-bold text-slate-900">
+                  {search.trim()
+                    ? "Không tìm thấy phương tiện phù hợp"
+                    : "Chưa có phương tiện nào"}
+                </div>
+                <div className="mt-1 text-xs font-medium text-slate-500">
+                  {search.trim()
+                    ? "Hãy thử đổi từ khóa tìm kiếm hoặc tải lại dữ liệu."
+                    : "Nhấn Thêm phương tiện để tạo xe đầu tiên."}
+                </div>
+              </div>
+            </div>
+          ) : (
+            filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[1.2fr_1fr_0.8fr_0.95fr_0.8fr_0.95fr_1.05fr_0.9fr] gap-4 border-b border-slate-50 px-6 py-5 last:border-b-0 hover:bg-slate-50/50 transition-colors group items-center"
+              >
+                <div>
+                  <div className="text-sm font-black text-slate-900">
+                    {item.vehiclePlate || "Chưa có"}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 font-medium">
+                    {item.creator || "Chưa rõ người tạo"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {item.type || "Chưa có"}
+                  </div>
+                </div>
+                <div className="text-xs font-bold text-slate-500">
+                  {item.manufacturer || "Chưa có"}
+                </div>
+                <div className="text-xs font-black text-slate-900">
+                  {formatSeatCapacity(item.seatCapacity)}
+                </div>
+                <div className="text-xs font-semibold text-slate-600">
+                  {item.hasFloor ? "Có" : "Không"}
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${statusMeta[item.status].badge}`}
+                  >
+                    {statusMeta[item.status].label}
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-slate-500">
+                  {item.updatedAt}
+                </div>
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(item)}
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
+                    title="Chỉnh sửa"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                    title="Xoá"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="flex flex-col gap-3 border-t border-slate-50 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
             {totalElements > 0 ? (
               <>
-                Hiển thị {pageInfo.start}-{pageInfo.end} trên {totalElements}{" "}
-                bản ghi
+                Hiển thị {pageInfo.start}-{pageInfo.end} trên {totalElements} bản ghi
               </>
             ) : (
               "Chưa có dữ liệu để hiển thị"
@@ -726,7 +715,7 @@ export function VehicleManagementPage() {
               type="button"
               onClick={() => setPageNumber((value) => Math.max(1, value - 1))}
               disabled={pageNumber === 1 || isLoading}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition-all disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100"
             >
               Trước
             </button>
@@ -738,7 +727,7 @@ export function VehicleManagementPage() {
                 )
               }
               disabled={pageNumber >= totalPages || isLoading}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition-all disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100"
             >
               Sau
             </button>
@@ -748,22 +737,22 @@ export function VehicleManagementPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[1.4rem] border border-slate-100 bg-white p-4.5 shadow-2xl sm:p-5">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-100 bg-white p-6 shadow-2xl sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[0.16em] text-brand-primary">
                   {editingId ? "Chỉnh sửa phương tiện" : "Tạo phương tiện mới"}
                 </div>
-                <h3 className="mt-1 text-[1.35rem] font-black tracking-tight text-slate-900">
+                <h3 className="mt-1.5 text-lg font-black tracking-tight text-slate-900">
                   {editingId ? "Cập nhật phương tiện" : "Thêm phương tiện vào đội xe"}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg border border-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                className="rounded-xl border border-slate-200 p-2 text-slate-500 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -872,12 +861,12 @@ export function VehicleManagementPage() {
               </label>
             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
               <button
                 type="button"
                 onClick={closeModal}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.13em] text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
                 disabled={submitting}
-                className="rounded-xl border border-slate-100 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Hủy
               </button>
@@ -885,16 +874,16 @@ export function VehicleManagementPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white transition-all hover:-translate-y-0.5 hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Save className="h-3.5 w-3.5" />
                 {submitting
                   ? editingId
-                    ? "Đang cập nhật..."
+                    ? "Đang lưu..."
                     : "Đang tạo..."
                   : editingId
-                    ? "Cập nhật phương tiện"
-                    : "Lưu phương tiện"}
+                    ? "Cập nhật"
+                    : "Tạo mới"}
               </button>
             </div>
           </div>

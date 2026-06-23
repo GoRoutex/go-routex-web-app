@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Wrench, Plus, Search, AlertCircle, Loader2, Calendar, Info, Clock, History, X, DollarSign, User, Edit3, Trash2, Save, Hash } from "lucide-react";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
+import { Pagination } from "../../Components/common/Pagination";
 
 const MAINTENANCE_API_URL = "http://localhost:8080/api/v1/merchant-service/maintenance-plans";
 const VEHICLE_API_URL = "http://localhost:8080/api/v1/merchant-service/vehicles";
@@ -80,7 +81,7 @@ export function MerchantMaintenancePage() {
 
   const fetchVehicles = async () => {
     try {
-      const headers = createAuthorizedEnvelopeHeaders();
+      const headers = createXAuthorizedHeaders();
       const response = await fetch(`${VEHICLE_API_URL}/fetch?pageNumber=1&pageSize=100`, {
         method: 'GET',
         headers: headers as HeadersInit
@@ -104,7 +105,7 @@ export function MerchantMaintenancePage() {
     try {
       setLoading(true);
       setError(null);
-      const headers = createAuthorizedEnvelopeHeaders();
+      const headers = createXAuthorizedHeaders();
 
       const queryParams = new URLSearchParams({
         pageNumber: pageNumber.toString(),
@@ -148,7 +149,7 @@ export function MerchantMaintenancePage() {
 
   const fetchPlanDetail = async (id: string, isForEdit: boolean = false) => {
     try {
-      const headers = createAuthorizedEnvelopeHeaders();
+      const headers = createXAuthorizedHeaders();
       const response = await fetch(`${MAINTENANCE_API_URL}/detail?maintenancePlanId=${id}`, {
         method: 'GET',
         headers: headers as HeadersInit
@@ -259,7 +260,7 @@ export function MerchantMaintenancePage() {
       const response = await fetch(`${MAINTENANCE_API_URL}/${endpoint}`, {
         method: 'POST',
         headers: {
-          ...createAuthorizedEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -296,7 +297,7 @@ export function MerchantMaintenancePage() {
       const response = await fetch(`${MAINTENANCE_API_URL}/delete`, {
         method: 'POST',
         headers: {
-          ...createAuthorizedEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -971,53 +972,14 @@ export function MerchantMaintenancePage() {
 
       {/* Pagination Container */}
       {!loading && plans.length > 0 && (
-        <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Tổng số kế hoạch: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            
-            <div className="flex items-center gap-2">
-              {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
-                    page === p 
-                    ? "bg-slate-900 text-white shadow-lg" 
-                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            <button
-              disabled={page * pageSize >= totalItems}
-              onClick={() => setPage(page + 1)}
-              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(totalItems / pageSize) || 1}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          itemLabel="kế hoạch"
+        />
       )}
     </div>
   );
-}
-
-function ChevronLeft({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
-}
-
-function ChevronRight({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

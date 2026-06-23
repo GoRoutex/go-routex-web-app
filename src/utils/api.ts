@@ -24,7 +24,11 @@ export const UPLOAD_AVATAR_URL = "user-service/profile/avatar";
 export const COMPLETE_PROFILE_URL = "user-service/profile/complete-profile";
 export const PROFILE_ME_URL = "user-service/profile/me";
 export const PROFILE_UPDATE_URL = "user-service/profile/update";
+export const SEARCH_USER_URL = `${GATEWAY_BASE_URL}/user-service`;
 export const USER_MANAGEMENT_SERVICE_BASE_URL = `${GATEWAY_BASE_URL}/management/user-service`;
 
-
+// ─── Notify Processor (SSE & REST) ───
+export const NOTIFY_PROCESSOR_BASE_URL = "http://localhost:8080/api/v1";
+export const NOTIFICATION_STREAM_URL = `${NOTIFY_PROCESSOR_BASE_URL}/notify/stream`;
+export const NOTIFY_REST_BASE_URL = `${NOTIFY_PROCESSOR_BASE_URL}/notify`;
 

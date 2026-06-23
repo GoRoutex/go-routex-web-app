@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronRight, Search } from "lucide-react";
+import { NotificationBell } from "./common/NotificationBell";
 
 type TopNavProps = {
   isDarkMode: boolean;
@@ -59,7 +60,11 @@ export function TopNav({
         {segments.slice(1).map((segment, index) => {
             const segmentPath = `/${segments.slice(0, index + 2).join("/")}`;
             const isLast = index === segments.length - 2;
-            const label = segment.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+            const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(segment);
+            const isObjectId = /^[0-9a-fA-F]{24}$/.test(segment);
+            const label = (isUuid || isObjectId)
+                ? "Chi Tiết"
+                : segment.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
             return (
                 <div key={index} className="flex items-center gap-2">
@@ -106,7 +111,7 @@ export function TopNav({
     >
       <div className="flex items-center gap-6">
         {onToggleSidebar && (
-          <button 
+          <button
             onClick={onToggleSidebar}
             className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-brand-primary transition-all active:scale-95"
           >
@@ -146,8 +151,11 @@ export function TopNav({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Notification Bell */}
+            <NotificationBell isDarkMode={isDarkMode} />
+
             {onToggleTheme && (
-              <button 
+              <button
                 onClick={onToggleTheme}
                 className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-brand-primary transition-all active:scale-95"
               >
@@ -155,11 +163,11 @@ export function TopNav({
               </button>
             )}
             {onToggleRightSidebar && (
-              <button 
+              <button
                 onClick={onToggleRightSidebar}
                 className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
-                  isRightSidebarVisible 
-                    ? "bg-black text-white border-black" 
+                  isRightSidebarVisible
+                    ? "bg-black text-white border-black"
                     : "bg-slate-50 border-slate-100 text-slate-400 hover:text-brand-primary"
                 }`}
               >

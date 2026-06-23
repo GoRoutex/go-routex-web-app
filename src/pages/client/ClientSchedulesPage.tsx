@@ -1,19 +1,87 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bus, Calendar, Clock, MapPin, CheckCircle2 } from 'lucide-react'
+import { Bus, Calendar, Clock, MapPin, CheckCircle2, Loader2 } from 'lucide-react'
+import { createRequestMeta, createEnvelopeHeaders } from '../../utils/requestMeta'
 
-
-const SCHEDULES = [
-  { id: 'TRP-1001', route: 'Hà Nội → Hải Phòng', type: 'Xe limousine', time: '08:00', arrival: '10:30', duration: '2h 30m', seats: 4, price: '320,000 ₫', status: 'Đúng giờ' },
-  { id: 'TRP-1002', route: 'Hà Nội → Hải Phòng', type: 'Xe tiêu chuẩn', time: '10:00', arrival: '12:30', duration: '2h 30m', seats: 12, price: '250,000 ₫', status: 'Đang đón khách' },
-  { id: 'TRP-1003', route: 'Sài Gòn → Nha Trang', type: 'Xe giường nằm', time: '20:00', arrival: '04:00', duration: '8h 00m', seats: 2, price: '280,000 ₫', status: 'Đã lên lịch' },
-  { id: 'TRP-1004', route: 'Sài Gòn → Đà Lạt', type: 'Xe cao cấp', time: '06:30', arrival: '13:00', duration: '6h 30m', seats: 8, price: '300,000 ₫', status: 'Đã lên lịch' },
-  { id: 'TRP-1005', route: 'Đà Nẵng → Huế', type: 'Xe limousine', time: '14:00', arrival: '16:00', duration: '2h 00m', seats: 6, price: '120,000 ₫', status: 'Đúng giờ' },
-]
+const getStatusDisplay = (status: string) => {
+    switch(status) {
+        case 'ASSIGNED': return { label: 'Đang mở bán', class: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' };
+        case 'ACTIVE': return { label: 'Đã lên lịch', class: 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20' };
+        case 'IN_PROGRESS': return { label: 'Đang chạy', class: 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' };
+        case 'COMPLETED': return { label: 'Hoàn thành', class: 'bg-slate-100 text-slate-500 border border-slate-200' };
+        case 'CANCELLED': return { label: 'Đã hủy', class: 'bg-red-500/10 text-red-600 border border-red-500/20' };
+        default: return { label: status || 'Không xác định', class: 'bg-slate-100 text-slate-400 border border-slate-200' };
+    }
+}
 
 export default function ClientSchedulesPage() {
   const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState('Hôm nay')
+  const [schedules, setSchedules] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const mapDateFilter = (text: string) => {
+    switch (text) {
+        case 'Hôm qua': return 'YESTERDAY';
+        case 'Hôm nay': return 'TODAY';
+        case 'Ngày mai': return 'TOMORROW';
+        default: return 'TODAY';
+    }
+  }
+
+  const fetchSchedules = async (dateText: string) => {
+    setLoading(true)
+    try {
+      const dateFilter = mapDateFilter(dateText)
+      const meta = createRequestMeta()
+      const response = await fetch(
+        `http://localhost:8080/api/v1/management/trip-service/fetch?dateFilter=${dateFilter}&pageNumber=1&pageSize=50`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...createEnvelopeHeaders(meta)
+          }
+        }
+      )
+      const result = await response.json()
+      if (result.data && result.data.items) {
+        const items = result.data.items;
+        const merchantMap: Record<string, any> = {};
+        
+        for (const trip of items) {
+          const mId = trip.merchantId || trip.merchant?.id || 'unknown_' + trip.id;
+          const routeKey = trip.routeCode || trip.routeName || (trip.originName + '-' + trip.destinationName) || 'unknown_route';
+          
+          if (!merchantMap[mId]) {
+            merchantMap[mId] = {
+              merchantId: mId,
+              merchantName: trip.merchantName || trip.merchant?.name || 'Nhà xe chưa xác định',
+              trips: [],
+              seenRoutes: new Set()
+            };
+          }
+          
+          if (merchantMap[mId].trips.length < 3 && !merchantMap[mId].seenRoutes.has(routeKey)) {
+            merchantMap[mId].seenRoutes.add(routeKey);
+            merchantMap[mId].trips.push(trip);
+          }
+        }
+        
+        setSchedules(Object.values(merchantMap))
+      } else {
+        setSchedules([])
+      }
+    } catch (error) {
+      console.error('Error fetching schedules:', error)
+      setSchedules([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSchedules(selectedDate)
+  }, [selectedDate])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans flex flex-col selection:bg-brand-primary/10">
@@ -28,7 +96,7 @@ export default function ClientSchedulesPage() {
           <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
             Theo dõi thời gian xuất phát, trạng thái chuyến xe và lên kế hoạch cho hành trình của bạn với bảng lịch trình thời gian thực.
           </p>
-          
+
           <div className="max-w-4xl mx-auto mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">
              <div className="flex bg-white/5 p-2 rounded-2xl w-full sm:w-auto backdrop-blur-xl border border-white/10 shadow-2xl">
                {['Hôm qua', 'Hôm nay', 'Ngày mai'].map((day) => (
@@ -36,8 +104,8 @@ export default function ClientSchedulesPage() {
                    key={day}
                    onClick={() => setSelectedDate(day)}
                    className={`flex-1 sm:flex-none px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 ${
-                     selectedDate === day 
-                       ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105 z-10' 
+                     selectedDate === day
+                       ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105 z-10'
                        : 'text-slate-400 hover:text-white'
                    }`}
                  >
@@ -45,7 +113,7 @@ export default function ClientSchedulesPage() {
                  </button>
                ))}
              </div>
-             
+
              <div className="relative w-full sm:w-72 group">
                 <select className="appearance-none w-full bg-white/5 border border-white/10 rounded-2xl py-4.5 pl-6 pr-12 text-white font-bold outline-none focus:bg-white/10 focus:border-brand-primary/30 transition-all cursor-pointer backdrop-blur-xl shadow-2xl">
                   <option>Tất cả bến xe</option>
@@ -66,68 +134,84 @@ export default function ClientSchedulesPage() {
             <table className="w-full min-w-[900px] text-left border-separate border-spacing-y-4">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="py-6 px-8 rounded-l-2xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Thời gian</th>
-                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Tuyến đường & Loại xe</th>
-                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Giá vé & Chỗ trống</th>
-                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Trạng thái</th>
+                  <th className="py-6 px-8 rounded-l-2xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nhà xe</th>
+                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Tuyến đường tiêu biểu</th>
+                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Giá vé tham khảo</th>
+                  <th className="py-6 px-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Thông tin xe</th>
                   <th className="py-6 px-8 rounded-r-2xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {SCHEDULES.map((trip) => (
-                  <tr key={trip.id} className="group hover:bg-slate-50/50 transition-all duration-300 rounded-2xl">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-24 text-center">
+                      <Loader2 className="w-10 h-10 animate-spin text-brand-primary mx-auto mb-4" />
+                      <p className="text-slate-500 font-medium">Đang tải lịch trình...</p>
+                    </td>
+                  </tr>
+                ) : schedules.map((merchantGroup: any, idx: number) => {
+                  const mName = merchantGroup.merchantName;
+                  const trips = merchantGroup.trips;
+                  const firstTrip = trips[0] || {};
+                  
+                  const price = firstTrip.ticketPrice || firstTrip.price || 0;
+                  const formattedPrice = price > 0 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price) : 'Đang cập nhật';
+
+                  // Lấy danh sách loại xe duy nhất của nhà xe này
+                  const vehicleTypes = Array.from(new Set(trips.map((t: any) => t.hasFloor ? 'Xe giường nằm' : (t.vehicleType || t.vehicle?.vehicleType || t.vehicleTemplate?.name || 'Xe tiêu chuẩn'))));
+
+                  return (
+                  <tr key={merchantGroup.merchantId || idx} className="group hover:bg-slate-50/50 transition-all duration-300 rounded-2xl">
                     <td className="py-8 px-8 border-b border-slate-50">
                       <div className="flex flex-col gap-1.5">
-                        <span className="font-black text-xl text-slate-900 tracking-tighter">{trip.time}</span>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                          <Clock className="w-3.5 h-3.5" />
-                          Đến lúc {trip.arrival}
-                        </div>
+                        <span className="font-black text-xl text-slate-900 tracking-tighter">{mName}</span>
                       </div>
                     </td>
                     <td className="py-8 px-8 border-b border-slate-50">
-                      <div className="flex flex-col gap-2">
-                        <span className="font-black text-lg text-slate-900 tracking-tight group-hover:text-brand-primary transition-colors">{trip.route}</span>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 bg-slate-100 w-max px-3 py-1.5 rounded-lg uppercase tracking-widest border border-slate-200/50 leading-none">
-                          <Bus className="w-3.5 h-3.5" />
-                          {trip.type}
-                        </div>
+                      <div className="flex flex-col gap-1.5">
+                        {trips.map((t: any, i: number) => {
+                           const rName = (t.originName && t.destinationName) ? `${t.originName} → ${t.destinationName}` : (t.routeName || t.route?.name || 'Tuyến chưa cập nhật');
+                           return (
+                             <span key={i} className="font-black text-[15px] md:text-base text-slate-900 tracking-tight hover:text-brand-primary transition-colors cursor-default">
+                               {rName}
+                             </span>
+                           );
+                        })}
                       </div>
                     </td>
                     <td className="py-8 px-8 border-b border-slate-50">
                       <div className="flex flex-col gap-1.5 text-center sm:text-left">
-                        <span className="font-black text-xl text-brand-primary tracking-tighter leading-none">{trip.price}</span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${trip.seats < 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
-                          Còn {trip.seats} chỗ trống
+                        <span className="font-black text-xl text-brand-primary tracking-tighter leading-none">{formattedPrice}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Giá chỉ từ
                         </span>
                       </div>
                     </td>
                     <td className="py-8 px-8 border-b border-slate-50">
                       <div className="flex flex-col gap-2">
-                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-[0.1em] w-max flex items-center gap-2 uppercase
-                          ${trip.status === 'Đúng giờ' ? 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20' : 
-                            trip.status === 'Đang đón khách' ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' : 
-                            'bg-slate-100 text-slate-400 border border-slate-200'}
-                        `}>
-                          {trip.status === 'Đúng giờ' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                          {trip.status}
-                        </span>
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 opacity-70">Hành trình {trip.duration}</span>
+                        {vehicleTypes.map((vType: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                            <Bus className="w-3.5 h-3.5" />
+                            {vType as string}
+                          </div>
+                        ))}
                       </div>
                     </td>
                     <td className="py-8 px-8 text-right border-b border-slate-50">
-                      <button 
-                        onClick={() => navigate('/')}
-                        className="bg-slate-900 hover:bg-brand-primary text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all duration-300 shadow-xl shadow-slate-200 hover:shadow-brand-primary/30 group-hover:-translate-x-2">
-                        Đặt ghế
-                      </button>
+                      {selectedDate === 'Hôm qua' ? null : (
+                        <button
+                          onClick={() => navigate('/booking', { state: { routeData: firstTrip } })}
+                          className="bg-slate-900 hover:bg-brand-primary text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all duration-300 shadow-xl shadow-slate-200 hover:shadow-brand-primary/30 group-hover:-translate-x-2">
+                          Đặt vé
+                        </button>
+                      )}
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
-            
-            {SCHEDULES.length === 0 && (
+
+            {!loading && schedules.length === 0 && (
               <div className="py-24 text-center w-full flex flex-col items-center">
                  <div className="w-20 h-20 rounded-[2.5rem] bg-slate-50 border border-slate-100 flex items-center justify-center mb-6 shadow-sm">
                     <Calendar className="w-10 h-10 text-slate-200" />

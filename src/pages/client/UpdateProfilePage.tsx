@@ -164,8 +164,8 @@ const writeBackProfile = (profile: GetMyProfileSnapshot) => {
     localStorage.setItem("membershipPointToNextTier", profile.stats.pointToNextTier);
     localStorage.setItem("membershipPointMultiplier", profile.stats.pointMultiplier);
     localStorage.setItem("membershipNextTierName", profile.stats.nextTierName);
-    localStorage.setItem("userRoles", JSON.stringify(profile.authorities));
-    localStorage.setItem("profileAuthorities", JSON.stringify(profile.authorities));
+    localStorage.setItem("userRoles:v1", JSON.stringify(profile.authorities));
+    localStorage.setItem("profileAuthorities:v1", JSON.stringify(profile.authorities));
     localStorage.setItem("userRole", profile.authorities[0] || "");
     localStorage.setItem("profileRole", profile.authorities[0] || "");
     localStorage.setItem("customerId", profile.customer.customerId);

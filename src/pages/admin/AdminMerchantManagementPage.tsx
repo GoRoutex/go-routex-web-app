@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Store, Plus, Search, Filter, MoreHorizontal, ShieldCheck, Mail, Phone, MapPin, ExternalLink, Download, Loader2, Edit3, X, Save, Building } from "lucide-react";
 import { MERCHANT_SERVICE_BASE_URL, MEDIA_UPLOAD_URL, API_BASE_URL } from "../../utils/api";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
 
@@ -39,7 +39,7 @@ export default function AdminMerchantManagementPage() {
     const fetchMerchants = async () => {
         try {
             setLoading(true);
-            const headers = createAuthorizedEnvelopeHeaders();
+            const headers = createXAuthorizedHeaders();
             const response = await fetch(`${MERCHANT_SERVICE_BASE_URL}/fetch?pageNumber=1&pageSize=10`, {
                 method: 'GET',
                 headers: headers as HeadersInit
@@ -91,7 +91,7 @@ export default function AdminMerchantManagementPage() {
         setViewMerchant(null); // Clear previous or show shell
         try {
             const headers = {
-                ...createAuthorizedEnvelopeHeaders(),
+                ...createXAuthorizedHeaders(),
                 'Accept': 'application/json'
             };
 
@@ -212,7 +212,7 @@ export default function AdminMerchantManagementPage() {
             const response = await fetch(`${MERCHANT_SERVICE_BASE_URL}/update`, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(),
+                    ...createXAuthorizedHeaders(),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -280,12 +280,10 @@ export default function AdminMerchantManagementPage() {
                     { label: 'Đánh giá TB', value: stats.avgRating, sub: 'Toàn hệ thống' },
                     { label: 'Đơn chờ duyệt', value: stats.numberOfPendingApps, sub: 'Đang đợi kiểm duyệt' },
                 ].map((stat) => (
-                    <div key={stat.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm group hover:border-slate-300 transition-all">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">{stat.label}</span>
-                        <div className="flex items-end justify-between mt-3">
-                            <h3 className="text-3xl font-black text-slate-900 leading-none tracking-tight">{stat.value}</h3>
-                        </div>
-                        <p className="text-[11px] text-slate-400 font-medium mt-3">{stat.sub}</p>
+                    <div key={stat.label} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</div>
+                        <div className="text-xl font-black text-slate-900">{stat.value}</div>
+                        <p className="text-xs text-slate-500 font-medium mt-1">{stat.sub}</p>
                     </div>
                 ))}
             </div>

@@ -8,8 +8,6 @@ import {
   UserRound,
 } from "lucide-react";
 import { ClientAvatar } from "./ClientAvatar";
-import { API_BASE_URL, LOGOUT_URL } from "../../utils/api";
-import { createRequestMeta } from "../../utils/requestMeta";
 import { logout } from "../../utils/auth";
 
 type ClientAccountMenuProps = {
@@ -76,41 +74,14 @@ export function ClientAccountMenu({
       kind: "loading",
     });
 
-    const refreshToken =
-      localStorage.getItem("refreshToken") ||
-      localStorage.getItem("authToken") ||
-      "";
-
-    const finalizeLogout = (message: string, kind: "success" | "error") => {
+    try {
+      await logout();
+    } catch {
       setLogoutState({
         open: true,
-        message,
-        kind,
+        message: "Đăng xuất thất bại.",
+        kind: "error",
       });
-
-      logoutTimerRef.current = window.setTimeout(() => {
-        setLogoutState((current) => ({ ...current, open: false }));
-        logout();
-      }, 900);
-    };
-
-    try {
-      await fetch(API_BASE_URL + LOGOUT_URL, {
-        method: "POST",
-        headers: {
-          authorization: "Basic YWRtaW46YWRtaW4=",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          ...createRequestMeta(),
-          data: {
-            refreshToken,
-          },
-        }),
-      });
-      finalizeLogout("Đã đăng xuất thành công.", "success");
-    } catch {
-      finalizeLogout("Đăng xuất thất bại, nhưng phiên đăng nhập đã được xóa.", "error");
     }
   };
 

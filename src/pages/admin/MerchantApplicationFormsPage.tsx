@@ -3,7 +3,7 @@ import {
     Search, X, Building, User, MapPin, CreditCard,
     Download, Loader2, AlertCircle
 } from "lucide-react";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { MERCHANT_APPLICATION_SERVICE_BASE_URL, ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 import { extractArrayValue } from "../../utils/responseExtractors";
 
@@ -23,7 +23,7 @@ export default function MerchantApplicationFormsPage() {
         try {
             const statusParam = status ? `&status=${status}` : "";
             const response = await fetch(`${MERCHANT_APPLICATION_SERVICE_BASE_URL}/fetch?pageNumber=1&pageSize=10${statusParam}`, {
-                headers: createAuthorizedEnvelopeHeaders()
+                headers: createXAuthorizedHeaders()
             });
             const body = await response.json();
             const data = extractArrayValue(body, ["data", "content"]);
@@ -44,7 +44,7 @@ export default function MerchantApplicationFormsPage() {
         setDetailLoading(true);
         try {
             const response = await fetch(`${MERCHANT_APPLICATION_SERVICE_BASE_URL}/detail?applicationFormId=${id}`, {
-                headers: createAuthorizedEnvelopeHeaders()
+                headers: createXAuthorizedHeaders()
             });
             const body = await response.json();
             const detail = body?.data || body;
@@ -77,7 +77,7 @@ export default function MerchantApplicationFormsPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...createAuthorizedEnvelopeHeaders()
+                    ...createXAuthorizedHeaders()
                 },
                 body: JSON.stringify({
                     ...createRequestMeta(),

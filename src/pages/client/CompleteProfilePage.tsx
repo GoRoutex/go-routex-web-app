@@ -14,10 +14,7 @@ import {
   COMPLETE_PROFILE_URL,
   MEDIA_UPLOAD_URL,
 } from "../../utils/api";
-import {
-  createRequestEnvelopeHeaders,
-  createRequestMeta,
-} from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { extractStringValue } from "../../utils/responseExtractors";
 
 type GenderValue = "MALE" | "FEMALE" | "LGBT" | "OTHER";
@@ -152,7 +149,7 @@ export default function CompleteProfilePage() {
       const response = await fetch(API_BASE_URL + MEDIA_UPLOAD_URL, {
         method: "POST",
         headers: {
-          ...createRequestEnvelopeHeaders(),
+          ...createXAuthorizedHeaders(),
           ...(authToken.trim() ? { Authorization: `Bearer ${authToken.trim()}` } : {}),
         },
         body: formData,

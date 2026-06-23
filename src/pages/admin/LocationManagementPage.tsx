@@ -13,10 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { PROVINCES_SERVICE_BASE_URL } from "../../utils/api";
-import {
-  createRequestEnvelopeHeaders,
-  createRequestMeta,
-} from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import {
   extractArrayValue,
   extractNumberValue,
@@ -124,7 +121,7 @@ export function LocationManagementPage() {
           method: "GET",
           headers: {
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(),
+            ...createXAuthorizedHeaders(),
             ...(authToken.trim()
               ? { Authorization: `Bearer ${authToken.trim()}` }
               : {}),
@@ -294,7 +291,7 @@ export function LocationManagementPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...createRequestEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
         },
         body: JSON.stringify({
           requestId: meta.requestId,
@@ -344,7 +341,7 @@ export function LocationManagementPage() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(meta),
+            ...createXAuthorizedHeaders(meta),
           },
           body: JSON.stringify({
             requestId: meta.requestId,
@@ -398,18 +395,14 @@ export function LocationManagementPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      <div className="flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10" data-reload-nonce={reloadNonce}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
-            <MapPinned className="h-3.5 w-3.5" />
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">
             Quản lý địa điểm
-          </div>
-          <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem]">
-            Quản lý tỉnh thành khai thác
           </h2>
-          <p className="mt-1.5 max-w-2xl text-[12px] font-medium leading-relaxed text-slate-500">
-            CRUD cho danh sách tỉnh/thành phố thông qua `provinces-service`.
+          <p className="text-sm text-slate-500 font-medium mt-1">
+            CRUD cho danh sách tỉnh/thành phố thông qua provinces-service.
           </p>
         </div>
 
@@ -417,23 +410,23 @@ export function LocationManagementPage() {
           <button
             type="button"
             onClick={() => setReloadNonce((value) => value + 1)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+            className="flex items-center gap-2 bg-white text-slate-600 px-5 py-2.5 rounded-xl font-bold border border-slate-100 shadow-sm hover:bg-slate-50 transition-all"
           >
-            <Loader2 className="h-3.5 w-3.5" />
+            <Loader2 className="h-4 w-4" />
             Tải lại
           </button>
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+            className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus size={14} />
             Thêm địa điểm
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             label: "Tổng địa điểm",
@@ -458,31 +451,31 @@ export function LocationManagementPage() {
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
+            className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               {item.label}
             </div>
-            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">
+            <div className="text-xl font-black text-slate-900">
               {item.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">{item.note}</div>
+            <div className="text-xs text-slate-500 font-medium mt-1">{item.note}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-[1.8rem] border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-col gap-2.5 px-5 pt-5 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 px-6 pt-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-base font-black tracking-tight text-slate-900">
               Danh sách địa điểm đang quản lý
             </h3>
-            <p className="mt-1 text-[12px] font-medium text-slate-500">
+            <p className="mt-1 text-xs text-slate-400 font-medium">
               Tên tỉnh/thành và mã địa điểm được lấy trực tiếp từ API.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5">
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchInput}
@@ -493,23 +486,23 @@ export function LocationManagementPage() {
                 }
               }}
               placeholder="Tìm tỉnh, thành phố..."
-              className="w-44 bg-transparent text-[12px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+              className="w-48 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
             />
             <button
               type="button"
               onClick={handleSearch}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600 transition-colors hover:border-brand-primary/20 hover:text-brand-primary"
+              className="px-3.5 py-1.5 bg-slate-900 text-white rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-black transition-colors shadow-md shadow-slate-900/10"
             >
               Tìm
             </button>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-b border-slate-100 px-5 pb-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="mt-4 flex flex-col gap-3 border-b border-slate-50 px-6 pb-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             Quản lý địa điểm khai thác theo tỉnh, thành phố
           </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-500">
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
             Trang {pageInfo.current} / {pageInfo.total}
           </div>
         </div>
@@ -557,7 +550,7 @@ export function LocationManagementPage() {
           </div>
         ) : (
           <div className="overflow-hidden">
-            <div className="grid grid-cols-[1.5fr_0.7fr_1fr_0.8fr] gap-3 border-b border-slate-100 bg-slate-50 px-5 py-3 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+            <div className="grid grid-cols-[1.5fr_0.7fr_1fr_0.8fr] gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
               <span>Tên địa điểm</span>
               <span>Mã</span>
               <span>Cập nhật</span>
@@ -567,37 +560,37 @@ export function LocationManagementPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[1.5fr_0.7fr_1fr_0.8fr] gap-3 border-b border-slate-100 px-5 py-4 last:border-b-0 hover:bg-slate-50/60"
+                className="grid grid-cols-[1.5fr_0.7fr_1fr_0.8fr] gap-4 border-b border-slate-50 px-6 py-5 last:border-b-0 hover:bg-slate-50/50 transition-colors group items-center"
               >
                 <div>
-                  <div className="text-[14px] font-semibold text-slate-900">
+                  <div className="text-sm font-black text-slate-900">
                     {item.name}
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600">
+                  <span className="inline-flex rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
                     {item.code}
                   </span>
                 </div>
-                <div className="flex items-center text-[12px] text-slate-700">
+                <div className="flex items-center text-xs font-bold text-slate-500">
                   {item.updatedAt}
                 </div>
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button
                     type="button"
                     onClick={() => openEdit(item)}
-                    className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-primary"
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
                     title="Sửa"
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 size={14} />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(item)}
-                    className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
                     title="Xoá"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

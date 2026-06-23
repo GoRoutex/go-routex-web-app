@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Copy, Plus, Search, Filter, Loader2, AlertCircle, X, Info, Trash2, Edit3, Save } from "lucide-react";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
 import { VEHICLE_TEMPLATE_ENDPOINTS } from "../../utils/api-constants";
+import { Pagination } from "../../Components/common/Pagination";
 
 export interface VehicleTemplate {
   templateId: string;
@@ -61,7 +62,7 @@ export function MerchantVehicleTemplatePage() {
     try {
       setLoading(true);
       setError(null);
-      const headers = createAuthorizedEnvelopeHeaders();
+      const headers = createXAuthorizedHeaders();
       const url = `${VEHICLE_TEMPLATE_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&search=${searchTerm}`;
       const response = await fetch(url, {
         method: 'GET',
@@ -95,7 +96,7 @@ export function MerchantVehicleTemplatePage() {
   const fetchTemplateDetail = async (templateId: string) => {
     try {
       setDetailLoading(true);
-      const headers = createAuthorizedEnvelopeHeaders();
+      const headers = createXAuthorizedHeaders();
       const response = await fetch(`${VEHICLE_TEMPLATE_ENDPOINTS.DETAIL}?templateId=${templateId}`, {
         method: 'GET',
         headers: {
@@ -183,7 +184,7 @@ export function MerchantVehicleTemplatePage() {
       const response = await fetch(isUpdate ? VEHICLE_TEMPLATE_ENDPOINTS.UPDATE : VEHICLE_TEMPLATE_ENDPOINTS.CREATE, {
         method: 'POST',
         headers: {
-          ...createAuthorizedEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -220,7 +221,7 @@ export function MerchantVehicleTemplatePage() {
       const response = await fetch(VEHICLE_TEMPLATE_ENDPOINTS.DELETE, {
         method: 'POST',
         headers: {
-          ...createAuthorizedEnvelopeHeaders(meta),
+          ...createXAuthorizedHeaders(meta),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -706,53 +707,14 @@ export function MerchantVehicleTemplatePage() {
 
       {/* Pagination Container */}
       {!loading && templates.length > 0 && (
-        <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Tổng số mẫu xe: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{Math.ceil(totalItems / pageSize) || 1}</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            
-            <div className="flex items-center gap-2">
-              {Array.from({ length: Math.ceil(totalItems / pageSize) || 1 }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
-                    page === p 
-                    ? "bg-slate-900 text-white shadow-lg" 
-                    : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            <button
-              disabled={page * pageSize >= totalItems}
-              onClick={() => setPage(page + 1)}
-              className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(totalItems / pageSize) || 1}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          itemLabel="mẫu xe"
+        />
       )}
     </div>
   );
-}
-
-function ChevronLeft({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
-}
-
-function ChevronRight({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

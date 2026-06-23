@@ -18,7 +18,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { PROVINCE_ENDPOINTS } from "../../utils/api-constants";
-import { createAuthorizedEnvelopeHeaders } from "../../utils/requestMeta";
+import { createXAuthorizedHeaders } from "../../utils/requestMeta";
 
 const POPULAR_ROUTES = [
     {
@@ -111,18 +111,125 @@ export default function HomePage() {
         setLoadingProvinces(true);
         try {
             const response = await fetch(`${PROVINCE_ENDPOINTS.SEARCH}?keyword=${keyword}&page=1&size=20`, {
-                headers: createAuthorizedEnvelopeHeaders()
+                headers: createXAuthorizedHeaders()
             });
             const result = await response.json();
             if (result.data) {
-                if (type === 'origin') setOriginSuggestions(result.data);
-                else setDestSuggestions(result.data);
+                // De-duplicate results by ID to prevent React "duplicate key" errors
+                const uniqueData = Array.isArray(result.data)
+                    ? result.data.filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i)
+                    : [];
+
+                if (type === 'origin') setOriginSuggestions(uniqueData);
+                else setDestSuggestions(uniqueData);
             }
         } catch (err) {
             console.error("Lỗi tìm kiếm tỉnh thành:", err);
         } finally {
             setLoadingProvinces(false);
         }
+    };
+
+    const renderSuggestions = (suggestions: any[], isOrigin: boolean) => {
+        const provinces = suggestions.filter(p => p.type === 'PROVINCE' || !p.type);
+        const departments = suggestions.filter(p => p.type === 'DEPARTMENT');
+        const stops = suggestions.filter(p => p.type === 'STOP');
+
+        const iconBg = "bg-slate-100";
+        const iconColor = "text-slate-500";
+
+        return (
+            <div className="flex flex-col gap-1 pb-2">
+                {provinces.length > 0 && (
+                    <>
+                        <div className="px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tỉnh/Thành phố</div>
+                        {provinces.map((p) => (
+                            <button
+                                key={`prov-${p.id}`}
+                                onClick={() => {
+                                    if (isOrigin) {
+                                        setSearchData(s => ({ ...s, originCity: p.name }));
+                                        setShowOriginDropdown(false);
+                                    } else {
+                                        setSearchData(s => ({ ...s, destinationCity: p.name }));
+                                        setShowDestDropdown(false);
+                                    }
+                                }}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl flex items-center gap-3 transition-all"
+                            >
+                                <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
+                                    <MapPin size={14} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900">{p.name}</p>
+                                    <p className={`text-[10px] font-bold ${iconColor} uppercase tracking-widest`}>Việt Nam</p>
+                                </div>
+                            </button>
+                        ))}
+                    </>
+                )}
+
+                {departments.length > 0 && (
+                    <>
+                        {provinces.length > 0 && <div className="h-px bg-slate-100 my-1 mx-4" />}
+                        <div className="px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Văn phòng / Chi nhánh</div>
+                        {departments.map((p) => (
+                            <button
+                                key={`dept-${p.id}`}
+                                onClick={() => {
+                                    if (isOrigin) {
+                                        setSearchData(s => ({ ...s, originCity: p.name }));
+                                        setShowOriginDropdown(false);
+                                    } else {
+                                        setSearchData(s => ({ ...s, destinationCity: p.name }));
+                                        setShowDestDropdown(false);
+                                    }
+                                }}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl flex items-center gap-3 transition-all"
+                            >
+                                <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
+                                    <MapPin size={14} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900">{p.name}</p>
+                                    <p className={`text-[10px] font-bold ${iconColor} uppercase tracking-widest`}>Văn phòng</p>
+                                </div>
+                            </button>
+                        ))}
+                    </>
+                )}
+
+                {stops.length > 0 && (
+                    <>
+                        {(provinces.length > 0 || departments.length > 0) && <div className="h-px bg-slate-100 my-1 mx-4" />}
+                        <div className="px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Điểm dừng</div>
+                        {stops.map((p) => (
+                            <button
+                                key={`stop-${p.id}`}
+                                onClick={() => {
+                                    if (isOrigin) {
+                                        setSearchData(s => ({ ...s, originCity: p.name }));
+                                        setShowOriginDropdown(false);
+                                    } else {
+                                        setSearchData(s => ({ ...s, destinationCity: p.name }));
+                                        setShowDestDropdown(false);
+                                    }
+                                }}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl flex items-center gap-3 transition-all"
+                            >
+                                <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
+                                    <MapPin size={14} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900">{p.name}</p>
+                                    <p className={`text-[10px] font-bold ${iconColor} uppercase tracking-widest`}>Điểm dừng</p>
+                                </div>
+                            </button>
+                        ))}
+                    </>
+                )}
+            </div>
+        );
     };
 
     const handleSearch = () => {
@@ -156,11 +263,11 @@ export default function HomePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">
+        <div className="min-h-screen overflow-x-hidden bg-[#F8FAFC] font-sans selection:bg-brand-primary/10">
 
 
             {/* ══════════════════  HERO SECTION  ══════════════════ */}
-            <section className="relative pt-12 pb-24 px-6 overflow-hidden">
+            <section className="relative pt-12 pb-24 px-6">
                 {/* Background Decorative Elements */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] pointer-events-none -z-10">
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[120px]" />
@@ -179,7 +286,7 @@ export default function HomePage() {
                         <h1 className="text-5xl lg:text-7xl font-black text-slate-900 leading-[1.1] mb-6">
                             Khám phá hành trình mới
                             <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-accent">
+                            <span className="text-brand-primary">
                                 Cùng Go Routex
                             </span>
                         </h1>
@@ -217,24 +324,7 @@ export default function HomePage() {
                                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đang tìm...</span>
                                                         </div>
                                                     )}
-                                                    {!loadingProvinces && originSuggestions.map((p) => (
-                                                        <button
-                                                            key={p.id}
-                                                            onClick={() => {
-                                                                setSearchData(s => ({ ...s, originCity: p.name }));
-                                                                setShowOriginDropdown(false);
-                                                            }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl flex items-center gap-3 transition-all"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-lg bg-brand-primary/5 flex items-center justify-center text-brand-primary">
-                                                                <MapPin size={14} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-black text-slate-900">{p.name} {p.code ? `(${p.code})` : ''}</p>
-                                                                <p className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">Việt Nam</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                    {!loadingProvinces && renderSuggestions(originSuggestions, true)}
                                                 </div>
                                             )}
                                         </div>
@@ -263,24 +353,7 @@ export default function HomePage() {
                                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đang tìm...</span>
                                                         </div>
                                                     )}
-                                                    {!loadingProvinces && destSuggestions.map((p) => (
-                                                        <button
-                                                            key={p.id}
-                                                            onClick={() => {
-                                                                setSearchData(s => ({ ...s, destinationCity: p.name }));
-                                                                setShowDestDropdown(false);
-                                                            }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl flex items-center gap-3 transition-all"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-lg bg-brand-accent/5 flex items-center justify-center text-brand-accent">
-                                                                <MapPin size={14} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-black text-slate-900">{p.name} {p.code ? `(${p.code})` : ''}</p>
-                                                                <p className="text-[10px] font-bold text-brand-accent uppercase tracking-widest">Việt Nam</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                    {!loadingProvinces && renderSuggestions(destSuggestions, false)}
                                                 </div>
                                             )}
                                         </div>

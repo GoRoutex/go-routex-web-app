@@ -18,7 +18,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import { createRequestMeta, createAuthorizedEnvelopeHeaders, createRequestEnvelopeHeaders } from '../../utils/requestMeta';
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { logout } from '../../utils/auth';
 import { API_BASE_URL, MEDIA_UPLOAD_URL, ADMIN_MERCHANT_ACTION_BASE_URL } from '../../utils/api';
 
@@ -183,9 +183,9 @@ export default function PartnerRegisterPage() {
             const response = await fetch(`${ADMIN_MERCHANT_ACTION_BASE_URL}/applications/submit`, {
                 method: 'POST',
                 headers: {
-                    ...createRequestEnvelopeHeaders(),
+                    ...createXAuthorizedHeaders(),
                     'Content-Type': 'application/json',
-                    ...createAuthorizedEnvelopeHeaders(meta)
+                    ...createXAuthorizedHeaders(meta)
                 },
                 body: JSON.stringify(payload)
             });
@@ -209,7 +209,7 @@ export default function PartnerRegisterPage() {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center px-6">
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center px-6" data-submitted={submitted}>
                 <div className="max-w-md w-full bg-white rounded-[3rem] p-12 text-center shadow-2xl">
                     <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-8">
                         <CheckCircle2 className="w-10 h-10 text-emerald-500" />

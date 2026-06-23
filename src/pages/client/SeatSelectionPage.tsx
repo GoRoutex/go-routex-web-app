@@ -6,7 +6,7 @@ import {
     X, ArrowRight, Loader2
 } from 'lucide-react'
 import type { TripItem, StopPoint } from '../../Components/client/Ticket'
-import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta"
 
 const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
 const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
@@ -113,10 +113,10 @@ export default function SeatSelectionPage() {
                 const response = await fetch(`${DETAIL_API_URL}?tripId=${tripId}`, {
                     method: 'GET',
                     headers: {
-                        ...createAuthorizedEnvelopeHeaders(meta),
-                        'X-Request-Id': meta.requestId,
-                        'X-Request-DateTime': meta.requestDateTime,
-                        'X-Channel': meta.channel
+                        ...createXAuthorizedHeaders(meta),
+                        'RT-REQUEST-ID': meta.requestId,
+                        'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                        'RT-CHANNEL': meta.channel
                     }
                 });
 
@@ -139,9 +139,9 @@ export default function SeatSelectionPage() {
                     const seatResponse = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&tripId=${tripId}`, {
                         method: 'GET',
                         headers: {
-                            'X-Request-Id': meta.requestId,
-                            'X-Request-DateTime': meta.requestDateTime,
-                            'X-Channel': 'ONL'
+                            'RT-REQUEST-ID': meta.requestId,
+                            'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                            'RT-CHANNEL': 'ONL'
                         }
                     });
 

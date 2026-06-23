@@ -206,6 +206,14 @@ export const extractUserId = (body: unknown) =>
     "account_id",
   ]);
 
+export const extractMerchantId = (body: unknown) =>
+  extractStringValue(body, [
+    "merchantId",
+    "merchant_id",
+    "partnerId",
+    "partner_id",
+  ]);
+
 export const extractDisplayName = (body: unknown, fallbackEmail: string) =>
   extractStringValue(body, [
     "fullName",
@@ -232,6 +240,7 @@ export const extractProfileCompleted = (body: unknown) => {
 
 export type ClientProfileSnapshot = {
   userId: string;
+  merchantId?: string;
   fullName: string;
   email: string;
   nationalId: string;
@@ -291,6 +300,7 @@ export const extractClientProfileSnapshot = (
   body: unknown,
 ): ClientProfileSnapshot => ({
   userId: extractUserId(body),
+  merchantId: extractMerchantId(body),
   fullName: extractStringValue(body, [
     "fullName",
     "name",
@@ -327,6 +337,7 @@ export const extractMyProfileSnapshot = (
   body: unknown,
 ): GetMyProfileSnapshot => ({
   userId: extractStringValue(body, ["userId"]),
+  merchantId: extractMerchantId(body),
   fullName: extractStringValue(body, ["fullName", "name", "username", "displayName"]),
   email: extractStringValue(body, ["email"]),
   phone: extractStringValue(body, ["phone"]),

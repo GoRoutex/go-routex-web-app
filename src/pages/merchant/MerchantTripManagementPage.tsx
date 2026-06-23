@@ -1,21 +1,60 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-    Plus, Clock, ArrowRight,
+    Plus, ArrowRight,
     X, Loader2, Save, Search,
-    Navigation, Building, Calendar, Activity, MoreHorizontal, Timer,
-    User, Truck, Trash2, Edit3
+    Navigation, Calendar, Activity, Timer,
+    User, Truck, Trash2, Edit3, ListPlus, Layers
 } from "lucide-react";
 
 import { toast } from "react-toastify";
 import { ROUTE_ENDPOINTS, TRIP_ENDPOINTS, VEHICLE_ENDPOINTS, STAFF_ENDPOINTS } from "../../utils/api-constants";
-import { createAuthorizedEnvelopeHeaders, createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { Pagination } from "../../Components/common/Pagination";
+
+const toLocalISOString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+07:00`;
+};
+
+const formatDateToDDMMYYYY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+};
+
+const getFormattedTime = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    } catch {
+        return "--:--";
+    }
+};
+
+const getFormattedDate = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch {
+        return "";
+    }
+};
 
 interface TripItem {
     tripId: string;
     merchantId: string;
     creator: string | null;
     tripCode: string;
-    pickupBranch: string | null;
     departureTime: string;
     rawDepartureTime: string;
     rawDepartureDate: string;
@@ -36,6 +75,13 @@ interface RouteItem {
     duration: number;
 }
 
+interface BatchTripInput {
+    id: string;
+    departureTime: string;
+    rawDepartureTime: string;
+    rawDepartureDate: string;
+}
+
 export function MerchantTripManagementPage() {
     const [trips, setTrips] = useState<TripItem[]>([]);
     const [routes, setRoutes] = useState<RouteItem[]>([]);
@@ -44,6 +90,7 @@ export function MerchantTripManagementPage() {
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [statusFilter, setStatusFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const pageSize = 10;
 
@@ -58,10 +105,9 @@ export function MerchantTripManagementPage() {
 
     const [formData, setFormData] = useState({
         routeId: "",
-        departureTime: new Date().toISOString(),
+        departureTime: toLocalISOString(new Date()),
         rawDepartureTime: "",
-        rawDepartureDate: "",
-        pickupBranch: ""
+        rawDepartureDate: ""
     });
 
     const [vehicles, setVehicles] = useState<any[]>([]);
@@ -75,9 +121,23 @@ export function MerchantTripManagementPage() {
         creator: localStorage.getItem("userName") || "System"
     });
 
+    // Batch create states
+    const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+    const [batchRouteId, setBatchRouteId] = useState("");
+    const [batchTrips, setBatchTrips] = useState<BatchTripInput[]>([]);
+    const [batchSubmitting, setBatchSubmitting] = useState(false);
+
+    const sortedTrips = useMemo(() => {
+        return [...trips].sort((a, b) => {
+            const timeA = new Date(a.departureTime).getTime();
+            const timeB = new Date(b.departureTime).getTime();
+            return timeA - timeB;
+        });
+    }, [trips]);
+
     useEffect(() => {
         fetchTrips(page);
-    }, [page, statusFilter, searchTerm]);
+    }, [page, statusFilter, searchTerm, dateFilter]);
 
     useEffect(() => {
         fetchRoutes();
@@ -91,6 +151,7 @@ export function MerchantTripManagementPage() {
                 setIsModalOpen(false);
                 setIsAssignModalOpen(false);
                 setIsDetailModalOpen(false);
+                setIsBatchModalOpen(false);
             }
         };
         window.addEventListener('keydown', handleEsc);
@@ -100,10 +161,11 @@ export function MerchantTripManagementPage() {
     const fetchTrips = async (pageNumber: number) => {
         setLoading(true);
         try {
+            const rawDepartureDateParam = dateFilter ? `&rawDepartureDate=${formatDateToDDMMYYYY(dateFilter)}` : "";
             const response = await fetch(
-                `${TRIP_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&status=${statusFilter}&search=${searchTerm}`,
+                `${TRIP_ENDPOINTS.FETCH}?pageNumber=${pageNumber}&pageSize=${pageSize}&status=${statusFilter}&search=${searchTerm}${rawDepartureDateParam}`,
                 {
-                    headers: createAuthorizedEnvelopeHeaders()
+                    headers: createXAuthorizedHeaders()
                 }
             );
             const result = await response.json();
@@ -123,7 +185,7 @@ export function MerchantTripManagementPage() {
         setLoadingDetail(true);
         try {
             const response = await fetch(`${TRIP_ENDPOINTS.DETAIL}?tripId=${tripId}`, {
-                headers: createAuthorizedEnvelopeHeaders()
+                headers: createXAuthorizedHeaders()
             });
             const result = await response.json();
             if (result.data) {
@@ -142,7 +204,7 @@ export function MerchantTripManagementPage() {
     const fetchRoutes = async () => {
         try {
             const response = await fetch(`${ROUTE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100&status=ACTIVE`, {
-                headers: createAuthorizedEnvelopeHeaders()
+                headers: createXAuthorizedHeaders()
             });
             const result = await response.json();
             if (result.data && result.data.items) {
@@ -155,8 +217,8 @@ export function MerchantTripManagementPage() {
 
     const fetchVehicles = async () => {
         try {
-            const response = await fetch(`${VEHICLE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100`, {
-                headers: createAuthorizedEnvelopeHeaders()
+            const response = await fetch(`${VEHICLE_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100&status=AVAILABLE`, {
+                headers: createXAuthorizedHeaders()
             });
             const result = await response.json();
             if (result.data && result.data.items) {
@@ -169,8 +231,8 @@ export function MerchantTripManagementPage() {
 
     const fetchDrivers = async () => {
         try {
-            const response = await fetch(`${STAFF_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100`, {
-                headers: createAuthorizedEnvelopeHeaders()
+            const response = await fetch(`${STAFF_ENDPOINTS.FETCH}?pageNumber=1&pageSize=100&status=AVAILABLE`, {
+                headers: createXAuthorizedHeaders()
             });
             const result = await response.json();
             if (result.data && result.data.items) {
@@ -193,10 +255,9 @@ export function MerchantTripManagementPage() {
         setIsEditing(false);
         setFormData({
             routeId: "",
-            departureTime: now.toISOString(),
+            departureTime: toLocalISOString(now),
             rawDepartureDate: `${day}/${month}/${year}`,
-            rawDepartureTime: `${hours}:${minutes}`,
-            pickupBranch: ""
+            rawDepartureTime: `${hours}:${minutes}`
         });
         setIsModalOpen(true);
     };
@@ -204,12 +265,20 @@ export function MerchantTripManagementPage() {
     const handleOpenEdit = (trip: TripItem) => {
         setIsEditing(true);
         setSelectedTrip(trip);
+
+        // Derive local raw fields from the ISO departureTime to ensure consistency
+        const d = new Date(trip.departureTime);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+
         setFormData({
             routeId: trip.route?.routeId || "",
             departureTime: trip.departureTime,
-            rawDepartureTime: trip.rawDepartureTime,
-            rawDepartureDate: trip.rawDepartureDate,
-            pickupBranch: trip.pickupBranch || ""
+            rawDepartureTime: `${hours}:${minutes}`,
+            rawDepartureDate: `${day}/${month}/${year}`
         });
         setIsModalOpen(true);
     };
@@ -222,6 +291,7 @@ export function MerchantTripManagementPage() {
             const body: any = {
                 ...meta,
                 channel: "ONL",
+                creator: localStorage.getItem("userName") || "System",
                 data: {
                     ...formData,
                     tripId: isEditing ? selectedTrip?.tripId : undefined
@@ -231,7 +301,7 @@ export function MerchantTripManagementPage() {
             const response = await fetch(isEditing ? TRIP_ENDPOINTS.UPDATE : TRIP_ENDPOINTS.CREATE, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -276,7 +346,7 @@ export function MerchantTripManagementPage() {
             const response = await fetch(TRIP_ENDPOINTS.ASSIGN, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -315,7 +385,7 @@ export function MerchantTripManagementPage() {
             const response = await fetch(TRIP_ENDPOINTS.DELETE, {
                 method: 'POST',
                 headers: {
-                    ...createAuthorizedEnvelopeHeaders(meta),
+                    ...createXAuthorizedHeaders(meta),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -333,6 +403,111 @@ export function MerchantTripManagementPage() {
         }
     };
 
+    const createEmptyBatchTrip = (): BatchTripInput => {
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        return {
+            id: Math.random().toString(36).substring(7),
+            departureTime: toLocalISOString(now),
+            rawDepartureDate: `${day}/${month}/${year}`,
+            rawDepartureTime: `${hours}:${minutes}`
+        };
+    };
+
+    const handleOpenBatchCreate = () => {
+        setBatchRouteId("");
+        setBatchTrips([createEmptyBatchTrip()]);
+        setIsBatchModalOpen(true);
+    };
+
+    const handleAddBatchTrip = () => {
+        setBatchTrips(prev => [...prev, createEmptyBatchTrip()]);
+    };
+
+    const handleRemoveBatchTrip = (id: string) => {
+        setBatchTrips(prev => prev.filter(t => t.id !== id));
+    };
+
+    const handleBatchTripChange = (id: string, field: keyof BatchTripInput, value: string) => {
+        setBatchTrips(prev => prev.map(t => {
+            if (t.id !== id) return t;
+
+            if (field === 'departureTime') {
+                const val = value; // YYYY-MM-DDTHH:mm
+                if (!val) return t;
+                const [datePart, timePart] = val.split('T');
+                const [year, month, day] = datePart.split('-');
+
+                return {
+                    ...t,
+                    departureTime: `${val}:00+07:00`,
+                    rawDepartureDate: `${day}/${month}/${year}`,
+                    rawDepartureTime: timePart
+                };
+            }
+
+            return { ...t, [field]: value };
+        }));
+    };
+
+    const handleBatchSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!batchRouteId) {
+            toast.error("Vui lòng chọn tuyến đường");
+            return;
+        }
+        if (batchTrips.length === 0) {
+            toast.error("Vui lòng thêm ít nhất một chuyến xe");
+            return;
+        }
+
+        setBatchSubmitting(true);
+        try {
+            const meta = createRequestMeta();
+            const body = {
+                ...meta,
+                channel: "ONL",
+                creator: localStorage.getItem("userName") || "System",
+                data: {
+                    routeId: batchRouteId,
+                    trips: batchTrips.map(t => ({
+                        departureTime: t.departureTime,
+                        rawDepartureTime: t.rawDepartureTime,
+                        rawDepartureDate: t.rawDepartureDate
+                    }))
+                }
+            };
+
+            const response = await fetch(TRIP_ENDPOINTS.BATCH_CREATE, {
+                method: 'POST',
+                headers: {
+                    ...createXAuthorizedHeaders(meta),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                toast.success(`Tạo lô ${batchTrips.length} chuyến xe thành công`);
+                setIsBatchModalOpen(false);
+                fetchTrips(page);
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || "Lỗi hệ thống khi tạo lô");
+            }
+        } catch (err: any) {
+            toast.error("Lỗi: " + err.message);
+        } finally {
+            setBatchSubmitting(false);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header Section */}
@@ -344,6 +519,13 @@ export function MerchantTripManagementPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleOpenBatchCreate}
+                        className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-slate-950/20 hover:scale-[1.02] transition-all"
+                    >
+                        <ListPlus size={18} />
+                        Tạo lô chuyến xe
+                    </button>
                     <button
                         onClick={handleOpenCreate}
                         className="flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-brand-primary/20 hover:scale-[1.02] transition-all"
@@ -385,6 +567,33 @@ export function MerchantTripManagementPage() {
                     />
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
+                    {/* Date Filter */}
+                    <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-100 flex-1 md:flex-none">
+                        <Calendar size={14} className="text-slate-400" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 pr-2 mr-1 hidden sm:block">Ngày đi</span>
+                        <input
+                            type="date"
+                            value={dateFilter}
+                            onChange={(e) => {
+                                setDateFilter(e.target.value);
+                                setPage(1);
+                            }}
+                            className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-slate-900 outline-none cursor-pointer pr-2 py-2 min-w-[130px] [color-scheme:light]"
+                        />
+                        {dateFilter && (
+                            <button
+                                onClick={() => {
+                                    setDateFilter("");
+                                    setPage(1);
+                                }}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Status Filter */}
                     <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-100 flex-1 md:flex-none">
                         <Activity size={14} className="text-slate-400" />
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 pr-2 mr-1 hidden sm:block">Trạng thái</span>
@@ -431,43 +640,35 @@ export function MerchantTripManagementPage() {
                             <thead>
                                 <tr className="bg-slate-50/50">
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Lộ trình & Thời gian</th>
-                                    <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Điểm đón</th>
                                     <th className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                                     <th className="px-5 py-3 text-right">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {trips.map((trip) => (
+                                {sortedTrips.map((trip) => (
                                     <tr key={trip.tripId} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => fetchTripDetail(trip.tripId)}>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-                                                    <Navigation size={16} />
+                                                {/* Prominent Time Capsule */}
+                                                <div className="flex flex-col items-center justify-center w-24 h-12 bg-slate-950 text-white rounded-xl shadow-sm border border-slate-900 shrink-0">
+                                                    <span className="text-sm font-black tracking-tight leading-none">{getFormattedTime(trip.departureTime)}</span>
+                                                    <span className="text-[10px] font-black text-slate-400 mt-1.5 uppercase tracking-wider">{getFormattedDate(trip.departureTime)}</span>
                                                 </div>
                                                 <div>
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                    <div className="flex items-center gap-2 mb-0.5">
                                                         <span className="text-sm font-black text-slate-900">{trip.route?.originName || "Tuyến đường"}</span>
-                                                        <ArrowRight size={12} className="text-slate-300" />
+                                                        <ArrowRight size={12} className="text-slate-400" />
                                                         <span className="text-sm font-black text-slate-900">{trip.route?.destinationName}</span>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                                             <Activity size={10} className="text-brand-primary" /> {trip.tripCode}
                                                         </p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                            <Clock size={10} /> {new Date(trip.departureTime).toLocaleString('vi-VN')}
-                                                        </p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                                             <Timer size={10} /> {trip.route?.duration} phút
                                                         </p>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <div className="flex items-center gap-2 text-slate-600">
-                                                <Building size={14} className="text-slate-300" />
-                                                <span className="text-sm font-bold">{trip.pickupBranch || "Chưa xác định"}</span>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
@@ -497,7 +698,7 @@ export function MerchantTripManagementPage() {
                                                 >
                                                     <Trash2 size={14} /> XÓA
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleOpenEdit(trip);
@@ -537,17 +738,7 @@ export function MerchantTripManagementPage() {
 
                         <form onSubmit={handleSubmit} className="p-8 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="col-span-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Văn phòng đón khách (Pickup Branch)</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white"
-                                        value={formData.pickupBranch}
-                                        onChange={(e) => setFormData({ ...formData, pickupBranch: e.target.value })}
-                                        placeholder="VD: Văn phòng Hàng Xanh"
-                                    />
-                                </div>
+
 
                                 <div className="col-span-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chọn Tuyến đường mẫu</label>
@@ -578,18 +769,18 @@ export function MerchantTripManagementPage() {
                                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white"
                                         value={formData.departureTime ? (() => {
                                             const d = new Date(formData.departureTime);
-                                            return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                            const gmt7Time = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+                                            return gmt7Time.toISOString().slice(0, 16);
                                         })() : ""}
                                         onChange={(e) => {
-                                            const val = e.target.value; // YYYY-MM-DDTHH:mm
+                                            const val = e.target.value;
                                             if (!val) return;
-
                                             const [datePart, timePart] = val.split('T');
                                             const [year, month, day] = datePart.split('-');
 
                                             setFormData({
                                                 ...formData,
-                                                departureTime: new Date(val).toISOString(),
+                                                departureTime: `${val}:00+07:00`,
                                                 rawDepartureDate: `${day}/${month}/${year}`,
                                                 rawDepartureTime: timePart
                                             });
@@ -662,7 +853,7 @@ export function MerchantTripManagementPage() {
                                     >
                                         <option value="">-- Chọn xe vận hành --</option>
                                         {vehicles.map(v => (
-                                            <option key={v.id} value={v.id}>{v.licensePlate} ({v.type || 'N/A'})</option>
+                                            <option key={v.id} value={v.id}>{v.vehiclePlate} - {v.type || 'N/A'} - {v.seatCapacity || 'N/A'} chỗ</option>
                                         ))}
                                     </select>
                                 </div>
@@ -726,9 +917,6 @@ export function MerchantTripManagementPage() {
                                     <div className="absolute -left-[37px] top-1 w-4 h-4 rounded-full bg-brand-primary border-4 border-white shadow-md" />
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Điểm đi</p>
                                     <h4 className="text-lg font-black text-slate-900">{tripDetail.route?.originName}</h4>
-                                    <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-2">
-                                        <Building size={12} /> {tripDetail.pickupBranch || "Chưa gán chi nhánh"}
-                                    </p>
                                 </div>
 
                                 <div className="relative">
@@ -784,7 +972,7 @@ export function MerchantTripManagementPage() {
                         <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
                             <p className="text-[10px] font-bold text-slate-400 italic">* Thông tin được cập nhật theo thời gian thực từ hệ thống GPS</p>
                             <div className="flex items-center gap-3">
-                                <button 
+                                <button
                                     onClick={() => {
                                         setIsDetailModalOpen(false);
                                         handleOpenEdit(tripDetail);
@@ -811,53 +999,154 @@ export function MerchantTripManagementPage() {
 
             {/* Pagination Container */}
             {!loading && trips.length > 0 && (
-                <div className="flex items-center justify-between pt-10 border-t border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Tổng số chuyến xe: <span className="text-slate-900">{totalItems}</span> · Trang <span className="text-slate-900">{page}</span> / <span className="text-slate-900">{totalPages}</span>
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => setPage(page - 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        
-                        <div className="flex items-center gap-2">
-                            {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPage(p)}
-                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${
-                                        page === p 
-                                        ? "bg-slate-900 text-white shadow-lg" 
-                                        : "bg-white text-slate-400 border border-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-sm"
-                                    }`}
-                                >
-                                    {p}
-                                </button>
-                            ))}
+                <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={setPage}
+                    itemLabel="chuyến xe"
+                />
+            )}
+
+            {/* Modal Create Batch */}
+            {isBatchModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" onClick={() => setIsBatchModalOpen(false)} />
+                    <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-950 tracking-tight flex items-center gap-2">
+                                    <Layers className="text-brand-primary" size={24} />
+                                    Tạo lô Chuyến xe mới
+                                </h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                                    Thiết lập và tạo đồng loạt nhiều chuyến xe cho tuyến đường
+                                </p>
+                            </div>
+                            <button onClick={() => setIsBatchModalOpen(false)} className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                <X size={20} />
+                            </button>
                         </div>
 
-                        <button
-                            disabled={page >= totalPages}
-                            onClick={() => setPage(page + 1)}
-                            className="w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black disabled:opacity-30 transition-all shadow-sm bg-white"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
+                        <form onSubmit={handleBatchSubmit} className="p-8 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Chọn Tuyến đường mẫu</label>
+                                    <select
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-900 outline-none focus:bg-white focus:border-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                        value={batchRouteId}
+                                        onChange={(e) => setBatchRouteId(e.target.value)}
+                                    >
+                                        <option value="">-- Chọn tuyến đường --</option>
+                                        {routes.map(r => (
+                                            <option key={r.id} value={r.id}>{r.originName} → {r.destinationName} ({r.duration || 0} phút)</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Batch Trips List */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Danh sách chuyến xe ({batchTrips.length})</h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBatchTrips([])}
+                                        className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline"
+                                    >
+                                        Xóa tất cả
+                                    </button>
+                                </div>
+
+                                <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                        {batchTrips.length === 0 ? (
+                                            <div className="py-8 text-center text-slate-400 text-xs font-bold">
+                                                Chưa có chuyến xe nào trong lô. Bấm nút bên dưới để thêm.
+                                            </div>
+                                        ) : (
+                                            batchTrips.map((trip, index) => (
+                                                <div key={trip.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-4 hover:border-slate-200 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                    <span className="w-6 h-6 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 flex items-center justify-center flex-shrink-0">
+                                                        {index + 1}
+                                                    </span>
+
+                                                    <div className="flex-1 w-full">
+                                                        <div>
+                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Thời gian khởi hành</label>
+                                                            <input
+                                                                type="datetime-local"
+                                                                required
+                                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white"
+                                                                value={trip.departureTime ? (() => {
+                                                                    const d = new Date(trip.departureTime);
+                                                                    const gmt7Time = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+                                                                    return gmt7Time.toISOString().slice(0, 16);
+                                                                })() : ""}
+                                                                onChange={(e) => handleBatchTripChange(trip.id, 'departureTime', e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <div>
+                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Ngày (Raw)</label>
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                className="w-20 px-2 py-2 bg-slate-100 border-none rounded-xl text-[11px] font-bold text-slate-500 text-center outline-none"
+                                                                value={trip.rawDepartureDate}
+                                                                onChange={(e) => handleBatchTripChange(trip.id, 'rawDepartureDate', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Giờ (Raw)</label>
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                className="w-16 px-2 py-2 bg-slate-100 border-none rounded-xl text-[11px] font-bold text-slate-500 text-center outline-none"
+                                                                value={trip.rawDepartureTime}
+                                                                onChange={(e) => handleBatchTripChange(trip.id, 'rawDepartureTime', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveBatchTrip(trip.id)}
+                                                            className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all self-end"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleAddBatchTrip}
+                                    className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-brand-primary hover:bg-brand-primary/5 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-brand-primary transition-all"
+                                >
+                                    <Plus size={16} />
+                                    Thêm chuyến xe vào lô
+                                </button>
+                            </div>
+
+                            <div className="pt-6 border-t border-slate-50 flex items-center justify-end gap-3">
+                                <button type="button" onClick={() => setIsBatchModalOpen(false)} className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                                    Hủy
+                                </button>
+                                <button type="submit" disabled={batchSubmitting} className="px-10 py-4 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                                    {batchSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                    Lưu lô chuyến xe
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
         </div>
     );
-}
-
-function ChevronLeft({ size }: { size: number }) {
-    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
-}
-
-function ChevronRight({ size }: { size: number }) {
-    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
 }

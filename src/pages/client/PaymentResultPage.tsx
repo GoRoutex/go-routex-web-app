@@ -1,17 +1,68 @@
+import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle2, XCircle, Home, Calendar, ArrowRight, Download, Share2 } from "lucide-react";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { CAMPAIGN_ENDPOINTS } from "../../utils/api-constants";
 
 export default function PaymentResultPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
+    const hasAppliedPromo = useRef(false);
     
     // Status can be passed via state or query params
     const status = location.state?.status || queryParams.get("status") || "PAID";
-    const bookingCode = location.state?.bookingCode || queryParams.get("bookingCode") || "N/A";
-    const amount = location.state?.amount || queryParams.get("amount") || 0;
+    const bookingCode = location.state?.bookingCode || queryParams.get("bookingCode") || queryParams.get("txnRef") || queryParams.get("vnp_TxnRef") || "N/A";
+    
+    const amount = location.state?.amount || 
+                   (bookingCode !== "N/A" ? Number(sessionStorage.getItem(`amount_${bookingCode}`)) : 0) || 
+                   queryParams.get("amount") || 
+                   (queryParams.get("vnp_Amount") ? Number(queryParams.get("vnp_Amount")) / 100 : 0);
+                   
+    const promoCode = location.state?.promotionCode || 
+                      (bookingCode !== "N/A" ? sessionStorage.getItem(`promo_${bookingCode}`) : null);
+                      
+    const merchantId = location.state?.merchantId || 
+                       (bookingCode !== "N/A" ? sessionStorage.getItem(`merchant_${bookingCode}`) : null);
 
-    const isSuccess = status === "PAID";
+    const isSuccess = status === "PAID" || status === "success" || status === "SUCCESS";
+
+    useEffect(() => {
+        const applyPromotion = async () => {
+            if (isSuccess && promoCode && merchantId && !hasAppliedPromo.current) {
+                hasAppliedPromo.current = true;
+                try {
+                    const meta = createRequestMeta();
+                    const payload = {
+                        ...meta,
+                        data: {
+                            promotionCode: promoCode,
+                            orderAmount: amount,
+                            merchantId: merchantId
+                        }
+                    };
+                    
+                    await fetch(CAMPAIGN_ENDPOINTS.APPLY, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...createXAuthorizedHeaders(meta)
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    // Clear persisted promo on success
+                    sessionStorage.removeItem(`promo_${bookingCode}`);
+                    sessionStorage.removeItem(`amount_${bookingCode}`);
+                    sessionStorage.removeItem(`merchant_${bookingCode}`);
+                } catch (err) {
+                    console.error("Failed to apply promotion:", err);
+                }
+            }
+        };
+
+        applyPromotion();
+    }, [isSuccess, promoCode, merchantId, amount]);
 
     const formatVnd = (val: number | string) => {
         const num = typeof val === 'string' ? parseInt(val) : val;

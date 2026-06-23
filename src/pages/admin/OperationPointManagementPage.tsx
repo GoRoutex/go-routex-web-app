@@ -3,7 +3,6 @@ import {
   AlertCircle,
   Edit2,
   ChevronDown,
-  Loader2,
   MapPin,
   Plus,
   RefreshCw,
@@ -13,10 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { POINT_SERVICE_BASE_URL } from "../../utils/api";
-import {
-  createRequestEnvelopeHeaders,
-  createRequestMeta,
-} from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
 import {
   extractArrayValue,
   extractDisplayValue,
@@ -217,7 +213,7 @@ export function OperationPointManagementPage() {
           method: "GET",
           headers: {
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(),
+            ...createXAuthorizedHeaders(),
             ...(authToken.trim()
               ? { Authorization: `Bearer ${authToken.trim()}` }
               : {}),
@@ -243,11 +239,13 @@ export function OperationPointManagementPage() {
           "list",
         ]);
 
-        const normalizedItems = rawItems
-          .map((item, index) => mapOperationPointRow(item, index, pageNumber))
-          .filter(
-            (item) => !item.type || isSupportedOperationPointType(item.type),
-          );
+        const normalizedItems = rawItems.flatMap((item, index) => {
+          const mapped = mapOperationPointRow(item, index, pageNumber);
+          if (!mapped.type || isSupportedOperationPointType(mapped.type)) {
+            return [mapped];
+          }
+          return [];
+        });
 
         const resolvedTotalElements = extractNumberValue(body, [
           "totalElements",
@@ -445,38 +443,40 @@ export function OperationPointManagementPage() {
     if (!confirmed) return;
 
     try {
-      for (const id of uniqueIds) {
-        const meta = createRequestMeta();
-        const authToken = localStorage.getItem("authToken") || "";
-        const response = await fetch(
-          buildPointServiceUrl("delete").toString(),
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              ...createRequestEnvelopeHeaders(meta),
-              ...(authToken.trim()
-                ? { Authorization: `Bearer ${authToken.trim()}` }
-                : {}),
+      await Promise.all(
+        uniqueIds.map(async (id) => {
+          const meta = createRequestMeta();
+          const authToken = localStorage.getItem("authToken") || "";
+          const response = await fetch(
+            buildPointServiceUrl("delete").toString(),
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                ...createXAuthorizedHeaders(meta),
+                ...(authToken.trim()
+                  ? { Authorization: `Bearer ${authToken.trim()}` }
+                  : {}),
+              },
+              body: JSON.stringify({
+                requestId: meta.requestId,
+                requestDateTime: meta.requestDateTime,
+                channel: "ONL",
+                data: { id },
+              }),
             },
-            body: JSON.stringify({
-              requestId: meta.requestId,
-              requestDateTime: meta.requestDateTime,
-              channel: "ONL",
-              data: { id },
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const message = await extractErrorMessage(
-            response,
-            `Không thể xoá điểm vận hành (${response.status})`,
           );
-          throw new Error(message);
-        }
-      }
+
+          if (!response.ok) {
+            const message = await extractErrorMessage(
+              response,
+              `Không thể xoá điểm vận hành (${response.status})`,
+            );
+            throw new Error(message);
+          }
+        })
+      );
 
       clearSelection();
       setReloadNonce((value) => value + 1);
@@ -525,7 +525,7 @@ export function OperationPointManagementPage() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            ...createRequestEnvelopeHeaders(meta),
+            ...createXAuthorizedHeaders(meta),
             ...(authToken.trim()
               ? { Authorization: `Bearer ${authToken.trim()}` }
               : {}),
@@ -569,39 +569,38 @@ export function OperationPointManagementPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      <div className="flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10" data-reload-nonce={reloadNonce}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
-            <MapPin className="h-3.5 w-3.5" />
-            Điểm vận hành
-          </div>
-          <h2 className="mt-2 text-[1.25rem] font-black tracking-tight text-slate-900 sm:text-[1.5rem] uppercase">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">
             Quản lý điểm vận hành
           </h2>
+          <p className="text-sm text-slate-500 font-medium mt-1">
+            Theo dõi, cập nhật và quản lý các địa điểm, trạm đón trả khách.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+            className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all self-start"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Thêm điểm
+            <Plus size={14} />
+            Thêm điểm vận hành
           </button>
           <button
             type="button"
             onClick={() => setReloadNonce((value) => value + 1)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-white shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-black"
+            className="flex items-center gap-2 bg-white text-slate-600 px-5 py-2.5 rounded-xl font-bold border border-slate-100 shadow-sm hover:bg-slate-50 transition-all"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw size={14} className="text-slate-400" />
             Tải lại
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             label: "Đang hoạt động",
@@ -626,55 +625,58 @@ export function OperationPointManagementPage() {
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm"
+            className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-lg hover:shadow-slate-200/40"
           >
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               {item.label}
             </div>
-            <div className="mt-1 text-[1.4rem] font-bold tracking-tight text-slate-900">
+            <div className="text-xl font-black text-slate-900">
               {item.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">{item.note}</div>
+            <div className="text-xs text-slate-500 font-medium mt-1">{item.note}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex min-h-[calc(100vh-320px)] flex-col overflow-hidden rounded-[1.8rem] border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-col gap-2.5 px-5 pt-5 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-h-[calc(100vh-320px)] flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 px-6 pt-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">
+            <h3 className="text-base font-black tracking-tight text-slate-900">
               Danh sách điểm vận hành
             </h3>
+            <p className="mt-1 text-xs text-slate-400 font-medium">
+              Quản lý danh sách điểm dừng, trạm đón trả khách trên hệ thống.
+            </p>
           </div>
         </div>
 
         {error ? (
-          <div className="mx-5 mt-4 flex items-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[12px] font-medium text-rose-700">
+          <div className="mx-6 mt-4 flex items-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[12px] font-medium text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-col gap-3 border-b border-slate-100 px-5 pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-1.5">
+        <div className="mt-4 flex flex-col gap-3 border-b border-slate-50 px-6 pb-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50"
-              aria-label="Thêm điểm vận hành"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors shadow-md shadow-slate-900/10"
               title="Thêm điểm vận hành"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus size={12} />
+              Thêm
             </button>
             <button
               type="button"
               onClick={openSelectedForEdit}
               disabled={selectedIds.length !== 1}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Sửa điểm vận hành đã chọn"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               title="Sửa điểm vận hành đã chọn"
             >
-              <Edit2 className="h-3.5 w-3.5" />
+              <Edit2 size={12} />
+              Sửa
             </button>
             <button
               type="button"
@@ -682,162 +684,149 @@ export function OperationPointManagementPage() {
                 deleteByIds(visibleSelectedItems.map((item) => item.id))
               }
               disabled={visibleSelectedItems.length === 0}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-100 bg-rose-50 text-rose-700 shadow-sm transition-all hover:border-rose-200 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Xoá các điểm vận hành đã chọn"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               title="Xoá các điểm vận hành đã chọn"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 size={12} />
+              Xoá
             </button>
           </div>
-          <div className="relative w-full lg:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 w-full lg:max-w-xs">
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm kiếm"
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[12px] font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
+              placeholder="Tìm kiếm..."
+              className="bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none w-full"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-300 table-fixed divide-y divide-slate-100">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="w-[4%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      ref={(element) => {
-                        if (element) {
-                          element.indeterminate = someVisibleSelected;
-                        }
-                      }}
-                      onChange={toggleAllVisible}
-                      className="h-4 w-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary/20"
-                      aria-label="Chọn tất cả"
-                    />
-                  </th>
-                  <th className="w-[25%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Tên & Loại
-                  </th>
-                  <th className="w-[10%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Thành phố
-                  </th>
-                  <th className="w-[20%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Địa chỉ
-                  </th>
-                  <th className="w-[16%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Tọa độ
-                  </th>
-                  <th className="w-[12%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Trạng thái
-                  </th>
-                  <th className="w-[11%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Cập nhật
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <div className="inline-flex items-center gap-2 text-[12px] font-medium text-slate-500">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang tải điểm vận hành...
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredItems.length > 0 ? (
-                  filteredItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className={`hover:bg-slate-50/70 ${
-                        selectedIds.includes(item.id)
-                          ? "bg-brand-primary/5"
-                          : ""
-                      }`}
-                    >
-                      <td className="px-4 py-4 align-top">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => toggleSelectedId(item.id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary/20"
-                          aria-label={`Chọn điểm vận hành ${item.name || item.id}`}
-                        />
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-[12px] font-black text-slate-900">
-                          {item.name || "Chưa có"}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-slate-400">
-                          {item.type
-                            ? getOperationPointTypeLabel(item.type)
-                            : "Chưa xác định"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-[12px] font-medium text-slate-600">
-                        {item.city || "Chưa có"}
-                      </td>
-                      <td className="wrap-break-word px-4 py-4 text-[12px] font-medium text-slate-600">
-                        {item.address || "Chưa có"}
-                      </td>
-                      <td className="px-4 py-4 text-[12px] font-medium text-slate-600">
-                        <div className="space-y-0.5">
-                          <div>
-                            Lat: {formatCoordinate(item.latitude) || "N/A"}
-                          </div>
-                          <div>
-                            Lng: {formatCoordinate(item.longitude) || "N/A"}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <span
-                          className={`inline-flex min-w-fit whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-black uppercase leading-none tracking-widest ${statusMeta[item.status].badge}`}
-                        >
-                          {statusMeta[item.status].label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-[12px] font-medium text-slate-500">
-                        {item.updatedAt}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-24 text-center">
-                      <div className="mx-auto flex max-w-md flex-col items-center gap-3 text-slate-500">
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-400">
-                          <MapPin className="h-5 w-5" />
-                        </div>
-                        <div className="text-sm font-bold text-slate-700">
-                          {search.trim()
-                            ? "Không tìm thấy điểm vận hành phù hợp."
-                            : "Chưa có điểm vận hành nào trong trang này."}
-                        </div>
-                        <div className="text-[12px] font-medium leading-relaxed text-slate-500">
-                          {search.trim()
-                            ? "Hãy thử đổi từ khóa tìm kiếm hoặc tải lại dữ liệu."
-                            : "Nhấn Thêm điểm để tạo Operation Point đầu tiên."}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        <div className="overflow-hidden">
+          <div className="grid grid-cols-[0.3fr_1.5fr_0.8fr_1.8fr_1.2fr_0.8fr_0.8fr_0.8fr] gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                ref={(element) => {
+                  if (element) {
+                    element.indeterminate = someVisibleSelected;
+                  }
+                }}
+                onChange={toggleAllVisible}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20"
+                aria-label="Chọn tất cả"
+              />
+            </div>
+            <span>Tên & Loại</span>
+            <span>Thành phố</span>
+            <span>Địa chỉ</span>
+            <span>Tọa độ</span>
+            <span>Trạng thái</span>
+            <span>Cập nhật</span>
+            <span className="text-right">Thao tác</span>
           </div>
+
+          {isLoading ? (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-12">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" />
+                Đang tải điểm vận hành...
+              </div>
+            </div>
+          ) : filteredItems.length > 0 ? (
+            filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className={`grid grid-cols-[0.3fr_1.5fr_0.8fr_1.8fr_1.2fr_0.8fr_0.8fr_0.8fr] gap-4 border-b border-slate-50 px-6 py-5 last:border-b-0 hover:bg-slate-50/50 transition-all group items-center ${
+                  selectedIds.includes(item.id) ? "bg-slate-50/30" : ""
+                }`}
+              >
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelectedId(item.id)}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20"
+                    aria-label={`Chọn điểm vận hành ${item.name || item.id}`}
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-black text-slate-900">
+                    {item.name || "Chưa có"}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 font-bold">
+                    {item.type
+                      ? getOperationPointTypeLabel(item.type)
+                      : "Chưa xác định"}
+                  </div>
+                </div>
+                <div className="text-xs font-bold text-slate-500">
+                  {item.city || "Chưa có"}
+                </div>
+                <div className="text-xs font-bold text-slate-500 break-words pr-2">
+                  {item.address || "Chưa có"}
+                </div>
+                <div className="text-xs font-semibold text-slate-600 space-y-0.5">
+                  <div>Lat: {formatCoordinate(item.latitude) || "N/A"}</div>
+                  <div>Lng: {formatCoordinate(item.longitude) || "N/A"}</div>
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${statusMeta[item.status].badge}`}
+                  >
+                    {statusMeta[item.status].label}
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-slate-500">
+                  {item.updatedAt}
+                </div>
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(item)}
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-black hover:text-white transition-all"
+                    title="Sửa"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteByIds([item.id])}
+                    className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                    title="Xoá"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="flex min-h-60 items-center justify-center bg-white px-4 py-16">
+              <div className="mx-auto flex max-w-md flex-col items-center gap-3 text-center">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-400 shadow-sm animate-bounce">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="text-sm font-bold text-slate-900">
+                  {search.trim()
+                    ? "Không tìm thấy điểm vận hành phù hợp"
+                    : "Chưa có điểm vận hành nào"}
+                </div>
+                <div className="text-xs font-medium text-slate-400 max-w-xs leading-relaxed">
+                  {search.trim()
+                    ? "Hãy thử đổi từ khóa tìm kiếm hoặc tải lại dữ liệu."
+                    : "Nhấn Thêm để tạo Operation Point đầu tiên."}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-[12px] font-medium text-slate-500">
+        <div className="flex flex-col gap-3 border-t border-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
             {totalElements > 0 ? (
               <>
-                Hiển thị {pageInfo.start}-{pageInfo.end} trên {totalElements}{" "}
-                bản ghi
+                Hiển thị {pageInfo.start}-{pageInfo.end} trên {totalElements} bản ghi
               </>
             ) : (
               "Chưa có dữ liệu để hiển thị"
@@ -849,7 +838,7 @@ export function OperationPointManagementPage() {
               type="button"
               onClick={() => setPageNumber((value) => Math.max(1, value - 1))}
               disabled={pageNumber === 1 || isLoading}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition-all disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100"
             >
               Trước
             </button>
@@ -859,7 +848,7 @@ export function OperationPointManagementPage() {
                 pageItem === "ellipsis" ? (
                   <span
                     key={`ellipsis-${index}`}
-                    className="px-2 text-[12px] font-bold text-slate-400"
+                    className="px-2 text-xs font-black text-slate-400"
                   >
                     …
                   </span>
@@ -868,10 +857,10 @@ export function OperationPointManagementPage() {
                     key={pageItem}
                     type="button"
                     onClick={() => setPageNumber(pageItem)}
-                    className={`min-w-9 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] transition-all ${
+                    className={`min-w-9 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
                       pageItem === pageNumber
-                        ? "bg-slate-900 text-white"
-                        : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                        : "border border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100"
                     }`}
                   >
                     {pageItem}
@@ -888,7 +877,7 @@ export function OperationPointManagementPage() {
                 )
               }
               disabled={pageNumber >= totalPages || isLoading}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition-all disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-100"
             >
               Sau
             </button>
@@ -898,14 +887,13 @@ export function OperationPointManagementPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[1.8rem] bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-primary">
-                  <MapPin className="h-3.5 w-3.5" />
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-brand-primary mb-1">
                   {editingId ? "Chỉnh sửa" : "Tạo mới"}
                 </div>
-                <h3 className="mt-2 text-lg font-black tracking-tight text-slate-900">
+                <h3 className="text-lg font-black tracking-tight text-slate-900">
                   {editingId ? "Cập nhật điểm vận hành" : "Thêm điểm vận hành"}
                 </h3>
               </div>

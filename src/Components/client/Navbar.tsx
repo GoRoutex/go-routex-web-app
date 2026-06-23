@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ClientAccountMenu } from "./ClientAccountMenu"
 import { RoleBasedNav } from "./RoleBasedNav"
 import { getClientHomeRoute } from "../../utils/auth"
+import { NotificationBell } from "../common/NotificationBell"
 
 export const Navbar = () => {
     const navigate = useNavigate()
@@ -17,7 +18,6 @@ export const Navbar = () => {
 
     const navItems = [
         { label: "Trang chủ", path: getClientHomeRoute() },
-        { label: "Tuyến đường", path: "/routes" },
         { label: "Lịch trình", path: "/schedules" },
         { label: "Hỗ trợ", path: "/support" },
         { label: "Đối tác", path: "/partner" },
@@ -70,6 +70,7 @@ export const Navbar = () => {
                 <div className="flex items-center gap-4">
                     {isLoggedIn ? (
                         <div className="flex items-center gap-4">
+                            <NotificationBell />
                             <RoleBasedNav />
                             <ClientAccountMenu
                                 fullName={userName || "Chào bạn"}

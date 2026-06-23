@@ -1,4 +1,4 @@
-import { API_BASE_URL, REFRESH_TOKEN_URL } from "./api";
+import { API_BASE_URL, REFRESH_TOKEN_URL, LOGOUT_URL } from "./api";
 import { createRequestMeta } from "./requestMeta";
 
 const normalizeRole = (value: string) => value.trim().toUpperCase();
@@ -29,6 +29,28 @@ export const isTokenExpired = (token: string | null) => {
 
 export const getAccessToken = () => localStorage.getItem("authToken");
 export const getRefreshToken = () => localStorage.getItem("refreshToken");
+
+/**
+ * Get merchantId from localStorage or decode it from the access token
+ * if it's missing but we are logged in.
+ */
+export const getMerchantId = () => {
+  const storedId = localStorage.getItem("merchantId");
+  if (storedId) return storedId;
+
+  const token = getAccessToken();
+  if (token) {
+    const decoded = parseJwt(token);
+    if (decoded) {
+      const merchantId = decoded.merchantId || decoded.sub;
+      if (merchantId) {
+        localStorage.setItem("merchantId", merchantId);
+        return merchantId;
+      }
+    }
+  }
+  return null;
+};
 
 export const refreshTokens = async () => {
   const refresh = getRefreshToken();
@@ -71,10 +93,13 @@ const readStoredStringArray = (key: string) => {
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      return parsed.flatMap((item: unknown) => {
+        if (typeof item === "string") {
+          const trimmed = item.trim();
+          if (trimmed) return [trimmed];
+        }
+        return [];
+      });
     }
   } catch {
     // Fall through and treat as a single comma-separated string.
@@ -82,12 +107,14 @@ const readStoredStringArray = (key: string) => {
 
   return raw
     .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .flatMap((item) => {
+      const trimmed = item.trim();
+      return trimmed ? [trimmed] : [];
+    });
 };
 
 export const getStoredRoles = () => {
-  const roleKeys = ["userRoles", "authorities", "profileAuthorities"];
+  const roleKeys = ["userRoles:v1", "userRoles", "authorities", "profileAuthorities:v1", "profileAuthorities"];
   const roles = new Set<string>();
 
   for (const key of roleKeys) {
@@ -157,32 +184,46 @@ export const isBothAdminAndMerchant = () => {
 
 export const getPrimaryRole = () => getPrimaryDisplayRole();
 
-export const getClientHomeRoute = () =>
-  localStorage.getItem("isLoggedIn") === "true" ? "/home" : "/";
+export const getClientHomeRoute = () => "/home";
 
-export const logout = () => {
-  // Clear all auth related items
-  const keysToRemove = [
-    "isLoggedIn", "authToken", "refreshToken", "userRoles", "userRole", 
-    "userName", "userEmail", "userId", "userPhoneNumber",
-    "profileCompleted", "profileFullName", "profileNationalId", "profileCccdNumber",
-    "profileDob", "profileAvatarUrl", "profileAddress", "profileGender",
-    "profilePhone", "profileStatus", "profileEmailVerified", "profilePhoneVerified",
-    "profileCreatedAt", "profileUpdatedAt", "profileAuthorities", "profileRole",
-    "profileCustomerId", "profileTripPoints", "profileTotalTrips", "profileTotalSpent",
-    "profileLastTripAt", "profileLastBookingAt",
-    "membershipId", "membershipCustomerId", "membershipTierId", "membershipCurrentPoint",
-    "membershipCurrentAvailablePoints", "membershipTotalPoints", "membershipPromotedAt",
-    "membershipDiscountPercent", "membershipPriorityLevel", "membershipStatus",
-    "membershipStatsTotalTrips", "membershipBadge", "membershipStatsTotalSpent",
-    "membershipPointToNextTier", "membershipPointMultiplier", "membershipNextTierName",
-    "customerId"
-  ];
-  
-  keysToRemove.forEach(key => localStorage.removeItem(key));
-  
-  // Clear all items to be absolutely sure
-  // localStorage.clear(); // Option 2: but might clear too much (like theme if any)
-  
-  window.location.href = "/";
+export const logout = async () => {
+  try {
+    await fetch(API_BASE_URL + LOGOUT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...createRequestMeta(),
+        data: {},
+      }),
+    });
+  } catch (error) {
+    console.error("Logout API error:", error);
+  } finally {
+    // Clear all auth related items
+    const keysToRemove = [
+      "isLoggedIn", "authToken", "refreshToken", "userRoles:v1", "userRoles", "userRole", 
+      "userName", "userEmail", "userId", "userPhoneNumber",
+      "profileCompleted", "profileFullName", "profileNationalId", "profileCccdNumber",
+      "profileDob", "profileAvatarUrl", "profileAddress", "profileGender",
+      "profilePhone", "profileStatus", "profileEmailVerified", "profilePhoneVerified",
+      "profileCreatedAt", "profileUpdatedAt", "profileAuthorities:v1", "profileAuthorities", "profileRole",
+      "profileCustomerId", "profileTripPoints", "profileTotalTrips", "profileTotalSpent",
+      "profileLastTripAt", "profileLastBookingAt",
+      "membershipId", "membershipCustomerId", "membershipTierId", "membershipCurrentPoint",
+      "membershipCurrentAvailablePoints", "membershipTotalPoints", "membershipPromotedAt",
+      "membershipDiscountPercent", "membershipPriorityLevel", "membershipStatus",
+      "membershipStatsTotalTrips", "membershipBadge", "membershipStatsTotalSpent",
+      "membershipPointToNextTier", "membershipPointMultiplier", "membershipNextTierName",
+      "customerId", "merchantId"
+    ];
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Clear all items to be absolutely sure
+    // localStorage.clear(); // Option 2: but might clear too much (like theme if any)
+    
+    window.location.href = "/";
+  }
 };

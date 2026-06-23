@@ -14,6 +14,8 @@ import {
     LayoutDashboard,
     Store,
     Copy,
+    Tag,
+    ShoppingCart,
 } from "lucide-react";
 
 interface NavItem {
@@ -44,6 +46,8 @@ const merchantNavGroups: NavGroup[] = [
             { label: "Quản lý Tuyến đường", to: "/merchant/schedules", icon: MapPin },
             { label: "Quản lý Chuyến xe", to: "/merchant/trips", icon: Calendar },
             { label: "Quản lý vé", to: "/merchant/tickets", icon: Ticket },
+            { label: "Bán vé Offline/Call", to: "/merchant/quick-booking", icon: ShoppingCart },
+            { label: "Chương trình ưu đãi", to: "/merchant/campaigns", icon: Tag },
         ],
     },
     {

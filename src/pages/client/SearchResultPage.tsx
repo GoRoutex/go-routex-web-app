@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { Trash2, DollarSign, Clock, Armchair} from 'lucide-react'
+import { Trash2, DollarSign, Clock, Armchair } from 'lucide-react'
 import { Ticket } from '../../Components/client/Ticket'
-import type { RouteItem } from '../../Components/client/Ticket'
-import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
+import type { TripItem } from '../../Components/client/Ticket'
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta"
 
 const SEARCH_API_URL = "http://localhost:8080/api/v1/management/trip-service/search";
 
@@ -12,9 +12,12 @@ export default function SearchResultPage() {
     const location = useLocation()
     const [searchParams] = useSearchParams()
 
-    const [routes, setRoutes] = useState<RouteItem[]>([]);
+    const [routes, setRoutes] = useState<TripItem[]>([]);
+    const [returnRoutes, setReturnRoutes] = useState<TripItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<"outbound" | "return">("outbound");
+    const [selectedOutbound, setSelectedOutbound] = useState<TripItem | null>(null);
 
     // Get data from location state OR query params
     const stateSearchData = location.state?.searchData
@@ -22,6 +25,11 @@ export default function SearchResultPage() {
     const destinationParam = searchParams.get('destination')
     const dateParam = searchParams.get('date')
     const seatsParam = searchParams.get('seats')
+    const typeParam = searchParams.get('type')
+    const returnDateParam = searchParams.get('returnDate')
+
+    const tripType = location.state?.tripType || typeParam || "one-way"
+    const returnDate = stateSearchData?.returnDate || returnDateParam
 
     const origin = stateSearchData?.originCity || originParam || "TP. Hồ Chí Minh"
     const destination = stateSearchData?.destinationCity || destinationParam || "Lâm Đồng"
@@ -34,26 +42,50 @@ export default function SearchResultPage() {
             setError(null);
             try {
                 const meta = createRequestMeta();
-                const body = {
-                    ...meta,
-                    data: {
-                        origin: origin,
-                        destination: destination,
-                        departureDate: departureDate || new Date().toISOString(),
-                        seat: String(seats),
-                        pageSize: "50",
-                        pageNumber: "1"
-                    }
-                };
+                let apiUrl = SEARCH_API_URL;
+                let body: any;
 
-                const response = await fetch(SEARCH_API_URL, {
+                if (tripType === "round-trip") {
+                    apiUrl = "http://localhost:8080/api/v1/management/trip-service/search/round-trip";
+                    body = {
+                        ...meta,
+                        data: {
+                            seat: String(seats),
+                            pageSize: "50",
+                            pageNumber: "1",
+                            outboundData: {
+                                origin: origin,
+                                destination: destination,
+                                departureDate: departureDate || new Date().toISOString()
+                            },
+                            returnData: {
+                                origin: destination,
+                                destination: origin,
+                                departureDate: returnDate || new Date().toISOString()
+                            }
+                        }
+                    };
+                } else {
+                    body = {
+                        ...meta,
+                        data: {
+                            origin: origin,
+                            destination: destination,
+                            departureDate: departureDate || new Date().toISOString(),
+                            seat: String(seats),
+                            pageSize: "50",
+                            pageNumber: "1"
+                        }
+                    };
+                }
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        ...createAuthorizedEnvelopeHeaders(meta),
                         'Content-Type': 'application/json',
-                        'X-Request-Id': meta.requestId,
-                        'X-Request-DateTime': meta.requestDateTime,
-                        'X-Channel': meta.channel
+                        'RT-REQUEST-ID': meta.requestId,
+                        'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                        'RT-CHANNEL': meta.channel
                     },
                     body: JSON.stringify(body)
                 });
@@ -61,18 +93,27 @@ export default function SearchResultPage() {
                 if (!response.ok) throw new Error("Không thể tìm thấy chuyến đi phù hợp");
 
                 const result = await response.json();
-                const rawItems = result.data?.items || result.data || [];
 
-                const items = rawItems.map((item: any) => ({
-                    ...item,
-                    stopPoints: item.routePoints?.map((rp: any) => ({
-                        ...rp,
-                        stopOrder: rp.operationOrder,
-                        note: rp.note || rp.stopName
-                    }))
-                }));
+                const processItems = (arr: any[]) => {
+                    if (!Array.isArray(arr)) return [];
+                    return arr.map((item: any) => ({
+                        ...item,
+                        stopPoints: item.routePoints?.map((rp: any) => ({
+                            ...rp,
+                            stopOrder: rp.stopOrder || rp.operationOrder,
+                            note: rp.note || rp.stopName
+                        }))
+                    }));
+                };
 
-                setRoutes(items);
+                if (tripType === "round-trip" && result.data && (result.data.outboundTrips || result.data.returnTrips)) {
+                    setRoutes(processItems(result.data.outboundTrips || []));
+                    setReturnRoutes(processItems(result.data.returnTrips || []));
+                } else {
+                    const rawItems = result.data?.items || result.data || [];
+                    setRoutes(processItems(rawItems));
+                    setReturnRoutes([]);
+                }
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -83,6 +124,52 @@ export default function SearchResultPage() {
         fetchResults();
     }, [origin, destination, departureDate, seats]);
 
+    const handleSelectTrip = async (item: TripItem) => {
+        if (tripType === "round-trip") {
+            if (activeTab === "outbound") {
+                setSelectedOutbound(item);
+                setActiveTab("return");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (activeTab === "return") {
+                if (!selectedOutbound) {
+                    alert("Vui lòng chọn chuyến đi trước khi chọn chuyến về.");
+                    setActiveTab("outbound");
+                    return;
+                }
+
+                try {
+                    setLoading(true);
+                    const meta = createRequestMeta();
+                    const res = await fetch(`http://localhost:8080/api/v1/management/trip-service/detail/round-trip?outboundTripId=${selectedOutbound.id}&returnTripId=${item.id}`, {
+                        headers: { 
+                            'accept': '*/*',
+                            'RT-REQUEST-ID': meta.requestId,
+                            'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                            'RT-CHANNEL': meta.channel
+                        }
+                    });
+                    
+                    if (!res.ok) throw new Error("Không thể lấy thông tin chi tiết chuyến xe");
+                    
+                    const detailResult = await res.json();
+                    
+                    navigate('/booking', { 
+                        state: { 
+                            routeData: null, 
+                            roundTripData: detailResult.data,
+                            tripType: "round-trip"
+                        } 
+                    });
+                } catch (err: any) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        } else {
+            navigate('/booking', { state: { routeData: item } });
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#F5F5F5] font-sans pb-20">
@@ -175,37 +262,64 @@ export default function SearchResultPage() {
                                 <p className="text-rose-500 font-medium mb-4">{error}</p>
                                 <button onClick={() => window.location.reload()} className="px-6 py-2 bg-brand-primary text-white rounded-lg font-bold">Thử lại</button>
                             </div>
-                        ) : routes.length === 0 ? (
+                        ) : routes.length === 0 && returnRoutes.length === 0 ? (
                             <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
                                 <p className="text-slate-500 font-medium">Không tìm thấy chuyến đi nào phù hợp.</p>
                             </div>
                         ) : (
-                            <div className="space-y-5">
-                                {routes.map((item: RouteItem, i: number) => (
-                                    <div key={item.id}>
-                                        {i === 1 && localStorage.getItem("isLoggedIn") !== "true" && (
-                                            <div className="bg-white rounded-xl border border-brand-primary/20 shadow-sm p-6 mb-5 flex items-center justify-between">
-                                                <div className="max-w-md">
-                                                    <h4 className="text-[15px] font-bold text-slate-800 mb-2">Đăng nhập ngay để nhận được nhiều quyền lợi dành cho thành viên</h4>
-                                                    <p className="text-[13px] text-slate-500 mb-4">Khi đăng nhập và tải App, bạn sẽ dễ dàng quản lý đặt chỗ, nhận thông báo quan trọng và nhiều ưu đãi khác...</p>
-                                                    <a href="#" className="text-brand-primary font-semibold text-[14px] hover:underline underline-offset-4">Đăng nhập ngay</a>
-                                                </div>
-                                                {/* Placeholder for illustration, keeping it abstract with a soft layout */}
-                                                <div className="hidden sm:flex w-40 h-24 bg-brand-primary/5 rounded-lg relative items-center justify-center border border-brand-primary/10 overflow-hidden">
-                                                    <div className="w-16 h-10 bg-brand-primary/20 rounded shadow-sm absolute top-4 left-4" />
-                                                    <div className="w-14 h-8 bg-brand-primary/40 rounded shadow-sm absolute bottom-2 right-4" />
-                                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md z-10">
-                                                        <div className="w-6 h-6 bg-brand-primary rounded" />
+                            <div className="space-y-6">
+                                {tripType === "round-trip" && (
+                                    <div className="flex bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                        <button
+                                            onClick={() => setActiveTab("outbound")}
+                                            className={`flex-1 py-4 text-center font-bold text-[15px] transition-colors border-b-[3px] ${
+                                                activeTab === "outbound" ? "border-brand-primary text-brand-primary bg-brand-primary/5" : "border-transparent text-slate-500 hover:text-slate-700 bg-white"
+                                            }`}
+                                        >
+                                            CHUYẾN ĐI {departureDate ? `- ${new Date(departureDate).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }).toUpperCase()}` : ''}
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab("return")}
+                                            className={`flex-1 py-4 text-center font-bold text-[15px] transition-colors border-b-[3px] ${
+                                                activeTab === "return" ? "border-brand-primary text-brand-primary bg-brand-primary/5" : "border-transparent text-slate-500 hover:text-slate-700 bg-white"
+                                            }`}
+                                        >
+                                            CHUYẾN VỀ {returnDate ? `- ${new Date(returnDate).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }).toUpperCase()}` : ''}
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="space-y-5">
+                                    {(activeTab === "outbound" || tripType !== "round-trip" ? routes : returnRoutes).map((item: TripItem, i: number) => (
+                                        <div key={`${activeTab}-${item.id}`}>
+                                            {i === 1 && localStorage.getItem("isLoggedIn") !== "true" && (
+                                                <div className="bg-white rounded-xl border border-brand-primary/20 shadow-sm p-6 mb-5 flex items-center justify-between">
+                                                    <div className="max-w-md">
+                                                        <h4 className="text-[15px] font-bold text-slate-800 mb-2">Đăng nhập ngay để nhận được nhiều quyền lợi dành cho thành viên</h4>
+                                                        <p className="text-[13px] text-slate-500 mb-4">Khi đăng nhập và tải App, bạn sẽ dễ dàng quản lý đặt chỗ, nhận thông báo quan trọng và nhiều ưu đãi khác...</p>
+                                                        <a href="#" className="text-brand-primary font-semibold text-[14px] hover:underline underline-offset-4">Đăng nhập ngay</a>
+                                                    </div>
+                                                    <div className="hidden sm:flex w-40 h-24 bg-brand-primary/5 rounded-lg relative items-center justify-center border border-brand-primary/10 overflow-hidden">
+                                                        <div className="w-16 h-10 bg-brand-primary/20 rounded shadow-sm absolute top-4 left-4" />
+                                                        <div className="w-14 h-8 bg-brand-primary/40 rounded shadow-sm absolute bottom-2 right-4" />
+                                                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md z-10">
+                                                            <div className="w-6 h-6 bg-brand-primary rounded" />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                        <Ticket
-                                            item={item}
-                                            onClick={() => navigate('/booking', { state: { routeData: item } })}
-                                        />
-                                    </div>
-                                ))}
+                                            )}
+                                            <Ticket
+                                                item={item}
+                                                onClick={() => handleSelectTrip(item)}
+                                            />
+                                        </div>
+                                    ))}
+                                    {(activeTab === "outbound" || tripType !== "round-trip" ? routes : returnRoutes).length === 0 && (
+                                        <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-gray-100">
+                                            <p className="text-slate-500 font-medium">Chưa có chuyến đi nào cho chiều này.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

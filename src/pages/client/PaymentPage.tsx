@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     ArrowLeft,
@@ -6,9 +6,13 @@ import {
     QrCode,
     Scan,
     CreditCard,
-    ExternalLink
+    ExternalLink,
+    Ticket,
+    CheckCircle2,
+    AlertCircle
 } from "lucide-react";
-import { createRequestMeta } from "../../utils/requestMeta";
+import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta";
+import { CAMPAIGN_ENDPOINTS } from "../../utils/api-constants";
 
 import momoIcon from "../../assets/payment/momo.svg";
 import shopeePayIcon from "../../assets/payment/shopeePay.png";
@@ -38,11 +42,14 @@ export default function PaymentPage() {
 
     const {
         routeData = {
-            origin: "An Sương",
-            destination: "Đà Lạt",
-            routeCode: "AS-DL-01",
+            origin: "Không xác định",
+            originName: "Không xác định",
+            destination: "Không xác định",
+            destinationName: "Không xác định",
+            routeCode: "N/A",
             plannedStartTime: new Date().toISOString(),
-            price: 364000,
+            departureTime: new Date().toISOString(),
+            price: 0,
         },
         selectedSeats = [],
         seatCodes = [],
@@ -65,6 +72,16 @@ export default function PaymentPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isFetchingPayment, setIsFetchingPayment] = useState(false);
+    const [promotionCode, setPromotionCode] = useState("");
+    const [promotionResult, setPromotionResult] = useState<any>(null);
+    const [isValidating, setIsValidating] = useState(false);
+    const [isPaymentFailed, setIsPaymentFailed] = useState(false);
+    const [txnCode, setTxnCode] = useState<string | null>(null);
+    const [promoError, setPromoError] = useState<string | null>(null);
+    const paymentWindow = useRef<Window | null>(null);
+
+    const finalTotal = promotionResult?.valid ? promotionResult.finalAmount : totalAmount;
+    const discountAmount = promotionResult?.valid ? promotionResult.discountAmount : 0;
 
     // Effect for the timer based on holdUntil
     useEffect(() => {
@@ -95,7 +112,8 @@ export default function PaymentPage() {
     // Effect to fetch payment URL when method changes
     useEffect(() => {
         const fetchPaymentData = async () => {
-            if (!booking?.bookingCode) return;
+            const bCode = booking?.bookingCode || booking?.code || booking?.id;
+            if (!bCode) return;
 
             setIsFetchingPayment(true);
             try {
@@ -108,14 +126,19 @@ export default function PaymentPage() {
                 };
 
                 const method = methodMap[paymentMethod];
-                const amount = booking.totalAmount || totalAmount;
+                const amount = finalTotal;
                 const meta = createRequestMeta();
-                const url = `http://localhost:8080/api/v1/payment-service/get-payment-url?bookingCode=${booking.bookingCode}&method=${method}&amount=${amount}`;
+                const bCode = booking?.bookingCode || booking?.code || booking?.id;
+                
+                const isBatch = bCode.includes(',');
+                const baseUrl = isBatch ? `http://localhost:8080/api/v1/payment-service/get-payment-url/batch` : `http://localhost:8080/api/v1/payment-service/get-payment-url`;
+                const queryParam = isBatch ? `bookingCodes=${bCode}` : `bookingCode=${bCode}`;
+                const url = `${baseUrl}?${queryParam}&method=${method}&amount=${amount}`;
 
                 const response = await fetch(url, {
                     headers: {
                         'accept': '*/*',
-                        'RT-REQUEST_ID': meta.requestId,
+                        'RT-REQUEST-ID': meta.requestId,
                         'RT-REQUEST_DATE_TIME': meta.requestDateTime,
                         'RT-CHANNEL': 'ONL'
                     }
@@ -125,6 +148,9 @@ export default function PaymentPage() {
                     const result = await response.json();
                     setQrCodeUrl(result.data?.qrCodeUrl);
                     setPaymentUrl(result.data?.paymentUrl);
+                    if (result.data?.bookingCode) {
+                        setTxnCode(result.data.bookingCode);
+                    }
                 }
             } catch (err) {
                 console.error("Fetch payment URL error:", err);
@@ -134,7 +160,7 @@ export default function PaymentPage() {
         };
 
         fetchPaymentData();
-    }, [paymentMethod, booking?.bookingCode, booking?.totalAmount, totalAmount]);
+    }, [paymentMethod, booking, finalTotal]);
 
     // Handle timeout: notification and redirect
     useEffect(() => {
@@ -144,46 +170,120 @@ export default function PaymentPage() {
         }
     }, [timeLeft, isSuccess, navigate, booking?.holdUntil]);
 
+    // Persist finalTotal and merchantId in sessionStorage for redirect survival
+    useEffect(() => {
+        const bCode = booking?.bookingCode || booking?.code || booking?.id;
+        if (bCode) {
+            sessionStorage.setItem(`amount_${bCode}`, String(finalTotal));
+            const mId = booking?.merchantId || routeData?.merchantId || "";
+            if (mId) {
+                sessionStorage.setItem(`merchant_${bCode}`, mId);
+            }
+        }
+    }, [booking, finalTotal, routeData?.merchantId]);
+
+    // Restore promotion from sessionStorage on refresh
+    useEffect(() => {
+        const bCode = booking?.bookingCode || booking?.code || booking?.id;
+        if (bCode) {
+            const savedPromo = sessionStorage.getItem(`promo_${bCode}`);
+            if (savedPromo && !promotionResult && !isValidating) {
+                setPromotionCode(savedPromo);
+                // Trigger validation automatically
+                const restorePromo = async () => {
+                    // Reuse validation logic directly to avoid DOM dependency
+                    try {
+                        const meta = createRequestMeta();
+                        const mId = booking?.merchantId || routeData?.merchantId || "";
+                        const payload = {
+                            ...meta,
+                            data: {
+                                promotionCode: savedPromo,
+                                orderAmount: totalAmount,
+                                merchantId: mId
+                            }
+                        };
+                        const response = await fetch(CAMPAIGN_ENDPOINTS.VALIDATE, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                ...createXAuthorizedHeaders(meta)
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+                        if (result.data && result.data.valid) {
+                            setPromotionResult(result.data);
+                        } else {
+                            sessionStorage.removeItem(`promo_${bCode}`);
+                        }
+                    } catch (e) {
+                        console.error("Restore promo error:", e);
+                    }
+                };
+                restorePromo();
+            }
+        }
+    }, [booking]);
+
     // Polling effect for payment status
     useEffect(() => {
-        if (!booking?.bookingCode || isSuccess) return;
+        const bCode = booking?.bookingCode || booking?.code || booking?.id;
+        if (!bCode || isSuccess) return;
+
+        let errorCount = 0;
 
         const pollStatus = async () => {
             try {
                 const meta = createRequestMeta();
-                const url = `http://localhost:8080/api/v1/payment-service/polling/status?bookingCode=${booking.bookingCode}`;
+                const codeToPoll = txnCode || (bCode.includes(',') ? bCode.split(',')[0] : bCode);
+                const url = `http://localhost:8080/api/v1/payment-service/polling/status?bookingCode=${codeToPoll}&method=${paymentMethod.toUpperCase()}`;
 
                 const response = await fetch(url, {
                     headers: {
                         'accept': '*/*',
-                        'RT-REQUEST_ID': meta.requestId,
+                        'RT-REQUEST-ID': meta.requestId,
                         'RT-REQUEST_DATE_TIME': meta.requestDateTime,
                         'RT-CHANNEL': 'ONL'
                     }
                 });
 
                 if (response.ok) {
+                    errorCount = 0; // reset on success
                     const result = await response.json();
                     const status = result.data?.status;
 
                     if (status === "PAID" || status === "FAILED") {
-                        navigate("/payment-result", {
-                            state: {
-                                status: status,
-                                bookingCode: booking.bookingCode,
-                                amount: result.data?.amount || totalAmount
+                        if (paymentWindow.current && !paymentWindow.current.closed) {
+                            try {
+                                paymentWindow.current.close();
+                            } catch (e) {
+                                console.error("Failed to close payment window:", e);
                             }
-                        });
+                        }
+                        const successParam = status === "PAID" ? "success" : "failed";
+                        navigate(`/payment-result?status=${successParam}&txnRef=${bCode}`);
+                    }
+                } else {
+                    errorCount++;
+                    if (errorCount >= 10) {
+                        alert("Hệ thống hiện tại không phản hồi. Vui lòng thử lại sau!");
+                        navigate("/");
                     }
                 }
             } catch (err) {
                 console.error("Polling error:", err);
+                errorCount++;
+                if (errorCount >= 10) {
+                    alert("Hệ thống hiện tại không phản hồi. Vui lòng thử lại sau!");
+                    navigate("/");
+                }
             }
         };
 
         const interval = setInterval(pollStatus, 5000);
         return () => clearInterval(interval);
-    }, [booking?.bookingCode, isSuccess, navigate, totalAmount]);
+    }, [booking, isSuccess, navigate, totalAmount, paymentMethod]);
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -198,18 +298,66 @@ export default function PaymentPage() {
         }
     };
 
+    const handleValidatePromotion = async () => {
+        if (!promotionCode.trim()) return;
+        setIsValidating(true);
+        setPromoError(null);
+        try {
+            const meta = createRequestMeta();
+            const mId = booking?.merchantId || routeData?.merchantId || "";
+            const payload = {
+                ...meta,
+                data: {
+                    promotionCode: promotionCode.trim(),
+                    orderAmount: totalAmount,
+                    merchantId: mId
+                }
+            };
+            const response = await fetch(CAMPAIGN_ENDPOINTS.VALIDATE, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...createXAuthorizedHeaders(meta)
+                },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.data && result.data.valid) {
+                setPromotionResult(result.data);
+                setPromoError(null);
+                // Persist promo code for this booking
+                const bCode = booking?.bookingCode || booking?.code || booking?.id;
+                if (bCode) {
+                    sessionStorage.setItem(`promo_${bCode}`, promotionCode.trim());
+                }
+            } else {
+                setPromoError(result.data?.message || result.message || "Mã giảm giá không hợp lệ hoặc đã hết hạn");
+                setPromotionResult(null);
+            }
+        } catch (err) {
+            console.error("Validate promotion error:", err);
+            setPromoError("Không thể kết nối tới máy chủ. Vui lòng thử lại sau.");
+        } finally {
+            setIsValidating(false);
+        }
+    };
+
     const handlePay = () => {
         setShowCardModal(false);
         setIsProcessing(true);
         setTimeout(() => {
             setIsProcessing(false);
-            navigate("/payment-result", {
-                state: {
-                    status: "PAID",
-                    bookingCode: booking?.bookingCode || "BK-MOCK-123",
-                    amount: booking?.totalAmount || totalAmount
-                }
-            });
+            const bCode = booking?.bookingCode || booking?.code || booking?.id || "BK-MOCK-123";
+            const amt = booking?.totalAmount || totalAmount;
+            const mId = booking?.merchantId || routeData?.merchantId || "";
+
+            sessionStorage.setItem(`amount_${bCode}`, String(amt));
+            if (mId) sessionStorage.setItem(`merchant_${bCode}`, mId);
+            if (promotionResult?.promotionCode) {
+                sessionStorage.setItem(`promo_${bCode}`, promotionResult.promotionCode);
+            }
+
+            navigate(`/payment-result?status=success&txnRef=${bCode}`);
         }, 1500);
     };
 
@@ -269,7 +417,7 @@ export default function PaymentPage() {
                     <div className="lg:col-span-4 flex flex-col items-center">
                         <div className="text-center mb-5">
                             <h3 className="text-[14px] font-medium text-slate-500 mb-1">Tổng thanh toán</h3>
-                            <p className="text-[42px] font-bold text-brand-primary leading-none tracking-tight">{formatVnd(totalAmount)}</p>
+                            <p className="text-[42px] font-bold text-brand-primary leading-none tracking-tight">{formatVnd(finalTotal)}</p>
                         </div>
 
                         <div className="w-full bg-[#f8f9fa] rounded-2xl p-6 flex flex-col items-center border border-slate-100/50">
@@ -297,7 +445,9 @@ export default function PaymentPage() {
 
                             {paymentUrl && (
                                 <button
-                                    onClick={() => window.open(paymentUrl, '_blank')}
+                                    onClick={() => {
+                                        paymentWindow.current = window.open(paymentUrl, '_blank');
+                                    }}
                                     className="w-full max-w-[220px] mb-6 py-3 bg-brand-primary hover:bg-brand-accent text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20 active:scale-95"
                                 >
                                     <ExternalLink size={18} />
@@ -360,12 +510,17 @@ export default function PaymentPage() {
                             <div className="space-y-4">
                                 <div className="flex justify-between items-start gap-4">
                                     <span className="text-slate-500 shrink-0">Tuyến xe</span>
-                                    <span className="font-semibold text-slate-800 text-right">{routeData.origin} - {routeData.destination}</span>
+                                    <span className="font-semibold text-slate-800 text-right">
+                                        {routeData.origin || routeData.originName || "N/A"} - {routeData.destination || routeData.destinationName || "N/A"}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-start gap-4">
                                     <span className="text-slate-500 shrink-0">Thời gian xuất bến</span>
                                     <span className="font-semibold text-emerald-800 text-right">
-                                        {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(routeData.plannedStartTime).toLocaleDateString("vi-VN") : "--"}
+                                        {(routeData.plannedStartTime || routeData.departureTime) ?
+                                            new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) + ' ' +
+                                            new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleDateString("vi-VN")
+                                            : "--"}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-start gap-4">
@@ -386,10 +541,14 @@ export default function PaymentPage() {
                                     <span className="text-slate-500 text-[13px] mt-0.5 shrink-0 opacity-80 pt-2">Thời gian tới điểm lên xe</span>
                                     <div className="flex flex-col items-end text-right pt-2">
                                         <span className="text-brand-primary font-semibold text-[13px]">
-                                            Trước {routeData.plannedStartTime ? new Date(new Date(routeData.plannedStartTime).getTime() - 15 * 60000).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : "--"}
+                                            Trước {(routeData.plannedStartTime || routeData.departureTime) ?
+                                                new Date(new Date(routeData.plannedStartTime || routeData.departureTime).getTime() - 15 * 60000).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })
+                                                : "--"}
                                         </span>
                                         <span className="text-brand-primary font-semibold text-[13px]">
-                                            {routeData.plannedStartTime ? new Date(routeData.plannedStartTime).toLocaleDateString("vi-VN") : "--"}
+                                            {(routeData.plannedStartTime || routeData.departureTime) ?
+                                                new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleDateString("vi-VN")
+                                                : "--"}
                                         </span>
                                     </div>
                                 </div>
@@ -408,6 +567,62 @@ export default function PaymentPage() {
                             </div>
                         </div>
 
+                        {/* Promotion Code */}
+                        <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">
+                            <h3 className="text-[16px] font-bold text-slate-800 mb-4 flex items-center gap-2 pb-3 border-b border-slate-100/60">
+                                <Ticket size={18} className="text-brand-primary" />
+                                Mã giảm giá / Ưu đãi
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập mã khuyến mãi..."
+                                        value={promotionCode}
+                                        onChange={(e) => setPromotionCode(e.target.value.toUpperCase())}
+                                        disabled={promotionResult?.valid}
+                                        className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase tracking-wider outline-none focus:border-brand-primary transition-all disabled:opacity-50"
+                                    />
+                                    {promotionResult?.valid ? (
+                                        <button
+                                            onClick={() => {
+                                                setPromotionResult(null);
+                                                setPromotionCode("");
+                                            }}
+                                            className="px-4 py-2.5 bg-slate-100 text-slate-500 hover:text-red-500 font-bold rounded-xl transition-all"
+                                        >
+                                            Hủy
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleValidatePromotion}
+                                            disabled={isValidating || !promotionCode}
+                                            className="px-5 py-2.5 bg-brand-primary hover:bg-brand-accent text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                                        >
+                                            {isValidating ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : "Áp dụng"}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {promoError && (
+                                    <div className="flex items-center gap-2 text-red-500 text-[12px] font-bold px-1">
+                                        <AlertCircle size={14} />
+                                        {promoError}
+                                    </div>
+                                )}
+
+                                {promotionResult?.valid && (
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-start gap-3">
+                                        <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                                        <div className="flex flex-col">
+                                            <span className="text-[13px] font-bold text-emerald-800">Đã áp dụng mã: {promotionResult.promotionCode}</span>
+                                            <span className="text-[12px] text-emerald-600 font-medium">{promotionResult.message || `Bạn được giảm ${formatVnd(promotionResult.discountAmount)}`}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Price Breakdown */}
                         <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">
                             <h3 className="text-[16px] font-bold text-slate-800 mb-5 flex items-center gap-2 pb-4 border-b border-slate-100/60">
@@ -417,15 +632,21 @@ export default function PaymentPage() {
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-500">Giá vé lượt đi</span>
-                                    <span className="font-semibold text-brand-primary">{formatVnd(totalAmount)}</span>
+                                    <span className="font-semibold text-slate-800">{formatVnd(totalAmount)}</span>
                                 </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Giảm giá khuyến mãi</span>
+                                        <span className="font-semibold text-emerald-600">-{formatVnd(discountAmount)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-500">Phí thanh toán</span>
                                     <span className="font-semibold text-slate-800">0đ</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-5 border-t border-slate-100 mt-2">
-                                    <span className="text-slate-500">Tổng tiền</span>
-                                    <span className="font-bold text-brand-primary text-[15px]">{formatVnd(totalAmount)}</span>
+                                    <span className="text-slate-500">Tổng thanh toán</span>
+                                    <span className="font-bold text-brand-primary text-[20px]">{formatVnd(finalTotal)}</span>
                                 </div>
                             </div>
                         </div>
@@ -499,7 +720,7 @@ export default function PaymentPage() {
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         </>
                                     ) : (
-                                        `Thanh toán ${formatVnd(totalAmount)}`
+                                        `Thanh toán ${formatVnd(finalTotal)}`
                                     )}
                                 </button>
                             </div>

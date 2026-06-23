@@ -1,15 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { Suspense, lazy } from 'react'
+import { Loader2 } from 'lucide-react'
 import { AdminLayout } from './Components/AdminLayout'
 import { DashboardAnalyticsPage } from './pages/admin/DashboardAnalyticsPage'
-import { DashboardFinancePage } from './pages/admin/DashboardFinancePage'
-import { DashboardOverviewPage } from './pages/admin/DashboardOverviewPage'
 import { FleetManagementPage } from './pages/admin/FleetManagementPage'
 import { LocationManagementPage } from './pages/admin/LocationManagementPage'
 import { OperationPointManagementPage } from './pages/admin/OperationPointManagementPage'
 import { VehicleManagementPage } from './pages/admin/VehicleManagementPage'
-import { ExpensesReportPage } from './pages/admin/ExpensesReportPage'
-import { SalaryReportPage } from './pages/admin/SalaryReportPage'
 import { TicketingPage } from './pages/admin/TicketingPage'
 import { MaintenancePage } from './pages/admin/MaintenancePage'
 import { AdminSystemHealthPage } from './pages/admin/AdminSystemHealthPage'
@@ -21,11 +19,9 @@ import { AdminUserManagementPage } from './pages/admin/AdminUserManagementPage'
 import MerchantApplicationFormsPage from './pages/admin/MerchantApplicationFormsPage'
 
 import { MerchantLayout } from './Components/merchant/MerchantLayout'
-import { MerchantPortalPage } from './pages/merchant/MerchantPortalPage'
 import { MerchantVehicleManagementPage } from './pages/merchant/MerchantVehicleManagementPage'
 import { MerchantScheduleManagementPage } from './pages/merchant/MerchantScheduleManagementPage'
 import { MerchantTicketManagementPage } from './pages/merchant/MerchantTicketManagementPage'
-import { MerchantRevenueReportPage } from './pages/merchant/MerchantRevenueReportPage'
 import { MerchantFeedbackPage } from './pages/merchant/MerchantFeedbackPage'
 import { MerchantStaffManagementPage } from './pages/merchant/MerchantStaffManagementPage'
 import { MerchantLocationManagementPage } from './pages/merchant/MerchantLocationManagementPage'
@@ -35,10 +31,21 @@ import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
 import { MerchantOperationPointPage } from './pages/merchant/MerchantOperationPointPage'
 import { MerchantVehicleTemplatePage } from './pages/merchant/MerchantVehicleTemplatePage'
 import { MerchantTripManagementPage } from './pages/merchant/MerchantTripManagementPage'
+import { MerchantCampaignManagementPage } from './pages/merchant/MerchantCampaignManagementPage'
+import { MerchantQuickBookingPage } from './pages/merchant/MerchantQuickBookingPage'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { useEffect } from 'react'
-import { isTokenExpired, getAccessToken, refreshTokens } from './utils/auth'
+import { NotificationProvider } from './contexts/NotificationContext'
+import { NotificationDetailPage } from './pages/common/NotificationDetailPage'
+
+
+// Lazy loaded dashboard/heavy chart pages (fixes react-doctor/prefer-dynamic-import for recharts)
+const DashboardOverviewPage = lazy(() => import('./pages/admin/DashboardOverviewPage').then(m => ({ default: m.DashboardOverviewPage })))
+const DashboardFinancePage = lazy(() => import('./pages/admin/DashboardFinancePage').then(m => ({ default: m.DashboardFinancePage })))
+const ExpensesReportPage = lazy(() => import('./pages/admin/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })))
+const SalaryReportPage = lazy(() => import('./pages/admin/SalaryReportPage').then(m => ({ default: m.SalaryReportPage })))
+const MerchantPortalPage = lazy(() => import('./pages/merchant/MerchantPortalPage').then(m => ({ default: m.MerchantPortalPage })))
+const MerchantRevenueReportPage = lazy(() => import('./pages/merchant/MerchantRevenueReportPage').then(m => ({ default: m.MerchantRevenueReportPage })))
 
 // Client pages
 import LandingPage from './pages/client/LandingPage'
@@ -55,7 +62,6 @@ import ClientSettingsPage from './pages/client/ClientSettingsPage'
 import HomePage from './pages/client/HomePage'
 import SearchResultPage from './pages/client/SearchResultPage'
 import BookingPage from './pages/client/BookingPage'
-import ClientRoutesPage from './pages/client/ClientRoutesPage'
 import ClientSchedulesPage from './pages/client/ClientSchedulesPage'
 import ClientSupportPage from './pages/client/ClientSupportPage'
 // SeatSelectionPage removed as merged into BookingPage
@@ -80,19 +86,15 @@ function MerchantRouteGuard({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = getAccessToken();
-      if (token && isTokenExpired(token)) {
-        await refreshTokens();
-      }
-    };
-    initAuth();
-  }, []);
-
   return (
+    <NotificationProvider>
     <>
-      <Routes>
+      <Suspense fallback={
+        <div className="flex h-screen items-center justify-center bg-slate-50">
+          <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
+        </div>
+      }>
+        <Routes>
         {/* ─── Client / Public Routes ─── */}
         <Route element={<ClientLayout />}>
           <Route path="/" element={<LandingPage />} />
@@ -104,7 +106,6 @@ function App() {
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
-          <Route path="/routes" element={<ClientRoutesPage />} />
           <Route path="/schedules" element={<ClientSchedulesPage />} />
           <Route path="/support" element={<ClientSupportPage />} />
           <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicyPage />} />
@@ -112,6 +113,7 @@ function App() {
           <Route path="/lien-he-chung-toi" element={<ContactUsPage />} />
           <Route path="/partner" element={<PartnerProgramPage />} />
           <Route path="/partner/register" element={<PartnerRegisterPage />} />
+          <Route path="/notifications/:id" element={<NotificationDetailPage />} />
         </Route>
 
         <Route path="/login" element={<LoginPage />} />
@@ -154,6 +156,7 @@ function App() {
           <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
           <Route path="health" element={<AdminSystemHealthPage />} />
           <Route path="feedback" element={<AdminFeedbackPage />} />
+          <Route path="notifications/:id" element={<NotificationDetailPage />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
 
@@ -173,6 +176,7 @@ function App() {
           <Route path="schedules" element={<MerchantScheduleManagementPage />} />
           <Route path="trips" element={<MerchantTripManagementPage />} />
           <Route path="tickets" element={<MerchantTicketManagementPage />} />
+          <Route path="campaigns" element={<MerchantCampaignManagementPage />} />
           <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
           <Route path="feedback" element={<MerchantFeedbackPage />} />
           <Route path="staff" element={<MerchantStaffManagementPage />} />
@@ -181,12 +185,15 @@ function App() {
           <Route path="maintenance" element={<MerchantMaintenancePage />} />
           <Route path="profile" element={<MerchantProfilePage />} />
           <Route path="settings" element={<MerchantSettingsPage />} />
+          <Route path="quick-booking" element={<MerchantQuickBookingPage />} />
+          <Route path="notifications/:id" element={<NotificationDetailPage />} />
           <Route path="*" element={<Navigate to="portal" replace />} />
         </Route>
 
         {/* ─── Fallback ─── */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -200,6 +207,7 @@ function App() {
         theme="light"
       />
     </>
+    </NotificationProvider>
   )
 }
 

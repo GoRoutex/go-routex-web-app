@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import { MapPin, Loader2, Bus, ShieldCheck, X, ArrowRight, Clock, Info, AlertCircle, ChevronRight } from 'lucide-react'
-import { createRequestMeta, createAuthorizedEnvelopeHeaders } from '../../utils/requestMeta'
+import { useState } from 'react'
+import { MapPin, Loader2, Bus, ShieldCheck, X, Clock, Info, AlertCircle } from 'lucide-react'
+import { createRequestMeta } from '../../utils/requestMeta'
 
 export type StopPoint = {
     id: string
@@ -78,9 +78,9 @@ export const Ticket = ({ item, onClick }: { item: TripItem, onClick?: () => void
             const response = await fetch(`${SEAT_DIAGRAM_API_URL}?pageNumber=1&pageSize=100&tripId=${item.id}`, {
                 method: 'GET',
                 headers: {
-                    'X-Request-Id': meta.requestId,
-                    'X-Request-DateTime': meta.requestDateTime,
-                    'X-Channel': 'ONL'
+                    'RT-REQUEST-ID': meta.requestId,
+                    'RT-REQUEST_DATE_TIME': meta.requestDateTime,
+                    'RT-CHANNEL': 'ONL'
                 }
             });
 
@@ -316,12 +316,12 @@ export const Ticket = ({ item, onClick }: { item: TripItem, onClick?: () => void
                                         let absMin = baseMinutes;
                                         if (item.rawDepartureTime && stop.timeAtDepartment !== undefined) {
                                             absMin = baseMinutes + stop.timeAtDepartment;
-                                            
+
                                             let h = Math.floor(absMin / 60) % 24;
                                             if (h < 0) h += 24;
                                             let m = absMin % 60;
                                             if (m < 0) m += 60;
-                                            
+
                                             scheduledTime = `${pad2(h)}:${pad2(m)}`;
                                         }
                                         stopsToRender.push({
@@ -359,11 +359,11 @@ export const Ticket = ({ item, onClick }: { item: TripItem, onClick?: () => void
                                     // Sort by absolute time
                                     stopsToRender.sort((a, b) => a.absoluteMinutes - b.absoluteMinutes);
 
-                                    return stopsToRender.map((stop: any, idx: number, arr: any[]) => {
+                                    return stopsToRender.map((stop: any) => {
                                         const isOrigin = stop.isOrigin === true;
                                         const isDestination = stop.isDestination === true;
                                         const isHighlighted = isOrigin || isDestination;
-                                        
+
                                         const borderColor = isOrigin ? 'border-brand-primary' : isDestination ? 'border-brand-accent' : 'border-slate-400';
                                         const bgColor = isOrigin ? 'bg-brand-primary' : isDestination ? 'bg-brand-accent' : 'bg-slate-400';
 
