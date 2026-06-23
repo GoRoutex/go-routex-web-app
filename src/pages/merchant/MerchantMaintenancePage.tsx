@@ -5,8 +5,8 @@ import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
 import { Pagination } from "../../Components/common/Pagination";
 
-const MAINTENANCE_API_URL = "http://localhost:8080/api/v1/merchant-service/maintenance-plans";
-const VEHICLE_API_URL = "http://localhost:8080/api/v1/merchant-service/vehicles";
+const MAINTENANCE_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/maintenance-plans`;
+const VEHICLE_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/vehicles`;
 
 interface MaintenancePlan {
   maintenancePlanId: string;

@@ -133,7 +133,7 @@ export default function PaymentPage() {
                 const meta = createRequestMeta();
                 const bCode = booking?.bookingCode || booking?.code || booking?.id;
 
-                const url = `http://localhost:8080/api/v1/payment-service/get-payment-url?bookingCode=${bCode}&method=${method}&amount=${amount}`;
+                const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1/payment-service/get-payment-url?bookingCode=${bCode}&method=${method}&amount=${amount}`;
 
                 const response = await fetch(url, {
                     headers: {
@@ -237,7 +237,7 @@ export default function PaymentPage() {
             try {
                 const meta = createRequestMeta();
                 const codeToPoll = txnCode || bCode;
-                const url = `http://localhost:8080/api/v1/payment-service/polling/status?bookingCode=${codeToPoll}&method=${paymentMethod.toUpperCase()}`;
+                const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1/payment-service/polling/status?bookingCode=${codeToPoll}&method=${paymentMethod.toUpperCase()}`;
 
                 const response = await fetch(url, {
                     headers: {

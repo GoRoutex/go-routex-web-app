@@ -4,8 +4,8 @@ import { Pagination } from "../../Components/common/Pagination";
 import { createXAuthorizedHeaders } from "../../utils/requestMeta";
 import { extractArrayValue, extractNumberValue } from "../../utils/responseExtractors";
 
-const FETCH_REVIEWS_URL = "http://localhost:8080/api/v1/merchant-service/reviews/fetch";
-const DETAIL_REVIEW_URL = "http://localhost:8080/api/v1/merchant-service/reviews/detail";
+const FETCH_REVIEWS_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/reviews/fetch`;
+const DETAIL_REVIEW_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/reviews/detail`;
 
 export function MerchantFeedbackPage() {
     const [feedbacks, setFeedbacks] = useState<any[]>([]);

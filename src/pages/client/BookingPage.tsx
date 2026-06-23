@@ -6,9 +6,9 @@ import {
 import type { TripItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createXAuthorizedHeaders, createEnvelopeHeaders } from "../../utils/requestMeta"
 
-const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
-const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
-const ROUND_TRIP_SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search/round-trip";
+const DETAIL_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/detail`;
+const SEAT_DIAGRAM_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/seat-diagram/search`;
+const ROUND_TRIP_SEAT_DIAGRAM_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/seat-diagram/search/round-trip`;
 
 // Dynamic Seat Generation
 const generateSeats = (totalSeats = 40, hasFloor = true) => {
@@ -317,7 +317,7 @@ export default function BookingPage() {
                     }
                 };
 
-                const response = await fetch("http://localhost:8080/api/v1/booking-service/trips/hold-seat", {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/booking-service/trips/hold-seat`, {
                     method: "POST",
                     headers: {
                         ...createEnvelopeHeaders(meta),
@@ -386,7 +386,7 @@ export default function BookingPage() {
                     }
                 };
 
-                const response = await fetch("http://localhost:8080/api/v1/booking-service/trips/hold-seat/round-trip", {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/booking-service/trips/hold-seat/round-trip`, {
                     method: "POST",
                     headers: {
                         ...createEnvelopeHeaders(meta),

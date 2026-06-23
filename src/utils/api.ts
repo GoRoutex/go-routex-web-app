@@ -1,4 +1,4 @@
-const GATEWAY_BASE_URL = "http://localhost:8080/api/v1";
+const GATEWAY_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 export const API_BASE_URL = `${GATEWAY_BASE_URL}/`;
 export const ROUTE_SERVICE_BASE_URL = GATEWAY_BASE_URL;
@@ -28,7 +28,7 @@ export const SEARCH_USER_URL = `${GATEWAY_BASE_URL}/user-service`;
 export const USER_MANAGEMENT_SERVICE_BASE_URL = `${GATEWAY_BASE_URL}/management/user-service`;
 
 // ─── Notify Processor (SSE & REST) ───
-export const NOTIFY_PROCESSOR_BASE_URL = "http://localhost:8080/api/v1";
+export const NOTIFY_PROCESSOR_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 export const NOTIFICATION_STREAM_URL = `${NOTIFY_PROCESSOR_BASE_URL}/notify/stream`;
 export const NOTIFY_REST_BASE_URL = `${NOTIFY_PROCESSOR_BASE_URL}/notify`;
 

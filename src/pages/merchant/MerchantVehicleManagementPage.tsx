@@ -5,7 +5,7 @@ import { extractArrayValue } from "../../utils/responseExtractors";
 import { toast } from "react-toastify";
 import { Pagination } from "../../Components/common/Pagination";
 
-const VEHICLE_API_URL = "http://localhost:8080/api/v1/merchant-service/vehicles";
+const VEHICLE_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/vehicles`;
 
 export interface Vehicle {
     vehicleId: string;
@@ -112,7 +112,7 @@ export function MerchantVehicleManagementPage() {
             setTemplateLoading(true);
             const meta = createRequestMeta();
             const headers = createXAuthorizedHeaders(meta);
-            const url = `http://localhost:8080/api/v1/merchant-service/vehicle-templates/fetch?pageNumber=1&pageSize=100&status=ACTIVE`;
+            const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/vehicle-templates/fetch?pageNumber=1&pageSize=100&status=ACTIVE`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: headers as HeadersInit

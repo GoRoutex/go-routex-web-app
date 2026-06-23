@@ -8,8 +8,8 @@ import {
 import type { TripItem, StopPoint } from '../../Components/client/Ticket'
 import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta"
 
-const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
-const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
+const DETAIL_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/detail`;
+const SEAT_DIAGRAM_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/seat-diagram/search`;
 
 // Dummy Data for Seat Map: 2 floors (Lower A, Upper B)
 // Dynamic Seat Generation

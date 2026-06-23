@@ -63,7 +63,7 @@ const formatVnd = (v?: number | null) => {
     return new Intl.NumberFormat("vi-VN").format(v) + "đ"
 }
 
-const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
+const SEAT_DIAGRAM_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/seat-diagram/search`;
 
 export const Ticket = ({ item, onClick }: { item: TripItem, onClick?: () => void }) => {
     const [expandedTab, setExpandedTab] = useState<string | null>(null);

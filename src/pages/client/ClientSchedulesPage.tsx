@@ -35,7 +35,7 @@ export default function ClientSchedulesPage() {
       const dateFilter = mapDateFilter(dateText)
       const meta = createRequestMeta()
       const response = await fetch(
-        `http://localhost:8080/api/v1/management/trip-service/fetch?dateFilter=${dateFilter}&pageNumber=1&pageSize=50`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/fetch?dateFilter=${dateFilter}&pageNumber=1&pageSize=50`,
         {
           headers: {
             'Content-Type': 'application/json',

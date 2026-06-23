@@ -5,7 +5,7 @@ import { Ticket } from '../../Components/client/Ticket'
 import type { TripItem } from '../../Components/client/Ticket'
 import { createRequestMeta, createXAuthorizedHeaders } from "../../utils/requestMeta"
 
-const SEARCH_API_URL = "http://localhost:8080/api/v1/management/trip-service/search";
+const SEARCH_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/search`;
 
 export default function SearchResultPage() {
     const navigate = useNavigate()
@@ -46,7 +46,7 @@ export default function SearchResultPage() {
                 let body: any;
 
                 if (tripType === "round-trip") {
-                    apiUrl = "http://localhost:8080/api/v1/management/trip-service/search/round-trip";
+                    apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/search/round-trip`;
                     body = {
                         ...meta,
                         data: {
@@ -140,7 +140,7 @@ export default function SearchResultPage() {
                 try {
                     setLoading(true);
                     const meta = createRequestMeta();
-                    const res = await fetch(`http://localhost:8080/api/v1/management/trip-service/detail/round-trip?outboundTripId=${selectedOutbound.id}&returnTripId=${item.id}`, {
+                    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/detail/round-trip?outboundTripId=${selectedOutbound.id}&returnTripId=${item.id}`, {
                         headers: { 
                             'accept': '*/*',
                             'RT-REQUEST-ID': meta.requestId,

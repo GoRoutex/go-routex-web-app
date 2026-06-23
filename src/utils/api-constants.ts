@@ -1,5 +1,5 @@
-export const API_BASE_URL = "http://localhost:8080/api/v1/merchant-service";
-export const ANALYTICS_BASE_URL = "http://localhost:8080/api/v1/analytics-service";
+export const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service`;
+export const ANALYTICS_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/analytics-service`;
 
 export const ROUTE_ENDPOINTS = {
     FETCH: `${API_BASE_URL}/routes/fetch`,

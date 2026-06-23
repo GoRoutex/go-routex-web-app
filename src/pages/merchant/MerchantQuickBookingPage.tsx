@@ -16,12 +16,12 @@ import seatDisabled from "../../assets/seat_disabled.svg";
 import seatSelecting from "../../assets/seat_selecting.svg";
 
 // Core API endpoints
-const SEARCH_API_URL = "http://localhost:8080/api/v1/management/trip-service/search";
-const DETAIL_API_URL = "http://localhost:8080/api/v1/management/trip-service/detail";
-const SEAT_DIAGRAM_API_URL = "http://localhost:8080/api/v1/management/seat-diagram/search";
-const HOLD_SEAT_API_URL = "http://localhost:8080/api/v1/booking-service/trips/hold-seat";
-const PAYMENT_URL_API = "http://localhost:8080/api/v1/payment-service/get-payment-url";
-const PAYMENT_STATUS_API = "http://localhost:8080/api/v1/payment-service/polling/status";
+const SEARCH_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/search`;
+const DETAIL_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/detail`;
+const SEAT_DIAGRAM_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/management/seat-diagram/search`;
+const HOLD_SEAT_API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/booking-service/trips/hold-seat`;
+const PAYMENT_URL_API = `${import.meta.env.VITE_API_BASE_URL}/api/v1/payment-service/get-payment-url`;
+const PAYMENT_STATUS_API = `${import.meta.env.VITE_API_BASE_URL}/api/v1/payment-service/polling/status`;
 
 interface RouteItem {
     id: string;
