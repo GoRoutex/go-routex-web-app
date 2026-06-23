@@ -41,18 +41,16 @@ export default function PaymentPage() {
     const location = useLocation();
 
     const {
-        routeData = {
-            origin: "Không xác định",
-            originName: "Không xác định",
-            destination: "Không xác định",
-            destinationName: "Không xác định",
-            routeCode: "N/A",
-            plannedStartTime: new Date().toISOString(),
-            departureTime: new Date().toISOString(),
-            price: 0,
-        },
+        routeData,
+        outboundRouteData,
+        returnRouteData,
+        tripType = "one-way",
         selectedSeats = [],
+        selectedOutboundSeats = [],
+        selectedReturnSeats = [],
         seatCodes = [],
+        outboundSeatCodes = [],
+        returnSeatCodes = [],
         customerName = "Không xác định",
         customerPhone = "Không xác định",
         customerEmail = "Không xác định",
@@ -62,7 +60,12 @@ export default function PaymentPage() {
         booking,
     } = location.state || {};
 
-    const seatsToDisplay = seatCodes.length > 0 ? seatCodes : selectedSeats;
+    const seatsToDisplay = tripType === "one-way" ? (seatCodes.length > 0 ? seatCodes : selectedSeats) : [];
+    const currentRoute = routeData || outboundRouteData || {
+        originName: "Không xác định",
+        destinationName: "Không xác định",
+        departureTime: new Date().toISOString()
+    };
 
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("vnpay");
     const [timeLeft, setTimeLeft] = useState(300); // Default 5 minutes
@@ -130,10 +133,7 @@ export default function PaymentPage() {
                 const meta = createRequestMeta();
                 const bCode = booking?.bookingCode || booking?.code || booking?.id;
                 
-                const isBatch = bCode.includes(',');
-                const baseUrl = isBatch ? `http://localhost:8080/api/v1/payment-service/get-payment-url/batch` : `http://localhost:8080/api/v1/payment-service/get-payment-url`;
-                const queryParam = isBatch ? `bookingCodes=${bCode}` : `bookingCode=${bCode}`;
-                const url = `${baseUrl}?${queryParam}&method=${method}&amount=${amount}`;
+                const url = `http://localhost:8080/api/v1/payment-service/get-payment-url?bookingCode=${bCode}&method=${method}&amount=${amount}`;
 
                 const response = await fetch(url, {
                     headers: {
@@ -236,7 +236,7 @@ export default function PaymentPage() {
         const pollStatus = async () => {
             try {
                 const meta = createRequestMeta();
-                const codeToPoll = txnCode || (bCode.includes(',') ? bCode.split(',')[0] : bCode);
+                const codeToPoll = txnCode || bCode;
                 const url = `http://localhost:8080/api/v1/payment-service/polling/status?bookingCode=${codeToPoll}&method=${paymentMethod.toUpperCase()}`;
 
                 const response = await fetch(url, {
@@ -478,94 +478,111 @@ export default function PaymentPage() {
 
                     {/* RIGHT: TICKET DETAILS (4 cols) */}
                     <div className="lg:col-span-4 space-y-4">
-
-                        {/* Passenger Info */}
-                        <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">
-                            <h3 className="text-[16px] font-bold text-slate-800 mb-5 pb-4 border-b border-slate-100/60">Thông tin hành khách</h3>
-                            <div className="space-y-3.5">
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500">Họ và tên</span>
-                                    <span className="font-semibold text-slate-800 truncate text-right">{customerName}</span>
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h2 className="text-base font-bold text-gray-900 mb-6">Thông tin hành khách</h2>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Họ và tên</span>
+                                    <span className="text-sm font-bold text-slate-900">{customerName}</span>
                                 </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500">Số điện thoại</span>
-                                    <span className="font-semibold text-slate-800 text-right">{customerPhone}</span>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Số điện thoại</span>
+                                    <span className="text-sm font-bold text-slate-900">{customerPhone}</span>
                                 </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500">Email</span>
-                                    <span className="font-semibold text-slate-800 truncate text-right">{customerEmail}</span>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Email</span>
+                                    <span className="text-sm font-bold text-slate-900">{customerEmail}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Trip Details */}
-                        <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">
-                            <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100/60">
-                                <h3 className="text-[16px] font-bold text-slate-800 flex items-center gap-2">
-                                    Thông tin chuyến đi
-                                    <div className="w-[18px] h-[18px] rounded-full border-[1.5px] border-brand-primary text-brand-primary flex items-center justify-center text-[10px] font-bold cursor-help">i</div>
-                                </h3>
-                                <button className="text-brand-primary text-[13px] font-semibold underline hover:text-brand-accent transition">Chi tiết</button>
+                        {/* Panel 1: Thông tin chuyến đi */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-base font-bold text-gray-900">Thông tin chuyến đi</h2>
                             </div>
                             <div className="space-y-4">
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500 shrink-0">Tuyến xe</span>
-                                    <span className="font-semibold text-slate-800 text-right">
-                                        {routeData.origin || routeData.originName || "N/A"} - {routeData.destination || routeData.destinationName || "N/A"}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Tuyến xe</span>
+                                    <span className="text-sm font-bold text-slate-900">{currentRoute.originName} - {currentRoute.destinationName}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Thời gian xuất bến</span>
+                                    <span className="text-sm font-bold text-emerald-600">
+                                        {currentRoute.rawDepartureTime || (currentRoute.departureTime ? new Date(currentRoute.departureTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(currentRoute.departureTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '--:--')}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500 shrink-0">Thời gian xuất bến</span>
-                                    <span className="font-semibold text-emerald-800 text-right">
-                                        {(routeData.plannedStartTime || routeData.departureTime) ?
-                                            new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) + ' ' +
-                                            new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleDateString("vi-VN")
-                                            : "--"}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Số lượng ghế</span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                        {tripType === "one-way" ? selectedSeats.length : selectedOutboundSeats.length} Ghế
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500 shrink-0">Số lượng ghế</span>
-                                    <span className="font-semibold text-slate-800 text-right">{selectedSeats.length} Ghế</span>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Số ghế</span>
+                                    <span className="text-sm font-bold text-emerald-600">
+                                        {tripType === "one-way" ? seatsToDisplay.join(", ") : outboundSeatCodes.join(", ")}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500 shrink-0">Số ghế</span>
-                                    <span className="font-semibold text-emerald-800 text-right max-w-[150px]">{seatsToDisplay.join(", ")}</span>
-                                </div>
-                                <div className="flex justify-between items-start gap-4 pt-1">
-                                    <span className="text-slate-500 shrink-0 mt-0.5">Điểm lên xe</span>
-                                    <div className="flex flex-col items-end text-right">
-                                        <span className="font-semibold text-slate-800 leading-snug">{pickupPoint?.note || `Trạm ${pickupPoint?.stopOrder || 1}`}</span>
+                                {pickupPoint && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Điểm đón</span>
+                                        <span className="text-sm font-bold text-slate-600 truncate max-w-[150px]" title={pickupPoint.note || pickupPoint.address}>{pickupPoint.note || pickupPoint.address || `Trạm ${pickupPoint?.stopOrder || 1}`}</span>
                                     </div>
-                                </div>
-                                <div className="flex justify-between items-start gap-4">
-                                    <span className="text-slate-500 text-[13px] mt-0.5 shrink-0 opacity-80 pt-2">Thời gian tới điểm lên xe</span>
-                                    <div className="flex flex-col items-end text-right pt-2">
-                                        <span className="text-brand-primary font-semibold text-[13px]">
-                                            Trước {(routeData.plannedStartTime || routeData.departureTime) ?
-                                                new Date(new Date(routeData.plannedStartTime || routeData.departureTime).getTime() - 15 * 60000).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })
-                                                : "--"}
-                                        </span>
-                                        <span className="text-brand-primary font-semibold text-[13px]">
-                                            {(routeData.plannedStartTime || routeData.departureTime) ?
-                                                new Date(routeData.plannedStartTime || routeData.departureTime).toLocaleDateString("vi-VN")
-                                                : "--"}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between items-start gap-4 pt-2">
-                                    <span className="text-slate-500 shrink-0 mt-0.5">Điểm trả khách</span>
-                                    <div className="flex flex-col items-end text-right">
-                                        <span className="font-semibold text-slate-800 leading-snug">{dropoffPoint?.note || `Trạm ${dropoffPoint?.stopOrder || 2}`}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between items-center pt-5 mt-1 border-t border-slate-100">
-                                    <span className="text-slate-500">Tổng tiền lượt đi</span>
-                                    <span className="font-bold text-emerald-800">{formatVnd(totalAmount)}</span>
+                                )}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-500">Tổng tiền lượt đi</span>
+                                    <span className="text-sm font-bold text-emerald-600">
+                                        {formatVnd(tripType === "one-way" ? totalAmount : selectedOutboundSeats.length * (outboundRouteData?.ticketPrice || 0))}
+                                    </span>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Panel 2: Thông tin chuyến về (Only for round trip) */}
+                        {tripType === "round-trip" && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-base font-bold text-gray-900">Thông tin chuyến về</h2>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Tuyến xe</span>
+                                        <span className="text-sm font-bold text-slate-900">{returnRouteData?.originName} - {returnRouteData?.destinationName}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Thời gian xuất bến</span>
+                                        <span className="text-sm font-bold text-emerald-600">
+                                            {returnRouteData?.rawDepartureTime || (returnRouteData?.departureTime ? new Date(returnRouteData.departureTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(returnRouteData.departureTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '--:--')}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Số lượng ghế</span>
+                                        <span className="text-sm font-bold text-slate-900">
+                                            {selectedReturnSeats.length} Ghế
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Số ghế</span>
+                                        <span className="text-sm font-bold text-emerald-600">
+                                            {returnSeatCodes.join(", ")}
+                                        </span>
+                                    </div>
+                                    {dropoffPoint && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-gray-500">Điểm đón (lượt về)</span>
+                                            <span className="text-sm font-bold text-slate-600 truncate max-w-[150px]" title={dropoffPoint.note || dropoffPoint.address}>{dropoffPoint.note || dropoffPoint.address || `Trạm ${dropoffPoint?.stopOrder || 1}`}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-500">Tổng tiền lượt về</span>
+                                        <span className="text-sm font-bold text-emerald-600">
+                                            {formatVnd(selectedReturnSeats.length * (returnRouteData?.ticketPrice || 0))}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Promotion Code */}
                         <div className="bg-white border text-[14px] border-slate-200 rounded-xl p-5 shadow-sm">

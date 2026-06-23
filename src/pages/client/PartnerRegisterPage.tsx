@@ -26,6 +26,8 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function PartnerRegisterPage() {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -130,6 +132,19 @@ export default function PartnerRegisterPage() {
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        if (step === 1) {
+            if (formData.email && !EMAIL_PATTERN.test(formData.email.trim())) {
+                setError("Địa chỉ email chủ nhà xe không hợp lệ.");
+                return;
+            }
+        }
+        if (step === 2) {
+            if (formData.contactEmail && !EMAIL_PATTERN.test(formData.contactEmail.trim())) {
+                setError("Email liên hệ không hợp lệ.");
+                return;
+            }
+        }
 
         if (step < 4) {
             nextStep();

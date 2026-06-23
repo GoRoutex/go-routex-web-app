@@ -398,14 +398,9 @@ export default function BookingPage() {
                 if (response.ok) {
                     const result = await response.json();
 
+                    // Backend refactored to single booking code but still returns outboundTrip/returnTrip structure
                     const outBooking = result.data?.outboundTrip?.booking;
-                    const retBooking = result.data?.returnTrip?.booking;
-
-                    const booking = outBooking && retBooking ? {
-                        bookingCode: `${outBooking.bookingCode},${retBooking.bookingCode}`,
-                        holdUntil: outBooking.holdUntil,
-                        totalAmount: outBooking.totalAmount + retBooking.totalAmount
-                    } : (result.data?.booking || result.booking || result.data);
+                    const extractedBooking = outBooking || result.data?.booking || result.booking || result.data;
 
                     navigate('/payment', {
                         state: {
@@ -419,8 +414,10 @@ export default function BookingPage() {
                             customerName: custName,
                             customerPhone: custPhone,
                             customerEmail: custEmail,
-                            totalAmount: booking?.totalAmount || totalAmount,
-                            booking: booking,
+                            pickupPoint: pickupAddress,
+                            dropoffPoint: dropoffAddress,
+                            totalAmount: extractedBooking?.totalAmount || totalAmount,
+                            booking: extractedBooking,
                             note: custNote
                         }
                     });

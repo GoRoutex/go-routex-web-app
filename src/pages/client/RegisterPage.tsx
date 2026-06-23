@@ -14,6 +14,7 @@ import { createRequestMeta } from "../../utils/requestMeta";
 import { API_BASE_URL, REGISTER_URL } from "../../utils/api";
 
 const DOB_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const getTodayYyyyMmDd = () => {
   const today = new Date();
@@ -132,6 +133,10 @@ export default function RegisterPage() {
     setError("");
     if (!canRegister) {
       setError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError("Địa chỉ email không hợp lệ.");
       return;
     }
     if (!DOB_PATTERN.test(dob)) {
