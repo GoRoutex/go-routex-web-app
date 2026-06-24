@@ -29,7 +29,7 @@ export const createRequestMeta = (): RequestMeta => ({
 export const createEnvelopeHeaders = (meta = createRequestMeta()) => {
     return {
         "RT-REQUEST-ID": meta.requestId,
-        "RT-REQUEST_DATE_TIME": meta.requestDateTime,
+        "RT-REQUEST-DATE-TIME": meta.requestDateTime,
         "RT-CHANNEL": meta.channel
     };
 };
