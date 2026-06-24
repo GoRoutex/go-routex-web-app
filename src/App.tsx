@@ -5,7 +5,6 @@ import { Loader2 } from 'lucide-react'
 import { AdminLayout } from './Components/AdminLayout'
 import { DashboardAnalyticsPage } from './pages/admin/DashboardAnalyticsPage'
 import { FleetManagementPage } from './pages/admin/FleetManagementPage'
-import { LocationManagementPage } from './pages/admin/LocationManagementPage'
 import { OperationPointManagementPage } from './pages/admin/OperationPointManagementPage'
 import { VehicleManagementPage } from './pages/admin/VehicleManagementPage'
 import { TicketingPage } from './pages/admin/TicketingPage'
@@ -40,8 +39,6 @@ import { NotificationDetailPage } from './pages/common/NotificationDetailPage'
 // Lazy loaded dashboard/heavy chart pages (fixes react-doctor/prefer-dynamic-import for recharts)
 const DashboardOverviewPage = lazy(() => import('./pages/admin/DashboardOverviewPage').then(m => ({ default: m.DashboardOverviewPage })))
 const DashboardFinancePage = lazy(() => import('./pages/admin/DashboardFinancePage').then(m => ({ default: m.DashboardFinancePage })))
-const ExpensesReportPage = lazy(() => import('./pages/admin/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })))
-const SalaryReportPage = lazy(() => import('./pages/admin/SalaryReportPage').then(m => ({ default: m.SalaryReportPage })))
 const MerchantPortalPage = lazy(() => import('./pages/merchant/MerchantPortalPage').then(m => ({ default: m.MerchantPortalPage })))
 
 // Client pages
@@ -137,7 +134,6 @@ function App() {
           <Route path="schedules" element={<RouteManagementPage />} />
           <Route path="routes" element={<Navigate to="schedules" replace />} />
           <Route path="trips" element={<Navigate to="schedules" replace />} />
-          <Route path="locations" element={<LocationManagementPage />} />
           <Route path="operation-points" element={<OperationPointManagementPage />} />
           <Route path="tickets" element={<TicketingPage />} />
           <Route path="merchants" element={<AdminMerchantManagementPage />} />
@@ -148,8 +144,6 @@ function App() {
 
           <Route path="dashboard/analytics" element={<DashboardAnalyticsPage />} />
           <Route path="reports/revenue" element={<DashboardFinancePage />} />
-          <Route path="reports/expenses" element={<ExpensesReportPage />} />
-          <Route path="reports/salaries" element={<SalaryReportPage />} />
           <Route path="profile/overview" element={<AdminProfileOverviewPage />} />
           <Route path="health" element={<AdminSystemHealthPage />} />
           <Route path="feedback" element={<AdminFeedbackPage />} />

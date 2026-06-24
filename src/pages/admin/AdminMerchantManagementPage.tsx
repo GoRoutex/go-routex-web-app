@@ -328,7 +328,6 @@ export default function AdminMerchantManagementPage() {
                                 <tr className="bg-slate-50/50">
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Thông Tin Đối Tác</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Liên Hệ & Loại Hình</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Quy Mô Đội Xe</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Hiệu Suất</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Trạng Thái</th>
                                     <th className="px-8 py-5 border-b border-slate-100"></th>
@@ -379,12 +378,6 @@ export default function AdminMerchantManagementPage() {
                                                         <span className="px-1.5 py-0.5 border border-slate-200 rounded">{m.type}</span>
                                                         <span className="flex items-center gap-1"><Phone size={10} /> {m.phone}</span>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[14px] font-black text-slate-900">{m.fleetSize} Xe</span>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{m.type}</span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">

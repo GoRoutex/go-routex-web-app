@@ -52,14 +52,9 @@ const navGroups: NavGroup[] = [
     title: "Tài chính",
     items: [
       {
-        label: "Đối soát & Báo cáo",
+        label: "Đối soát doanh thu",
         to: "/admin/reports/revenue",
         icon: ClipboardList,
-        subItems: [
-          { label: "Đối soát doanh thu", to: "/admin/reports/revenue" },
-          { label: "Phân tích chiết khấu", to: "/admin/reports/expenses" },
-          { label: "Lương & Thưởng", to: "/admin/reports/salaries" },
-        ],
       },
       { label: "Vé & Đặt chỗ", to: "/admin/tickets", icon: Ticket },
     ],
@@ -68,7 +63,6 @@ const navGroups: NavGroup[] = [
     title: "Vận hành nền tảng",
     items: [
       { label: "Mạng lưới lịch trình", to: "/admin/schedules", icon: Calendar },
-      { label: "Quản lý Địa điểm", to: "/admin/locations", icon: MapPinned },
       { label: "Tình trạng hệ thống", to: "/admin/health", icon: Settings },
     ],
   },

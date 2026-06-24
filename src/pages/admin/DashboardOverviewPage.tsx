@@ -37,7 +37,7 @@ export function DashboardOverviewPage() {
     setLoading(true)
     try {
       const meta = createRequestMeta()
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/analytics-service/admin/platform-overview?granularity=${g}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/analytics-service/admin/platform-overview?granularity=${g}&filter=${g}`, {
         method: "GET",
         headers: createXAuthorizedHeaders(meta)
       })

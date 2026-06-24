@@ -98,7 +98,9 @@ type RouteRow = {
   id: string;
   creator: string;
   routeCode: string;
+  routeDisplayName: string;
   routeName: string;
+  merchantDisplayName: string;
   origin: string;
   destination: string;
   pickupBranch: string;
@@ -681,11 +683,13 @@ const mapRouteRow = (
       "routeNo",
       "routeNumber",
     ]) || `ROUTE-${(pageNumber - 1) * PAGE_SIZE + index + 1}`;
+  const originName = extractStringValue(item, ["originName", "originProvinceName"]) || origin;
+  const destinationName = extractStringValue(item, ["destinationName", "destinationProvinceName"]) || destination;
+  const routeDisplayName = originName && destinationName ? `${originName} - ${destinationName}` : (origin && destination ? `${origin} - ${destination}` : "Chưa xác định");
+
   const routeName =
     extractStringValue(item, ["routeName", "name", "title", "label"]) ||
-    (origin && destination
-      ? `${origin} - ${destination}`
-      : "Chưa có tên lịch chuyến");
+    routeDisplayName;
   const plannedStartTime = formatTime(
     extractDisplayValue(item, [
       "plannedStartTime",
@@ -738,6 +742,11 @@ const mapRouteRow = (
     "assignedDriver",
     "driver",
     "driverName",
+  ]);
+  const merchantDisplayName = extractStringValue(item, [
+    "merchantDisplayName",
+    "merchantName",
+    "merchant",
   ]);
   const pickupBranch = extractStringValue(item, [
     "pickupBranch",
@@ -904,6 +913,8 @@ const mapRouteRow = (
     assignedDriver,
     status: normalizeStatus(rawStatus),
     statusText,
+    merchantDisplayName,
+    routeDisplayName,
     actualStartTime,
     actualEndTime,
     stopLocation,
@@ -1003,6 +1014,7 @@ export function RouteManagementPage() {
   const [items, setItems] = useState<RouteRow[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+  const [totalPagesServer, setTotalPagesServer] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -1043,11 +1055,13 @@ export function RouteManagementPage() {
         const authToken = localStorage.getItem("authToken") || "";
         const allItems: RouteRow[] = [];
 
-        const fetchRoutePage = async (page: number): Promise<{ rawItems: any[]; totalPages: number }> => {
-          const url = new URL(ROUTE_SERVICE_BASE_URL);
-          url.pathname = `${url.pathname.replace(/\/$/, "")}/route-service/fetch`;
+        const fetchRoutePage = async (page: number): Promise<{ rawItems: any[]; totalPages: number; totalElements: number }> => {
+          const url = new URL(`${import.meta.env.VITE_API_BASE_URL}/api/v1/management/trip-service/admin/fetch`);
           url.searchParams.set("pageNumber", String(page));
           url.searchParams.set("pageSize", String(PAGE_SIZE));
+          if (scheduleDate.trim()) {
+            url.searchParams.set("departureDate", scheduleDate.trim());
+          }
 
           const response = await fetch(url.toString(), {
             method: "GET",
@@ -1092,35 +1106,32 @@ export function RouteManagementPage() {
             resolvedTotalPages = page;
           }
 
-          return { rawItems, totalPages: resolvedTotalPages };
+          let resolvedTotalElements = 0;
+          const extractedElements = extractNumberValue(body, [
+            "totalTrips",
+            "totalElements",
+            "total",
+            "count",
+          ]);
+          if (typeof extractedElements === "number" && extractedElements >= 0) {
+            resolvedTotalElements = extractedElements;
+          } else {
+            resolvedTotalElements = rawItems.length;
+          }
+
+          return { rawItems, totalPages: resolvedTotalPages, totalElements: resolvedTotalElements };
         };
 
-        const firstPageResult = await fetchRoutePage(1);
+        const firstPageResult = await fetchRoutePage(pageNumber);
         allItems.push(
           ...firstPageResult.rawItems.map((item, index) =>
-            mapRouteRow(item, index, 1),
+            mapRouteRow(item, index, pageNumber),
           ),
         );
 
-        const totalPagesCount = firstPageResult.totalPages;
-        if (totalPagesCount > 1) {
-          const pagePromises: Promise<{ rawItems: any[]; totalPages: number }>[] = [];
-          for (let p = 2; p <= totalPagesCount; p++) {
-            pagePromises.push(fetchRoutePage(p));
-          }
-          const additionalPages = await Promise.all(pagePromises);
-          additionalPages.forEach((pageRes, pageIdx) => {
-            const pageNum = pageIdx + 2;
-            allItems.push(
-              ...pageRes.rawItems.map((item, index) =>
-                mapRouteRow(item, index, pageNum),
-              ),
-            );
-          });
-        }
-
         setItems(allItems);
-        setTotalElements(allItems.length);
+        setTotalPagesServer(firstPageResult.totalPages);
+        setTotalElements(firstPageResult.totalElements);
       } catch (loadError) {
         if (
           loadError instanceof DOMException &&
@@ -1142,7 +1153,7 @@ export function RouteManagementPage() {
     loadRoutes();
 
     return () => controller.abort();
-  }, [reloadNonce]);
+  }, [reloadNonce, scheduleDate, pageNumber]);
 
   useEffect(() => {
     if (!createModalOpen || provinceLoaded) {
@@ -1283,34 +1294,25 @@ export function RouteManagementPage() {
     });
   }, [filteredItems, routeFilter, scheduleDate]);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredAndScopedItems.length / PAGE_SIZE)),
-    [filteredAndScopedItems.length],
-  );
-
+  const totalPages = totalPagesServer;
   const currentPage = Math.min(Math.max(pageNumber, 1), totalPages);
-  const pageSliceStart = (currentPage - 1) * PAGE_SIZE;
 
   const pageInfo = useMemo(() => {
-    const start = filteredAndScopedItems.length === 0 ? 0 : pageSliceStart + 1;
+    const start = filteredAndScopedItems.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
     const end =
       filteredAndScopedItems.length === 0
         ? 0
-        : Math.min(pageSliceStart + PAGE_SIZE, filteredAndScopedItems.length);
+        : start - 1 + filteredAndScopedItems.length;
 
     return { current: currentPage, total: totalPages, start, end };
-  }, [currentPage, filteredAndScopedItems.length, pageSliceStart, totalPages]);
+  }, [currentPage, filteredAndScopedItems.length, totalPages]);
 
   const pageButtons = useMemo(
     () => getVisiblePageItems(currentPage, totalPages),
     [currentPage, totalPages],
   );
 
-  const displayedItems = useMemo(
-    () =>
-      filteredAndScopedItems.slice(pageSliceStart, pageSliceStart + PAGE_SIZE),
-    [filteredAndScopedItems, pageSliceStart],
-  );
+  const displayedItems = filteredAndScopedItems;
 
   const routeOptions = useMemo(
     () =>
@@ -1970,8 +1972,8 @@ export function RouteManagementPage() {
           </div>
 
           <div className="grid grid-cols-[0.95fr_1.65fr_0.9fr_1fr_0.75fr] gap-4 border-b border-slate-100 bg-white px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
-            <span>Mã chuyến</span>
-            <span>Thông tin lịch chuyến</span>
+            <span>Nhà xe</span>
+            <span>Tuyến đường & Lịch chuyến</span>
             <span>Khởi hành</span>
             <span>Trạng thái</span>
             <span className="text-right">Thao tác</span>
@@ -2026,18 +2028,15 @@ export function RouteManagementPage() {
               >
                 <div>
                   <div className="text-sm font-black text-slate-900">
-                    {item.routeCode}
-                  </div>
-                  <div className="mt-0.5 text-[10px] text-slate-400 font-medium">
-                    {item.stopLocation || item.pickupBranch || "Chưa có"}
+                    {item.merchantDisplayName || "Hệ thống"}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm font-black text-slate-900">
-                    {item.routeName}
+                    {item.routeDisplayName}
                   </div>
                   <div className="mt-0.5 text-[11px] text-slate-400 font-bold">
-                    Xe: {item.assignedVehicle || "Chưa có"} • Tài xế:{" "}
+                    Xe: {item.licensePlate || item.assignedVehicle || "Chưa có"} • Tài xế:{" "}
                     {item.assignedDriver || "Chưa có"}
                   </div>
                 </div>
