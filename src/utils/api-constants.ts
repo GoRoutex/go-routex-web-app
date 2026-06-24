@@ -70,5 +70,6 @@ export const AI_ENDPOINTS = {
     FORECAST: `${AI_SERVICE_BASE_URL}/forecast`,
     SCHEDULE: `${API_BASE_URL}/trips/schedule-async`,
     PRICING: `${AI_SERVICE_BASE_URL}/pricing`,
+    RECOMMENDATIONS: `${AI_SERVICE_BASE_URL}/recommendations/routes`,
 };
 

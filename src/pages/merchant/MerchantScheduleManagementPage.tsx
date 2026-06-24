@@ -20,6 +20,9 @@ import {
 import { getMerchantId } from "../../utils/auth";
 import { ADMIN_MERCHANT_ACTION_BASE_URL } from "../../utils/api";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { useSearchParams } from "react-router-dom";
+
+const handledNotifications = new Set<string>();
 
 interface RoutePoint {
     id?: string;
@@ -62,10 +65,21 @@ interface Province {
 
 export function MerchantScheduleManagementPage() {
     const { notifications } = useNotifications();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        const aiJobId = searchParams.get("view_ai_job");
+        if (aiJobId) {
+            fetchOptimizationDetail(aiJobId);
+            searchParams.delete("view_ai_job");
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
     const lastNotificationRef = useRef<string | null>(null);
 
     const [routes, setRoutes] = useState<RouteItem[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
+
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);
@@ -79,6 +93,16 @@ export function MerchantScheduleManagementPage() {
     // AI Dispatch states
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [aiRoute, setAiRoute] = useState<RouteItem | null>(null);
+
+    useEffect(() => {
+        if (aiRoute && aiRoute.creator === "AI" && routes.length > 0) {
+            const realRoute = routes.find(r => r.id === aiRoute.id);
+            if (realRoute) {
+                setAiRoute(realRoute);
+            }
+        }
+    }, [routes, aiRoute]);
+
     const [forecastDays, setForecastDays] = useState(30);
     const [forecasting, setForecasting] = useState(false);
     const [forecastResults, setForecastResults] = useState<any[]>([]);
@@ -99,9 +123,11 @@ export function MerchantScheduleManagementPage() {
     const [publishProgress, setPublishProgress] = useState<{ current: number; total: number } | null>(null);
     const [dispatching, setDispatching] = useState(false);
     const [drivers, setDrivers] = useState<any[]>([]);
+    const [autoCreatedTrips, setAutoCreatedTrips] = useState<any[]>([]);
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
     const [allOperationPoints, setAllOperationPoints] = useState<any[]>([]);
     const [originDepartments, setOriginDepartments] = useState<any[]>([]);
@@ -251,15 +277,84 @@ export function MerchantScheduleManagementPage() {
     useEffect(() => {
         if (notifications.length > 0) {
             const latest = notifications[0];
-            if (latest._id !== lastNotificationRef.current) {
+            if (latest._id !== lastNotificationRef.current && !handledNotifications.has(latest._id) && !latest.read) {
                 lastNotificationRef.current = latest._id;
-                if (latest.notificationType === 'AI_OPTIMIZATION_COMPLETED') {
+                handledNotifications.add(latest._id);
+                if (latest.notificationType === 'AI_OPTIMIZATION_COMPLETED' || latest.notificationType === 'SCHEDULE_OPTIMIZATION_SUCCESS') {
                     toast.success(`Tối ưu hóa thành công: ${latest.message}`);
-                    fetchRoutes(page);
+                    if (latest.referenceId) {
+                        fetchOptimizationDetail(latest.referenceId);
+                    } else {
+                        fetchRoutes(page);
+                    }
                 }
             }
         }
     }, [notifications, page]);
+
+    const fetchOptimizationDetail = async (jobId: string) => {
+        try {
+            const meta = createRequestMeta();
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant-service/trips/schedule-async/detail?jobId=${jobId}`, {
+                method: "GET",
+                headers: {
+                    ...createXAuthorizedHeaders(meta),
+                    "Content-Type": "application/json",
+                    "accept": "*/*"
+                }
+            });
+            if (!response.ok) throw new Error("Không thể lấy thông tin chi tiết kết quả tối ưu");
+            const result = await response.json();
+            const payload = result.data;
+            if (payload && payload.recommendationsPayload) {
+                const payloadStr = typeof payload.recommendationsPayload === "string"
+                    ? payload.recommendationsPayload
+                    : JSON.stringify(payload.recommendationsPayload);
+                const parsed = JSON.parse(payloadStr);
+                const schedulesArray = parsed.schedules || parsed;
+                const scheduleMap: Record<string, any> = {};
+
+                if (Array.isArray(schedulesArray)) {
+                    schedulesArray.forEach((item: any) => {
+                        scheduleMap[item.date] = item;
+                    });
+                } else {
+                    Object.assign(scheduleMap, schedulesArray);
+                }
+
+                if (parsed.createdTrips) {
+                    setAutoCreatedTrips(parsed.createdTrips);
+                } else {
+                    setAutoCreatedTrips([]);
+                }
+
+                if (payload.routeId) {
+                    setAiRoute(prev => {
+                        if (prev && prev.id === payload.routeId) return prev;
+                        // If routes array is not fully loaded yet, provide a fallback so the modal can render
+                        const found = routes.find(r => r.id === payload.routeId);
+                        if (found) return found;
+                        return {
+                            id: payload.routeId,
+                            originName: "Tuyến đường",
+                            destinationName: "Đã chọn",
+                            originCode: "...",
+                            destinationCode: "...",
+                            duration: 0,
+                            status: "ACTIVE",
+                            creator: "AI"
+                        } as RouteItem;
+                    });
+                }
+
+                setBatchOptimizedSchedules(scheduleMap);
+                setIsResultModalOpen(true);
+            }
+        } catch (error: any) {
+            console.error(error);
+            toast.error("Lỗi lấy chi tiết lịch tối ưu: " + error.message);
+        }
+    };
 
 
 
@@ -1424,10 +1519,10 @@ export function MerchantScheduleManagementPage() {
                 </div>
             )}
 
-            {/* AI Smart Dispatch Modal */}
+            {/* AI Smart Dispatch Request Modal */}
             {isAiModalOpen && aiRoute && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
-                    <div className="bg-white w-full max-w-6xl h-full max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
+                    <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
 
                         {/* Modal Header */}
                         <div className="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -1454,9 +1549,7 @@ export function MerchantScheduleManagementPage() {
                         {/* Modal Content - Dual Column Grid */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-8 bg-slate-50/40">
 
-                            {/* Row 1: Forecast and Settings */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
                                 {/* Left Side: Forecast Column */}
                                 <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1666,171 +1759,174 @@ export function MerchantScheduleManagementPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Row 2: Optimization Results */}
-                            {optimizedDates.length > 0 && (
-                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <CheckCircle className="text-emerald-500" size={18} />
-                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">3. Lịch Trình Tối Ưu Đề Xuất</h4>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Result Modal */}
+            {isResultModalOpen && aiRoute && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-500">
+                    <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden relative border border-white/50 animate-in zoom-in-95 duration-500">
+                        {/* Modal Header */}
+                        <div className="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                                    <CheckCircle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-950 tracking-tight">Kết Quả Phát Hành Lịch Trình Tự Động</h3>
+                                    <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-1">
+                                        <Navigation size={12} className="text-slate-400" />
+                                        Tuyến đường: <span className="text-indigo-600 font-extrabold">{aiRoute.originName} → {aiRoute.destinationName}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsResultModalOpen(false)}
+                                className="w-10 h-10 rounded-2xl border border-slate-150 bg-white text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-100 transition-all flex items-center justify-center shadow-sm"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-8 bg-slate-50/40">
+                            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                    <CheckCircle className="text-emerald-500" size={18} />
+                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">Chi Tiết Các Chuyến Xe Đã Được Tạo</h4>
+                                </div>
+
+                                {/* Key Performance Indicators */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng số chuyến xe</p>
+                                            <h5 className="text-2xl font-black text-slate-900">{totalTrips} chuyến</h5>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                            <Timer size={18} />
+                                        </div>
                                     </div>
-
-                                    {/* Key Performance Indicators */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng chuyến đề xuất</p>
-                                                <h5 className="text-2xl font-black text-slate-900">{totalTrips} chuyến</h5>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                                <Timer size={18} />
-                                            </div>
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hiệu suất đội xe</p>
+                                            <h5 className="text-2xl font-black text-slate-900">{Math.round(avgFleetUtilization * 100)}%</h5>
                                         </div>
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hiệu suất đội xe trung bình</p>
-                                                <h5 className="text-2xl font-black text-slate-900">{Math.round(avgFleetUtilization * 100)}%</h5>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                                <Users size={18} />
-                                            </div>
-                                        </div>
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tổng lợi nhuận ước tính</p>
-                                                <h5 className="text-2xl font-black text-emerald-600">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalExpectedProfit)}</h5>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
-                                                <DollarSign size={18} />
-                                            </div>
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                            <Users size={18} />
                                         </div>
                                     </div>
-
-                                    {/* Collapsible Daily Schedules */}
-                                    <div className="space-y-4">
-                                        {optimizedDates.map((date) => {
-                                            const daySchedule = batchOptimizedSchedules[date];
-                                            if (!daySchedule) return null;
-                                            const isExpanded = expandedDates[date] ?? true;
-                                            const dailyTripsCount = daySchedule.optimal_trips?.length || 0;
-                                            const dailyProfit = daySchedule.total_expected_profit || 0;
-
-                                            return (
-                                                <div key={date} className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm transition-all hover:shadow-md">
-                                                    {/* Day Header */}
-                                                    <div
-                                                        onClick={() => setExpandedDates(prev => ({ ...prev, [date]: !isExpanded }))}
-                                                        className="bg-slate-50/70 p-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-100 transition-all border-b border-slate-100/60"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <Calendar size={16} className="text-indigo-650" />
-                                                            <span className="font-mono font-black text-slate-900 text-sm">{date}</span>
-                                                            <span className="text-[11px] text-slate-400 font-bold">({dailyTripsCount} chuyến xe đề xuất)</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
-                                                                +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dailyProfit)}
-                                                            </span>
-                                                            {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Day Table */}
-                                                    {isExpanded && (
-                                                        <div className="overflow-x-auto">
-                                                            <table className="w-full text-left border-collapse">
-                                                                <thead>
-                                                                    <tr className="bg-slate-100/30 border-b border-slate-100">
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-12">STT</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-28">Giờ đi</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Xe phân bổ</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-24">Dự báo khách</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dynamic Price</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lợi nhuận</th>
-                                                                        <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-36">Load Factor</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100">
-                                                                    {daySchedule.optimal_trips.map((trip: any) => (
-                                                                        <tr key={trip.trip_index} className="hover:bg-slate-50/30 transition-colors">
-                                                                            <td className="px-5 py-2.5 text-xs font-black text-slate-650">{trip.trip_index}</td>
-                                                                            <td className="px-5 py-2.5 text-xs font-black text-indigo-600">{trip.departure_time}</td>
-                                                                            <td className="px-5 py-2.5 text-xs font-bold text-slate-700">
-                                                                                {trip.assigned_vehicle ? (
-                                                                                    <div>
-                                                                                        <span className="font-black text-slate-900 block">{trip.assigned_vehicle.vehicle_plate}</span>
-                                                                                        <span className="text-[9px] text-slate-400 block font-normal">{trip.assigned_vehicle.vehicle_model} ({trip.assigned_vehicle.seat_capacity} chỗ)</span>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="text-slate-400 italic">Chưa phân bổ</span>
-                                                                                )}
-                                                                            </td>
-                                                                            <td className="px-5 py-2.5 text-xs font-bold text-slate-700">{trip.expected_passengers} khách</td>
-                                                                            <td className="px-5 py-2.5 text-xs font-black text-slate-900">
-                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.ticket_price)}
-                                                                            </td>
-                                                                            <td className="px-5 py-2.5 text-xs font-bold text-emerald-600">
-                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.expected_profit)}
-                                                                            </td>
-                                                                            <td className="px-5 py-2.5">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                                                        <div className="h-full bg-indigo-600" style={{ width: `${Math.min(100, trip.load_factor * 100)}%` }} />
-                                                                                    </div>
-                                                                                    <span className="text-xs font-bold text-slate-605">{Math.round(trip.load_factor * 100)}%</span>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Doanh thu dự kiến</p>
+                                            <h5 className="text-2xl font-black text-emerald-600">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalExpectedProfit)}</h5>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                                            <DollarSign size={18} />
+                                        </div>
                                     </div>
                                 </div>
-                            )}
 
+                                {/* Collapsible Daily Schedules */}
+                                <div className="space-y-4">
+                                    {optimizedDates.map((date) => {
+                                        const daySchedule = batchOptimizedSchedules[date];
+                                        if (!daySchedule) return null;
+                                        const isExpanded = expandedDates[date] ?? true;
+                                        const dailyTripsCount = daySchedule.optimal_trips?.length || 0;
+                                        const dailyProfit = daySchedule.total_expected_profit || 0;
+
+                                        return (
+                                            <div key={date} className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm transition-all hover:shadow-md">
+                                                {/* Day Header */}
+                                                <div
+                                                    onClick={() => setExpandedDates(prev => ({ ...prev, [date]: !isExpanded }))}
+                                                    className="bg-slate-50/70 p-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-100 transition-all border-b border-slate-100/60"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Calendar size={16} className="text-indigo-650" />
+                                                        <span className="font-mono font-black text-slate-900 text-sm">{date}</span>
+                                                        <span className="text-[11px] text-slate-400 font-bold">({dailyTripsCount} chuyến xe)</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                                                            +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dailyProfit)}
+                                                        </span>
+                                                        {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Day Table */}
+                                                {isExpanded && (
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-left border-collapse">
+                                                            <thead>
+                                                                <tr className="bg-slate-100/30 border-b border-slate-100">
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-12">STT</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-28">Giờ đi</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Xe phân bổ</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-24">Dự báo khách</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Vé</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lợi nhuận</th>
+                                                                    <th className="px-5 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest w-36">Tỉ lệ lấp đầy</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100">
+                                                                {(daySchedule.optimal_trips || []).map((trip: any) => (
+                                                                    <tr key={trip.trip_index} className="hover:bg-slate-50/30 transition-colors">
+                                                                        <td className="px-5 py-2.5 text-xs font-black text-slate-650">{trip.trip_index}</td>
+                                                                        <td className="px-5 py-2.5 text-xs font-black text-indigo-600">{trip.departure_time}</td>
+                                                                        <td className="px-5 py-2.5 text-xs font-bold text-slate-700">
+                                                                            {trip.assigned_vehicle ? (
+                                                                                <div>
+                                                                                    <span className="font-black text-slate-900 block">{trip.assigned_vehicle.vehicle_plate}</span>
+                                                                                    <span className="text-[9px] text-slate-400 block font-normal">{trip.assigned_vehicle.vehicle_model} ({trip.assigned_vehicle.seat_capacity} chỗ)</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="text-slate-400 italic">Chưa phân bổ</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="px-5 py-2.5 text-xs font-bold text-slate-700">{trip.expected_passengers} khách</td>
+                                                                        <td className="px-5 py-2.5 text-xs font-black text-slate-900">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.ticket_price)}
+                                                                        </td>
+                                                                        <td className="px-5 py-2.5 text-xs font-bold text-emerald-600">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(trip.expected_profit)}
+                                                                        </td>
+                                                                        <td className="px-5 py-2.5">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                                    <div className="h-full bg-indigo-600" style={{ width: `${Math.min(100, trip.load_factor * 100)}%` }} />
+                                                                                </div>
+                                                                                <span className="text-xs font-bold text-slate-605">{Math.round(trip.load_factor * 100)}%</span>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-6 md:p-8 border-t border-slate-150 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="p-6 md:p-8 border-t border-slate-150 bg-slate-50 flex items-center justify-end">
                             <button
                                 type="button"
-                                onClick={() => setIsAiModalOpen(false)}
-                                className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all text-center w-full sm:w-auto"
+                                onClick={() => setIsResultModalOpen(false)}
+                                className="px-8 py-3.5 bg-slate-950 hover:bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-md"
                             >
-                                Hủy Bỏ
-                            </button>
-
-                            {dispatching && publishProgress && publishProgress.total > 0 && (
-                                <div className="flex-1 max-w-md w-full px-4">
-                                    <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                                        <span>Đang điều phối xe...</span>
-                                        <span>{publishProgress.current} / {publishProgress.total}</span>
-                                    </div>
-                                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-indigo-600 transition-all duration-300"
-                                            style={{ width: `${(publishProgress.current / publishProgress.total) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <button
-                                type="button"
-                                onClick={handlePublishSchedule}
-                                disabled={dispatching || optimizedDates.length === 0}
-                                className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 w-full sm:w-auto justify-center"
-                            >
-                                {dispatching ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />}
-                                Phát Hành Lịch Chạy ({totalTrips} Chuyến / {optimizedDates.length} Ngày)
+                                Đóng
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}

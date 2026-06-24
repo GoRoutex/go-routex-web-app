@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Bus,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { PROVINCE_ENDPOINTS } from "../../utils/api-constants";
+import { PROVINCE_ENDPOINTS, AI_ENDPOINTS } from "../../utils/api-constants";
 import { createXAuthorizedHeaders } from "../../utils/requestMeta";
 
 const POPULAR_ROUTES = [
@@ -84,8 +84,7 @@ const Field = ({ label, icon: Icon, children }: FieldProps) => (
 export default function HomePage() {
     const navigate = useNavigate();
     const [isLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
-
-
+    const userId = localStorage.getItem("userId");
     const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
     const [searchData, setSearchData] = useState({
         originCity: "",
@@ -100,6 +99,31 @@ export default function HomePage() {
     const [showOriginDropdown, setShowOriginDropdown] = useState(false);
     const [showDestDropdown, setShowDestDropdown] = useState(false);
     const [loadingProvinces, setLoadingProvinces] = useState(false);
+
+    const [recommendations, setRecommendations] = useState<any[]>([]);
+    const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+    useEffect(() => {
+        if (isLoggedIn && userId) {
+            const fetchRecommendations = async () => {
+                setLoadingRecommendations(true);
+                try {
+                    const response = await fetch(`${AI_ENDPOINTS.RECOMMENDATIONS}/${userId}?limit=6&days_ahead=14`, {
+                        headers: { "accept": "application/json" }
+                    });
+                    const result = await response.json();
+                    if (result && result.recommendations) {
+                        setRecommendations(result.recommendations);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch smart trip recommendations:", err);
+                } finally {
+                    setLoadingRecommendations(false);
+                }
+            };
+            fetchRecommendations();
+        }
+    }, [isLoggedIn, userId]);
 
     const fetchProvinces = async (keyword: string, type: 'origin' | 'destination') => {
         if (!keyword || keyword.length < 1) {
@@ -466,10 +490,10 @@ export default function HomePage() {
                         <div className="flex items-end justify-between mb-8">
                             <div>
                                 <h2 className="text-3xl font-black text-slate-900">
-                                    Tuyến đường phổ biến
+                                    {recommendations.length > 0 ? "Đề xuất thông minh cho bạn" : "Tuyến đường phổ biến"}
                                 </h2>
                                 <p className="text-slate-500 mt-2">
-                                    Được nhiều người dùng lựa chọn nhất
+                                    {recommendations.length > 0 ? "Các chuyến đi phù hợp nhất dựa trên lịch sử của bạn" : "Được nhiều người dùng lựa chọn nhất"}
                                 </p>
                             </div>
                             <button className="flex items-center gap-2 text-brand-primary text-sm font-black hover:gap-3 transition-all px-4 py-2 rounded-xl hover:bg-brand-primary/5">
@@ -477,41 +501,60 @@ export default function HomePage() {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {POPULAR_ROUTES.map((r, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => patchRoute(r.from, r.to)}
-                                    className="group bg-white border border-slate-100 rounded-[2rem] p-8 text-left hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-10 scale-150 rotate-12 transition-all">
-                                        <Bus className="w-32 h-32 text-brand-primary" />
-                                    </div>
+                        {loadingRecommendations ? (
+                            <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                                <Loader2 className="animate-spin text-brand-primary" size={40} />
+                                <p className="text-sm font-bold text-slate-500">Đang tải đề xuất thông minh...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {(recommendations.length > 0 ? recommendations : POPULAR_ROUTES).map((r, i) => {
+                                    const isAi = recommendations.length > 0;
+                                    const from = isAi ? r.origin : r.from;
+                                    const to = isAi ? r.destination : r.to;
+                                    const price = isAi ? "Chỉ từ 250,000 ₫" : r.price;
+                                    const info = isAi ? `Sắp tới: ${new Date(r.next_departure_time).toLocaleString("vi-VN")} • ${r.upcoming_trip_count} chuyến tiếp theo` : r.info;
+                                    const aiBadge = isAi && r.is_personalized ? "Gợi ý cho bạn 🌟" : "Tuyến Phổ Biến";
 
-                                    <div className="flex items-center justify-between mb-6 relative z-10">
-                                        <div className="bg-slate-50 px-4 py-1.5 rounded-full">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                Chuyến cao cấp
-                                            </span>
-                                        </div>
-                                        <span className="text-2xl font-black text-slate-900 group-hover:text-brand-primary transition-colors">
-                                            {r.price}
-                                        </span>
-                                    </div>
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => patchRoute(from, to)}
+                                            className="group bg-white border border-slate-100 rounded-[2rem] p-8 text-left hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 relative overflow-hidden"
+                                        >
+                                            {isAi && (
+                                                <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent pointer-events-none" />
+                                            )}
+                                            <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-10 scale-150 rotate-12 transition-all">
+                                                <Bus className="w-32 h-32 text-brand-primary" />
+                                            </div>
 
-                                    <h3 className="font-black text-2xl text-slate-900 mb-2 flex items-center gap-3">
-                                        {r.from}
-                                        <ArrowRightLeft className="w-5 h-5 text-brand-primary/40 group-hover:text-brand-primary transition-all group-hover:scale-110" />
-                                        {r.to}
-                                    </h3>
-                                    <p className="text-slate-400 font-medium mb-6">{r.info}</p>
+                                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                                <div className={`px-4 py-1.5 rounded-full ${isAi ? 'bg-amber-100 text-amber-700' : 'bg-slate-50 text-slate-400'}`}>
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isAi ? '' : 'text-slate-400'}`}>
+                                                        {aiBadge}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xl font-black text-slate-900 group-hover:text-brand-primary transition-colors">
+                                                    {price}
+                                                </span>
+                                            </div>
 
-                                    <div className="flex items-center gap-2 text-sm font-black text-brand-primary opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all">
-                                        Đặt vé ngay <ChevronRight className="w-4 h-4" />
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                                            <h3 className="font-black text-2xl text-slate-900 mb-2 flex items-center gap-3 relative z-10">
+                                                {from}
+                                                <ArrowRightLeft className="w-5 h-5 text-brand-primary/40 group-hover:text-brand-primary transition-all group-hover:scale-110" />
+                                                {to}
+                                            </h3>
+                                            <p className="text-slate-500 font-medium mb-6 relative z-10">{info}</p>
+
+                                            <div className="flex items-center gap-2 text-sm font-black text-brand-primary opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all relative z-10">
+                                                Đặt vé ngay <ChevronRight className="w-4 h-4" />
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
 
                     {/* Value Props */}

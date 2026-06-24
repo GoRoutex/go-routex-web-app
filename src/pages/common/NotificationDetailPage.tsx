@@ -203,18 +203,20 @@ export function NotificationDetailPage({ isDarkMode = false }: { isDarkMode?: bo
               <span className="text-slate-400 mr-1">Tham chiếu ID:</span>
               <span className="font-mono text-[11px] truncate select-all">{notification.referenceId || "N/A"}</span>
             </div>
-            {notification.notificationType === "AI_OPTIMIZATION_COMPLETED" && (
-              <div className="pt-1">
-                <button
-                  onClick={() => navigate("/merchant/schedules")}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-violet-600 text-white hover:bg-violet-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-violet-600/10"
-                >
-                  <CheckCircle size={10} /> Xem lịch chạy
-                </button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Action Buttons */}
+        {notification.notificationType === "AI_OPTIMIZATION_COMPLETED" && (
+          <div className="flex justify-end pt-4 mt-2">
+            <button
+              onClick={() => navigate(`/merchant/schedules?view_ai_job=${notification.referenceId}`)}
+              className="flex items-center gap-2 px-6 py-3.5 bg-slate-950 text-white hover:bg-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-slate-900/10 hover:scale-[1.02] active:scale-95"
+            >
+              <CheckCircle size={14} /> Xem Kết Quả Chi Tiết
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
