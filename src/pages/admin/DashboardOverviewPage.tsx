@@ -59,9 +59,9 @@ export function DashboardOverviewPage() {
     fetchDashboardData(granularity)
   }, [granularity])
 
-  const formatCurrency = (val: number | string | unknown[]) => {
+  const formatCurrency = (val: any): string => {
     const num = Number(val);
-    if (isNaN(num)) return val;
+    if (isNaN(num)) return String(val);
     if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + 'tỷ'
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'tr'
     return new Intl.NumberFormat('vi-VN').format(num)
@@ -180,10 +180,10 @@ export function DashboardOverviewPage() {
                      axisLine={false}
                      tickLine={false}
                      tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
-                     tickFormatter={(val: number | string | unknown[]) => activeChartTab === 'REVENUE' ? formatCurrency(val) : val as string}
+                     tickFormatter={(val: any) => activeChartTab === 'REVENUE' ? formatCurrency(val) : String(val)}
                   />
                   <Tooltip
-                    formatter={(val: number | string | unknown[]) => activeChartTab === 'REVENUE' ? `${formatCurrency(val)} đ` : val as string}
+                    formatter={(val: any) => activeChartTab === 'REVENUE' ? `${formatCurrency(val)} đ` : String(val)}
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', fontSize: '12px', fontWeight: 'bold' }}
                     itemStyle={{ color: '#0EA5E9' }}
                   />
