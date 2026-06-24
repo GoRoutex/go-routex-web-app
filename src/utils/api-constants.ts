@@ -64,7 +64,7 @@ export const CAMPAIGN_ENDPOINTS = {
     APPLY: `${API_BASE_URL}/campaigns/apply`,
 };
 
-export const AI_SERVICE_BASE_URL = "http://localhost:8000/api/v1/ai";
+export const AI_SERVICE_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/ai`;
 
 export const AI_ENDPOINTS = {
     FORECAST: `${AI_SERVICE_BASE_URL}/forecast`,
