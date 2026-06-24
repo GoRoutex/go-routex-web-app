@@ -9,10 +9,28 @@ import { createRequestMeta, createXAuthorizedHeaders } from '../../utils/request
 // Color map for charts
 const COLORS = ['#0EA5E9', '#6366F1', '#A1A7FF', '#CBD5E1', '#F43F5E', '#10B981', '#F59E0B']
 
+interface PlatformOverviewData {
+  summary: {
+    totalRevenue: number;
+    activeMerchants: number;
+    totalMerchants: number;
+    averageOccupancyRate: number;
+    openComplaints: number;
+    ticketsSold: number;
+    revenueGrowthRate: number;
+    trafficGrowthRate: number;
+  };
+  customerTrafficSeries: { label: string; date: string; value: number }[];
+  revenueSeries: { label: string; date: string; value: number }[];
+  merchantPerformance: { merchantId: string; merchantName: string; revenue: number; ticketsSold: number; occupancyRate: number; performanceRate: number }[];
+  regionDemand: { regionId: string; regionName: string; ticketsSold: number; percentage: number }[];
+  partnerStatusDistribution: { status: string; count: number; percentage: number }[];
+}
+
 export function DashboardOverviewPage() {
   const [granularity, setGranularity] = useState<'DAY' | 'WEEK' | 'MONTH' | 'YEAR'>('DAY')
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<PlatformOverviewData | null>(null)
   const [activeChartTab, setActiveChartTab] = useState<'TRAFFIC' | 'REVENUE'>('TRAFFIC')
 
   const fetchDashboardData = async (g: string) => {
@@ -26,7 +44,7 @@ export function DashboardOverviewPage() {
 
       if (response.ok) {
         const result = await response.json()
-        setData(result.data)
+        setData(result.data as PlatformOverviewData)
       } else {
         console.error("Failed to fetch overview data")
       }
@@ -41,10 +59,12 @@ export function DashboardOverviewPage() {
     fetchDashboardData(granularity)
   }, [granularity])
 
-  const formatCurrency = (val: number) => {
-    if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(1) + 'tỷ'
-    if (val >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'tr'
-    return new Intl.NumberFormat('vi-VN').format(val)
+  const formatCurrency = (val: number | string | unknown[]) => {
+    const num = Number(val);
+    if (isNaN(num)) return val;
+    if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + 'tỷ'
+    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'tr'
+    return new Intl.NumberFormat('vi-VN').format(num)
   }
 
   const kpis = data?.summary ? [
@@ -55,20 +75,20 @@ export function DashboardOverviewPage() {
   ] : []
 
   const chartData = activeChartTab === 'TRAFFIC' 
-    ? (data?.customerTrafficSeries || []).map((s: any) => ({ name: s.label, value: s.value }))
-    : (data?.revenueSeries || []).map((s: any) => ({ name: s.label, value: s.value }))
+    ? (data?.customerTrafficSeries || []).map((s) => ({ name: s.label, value: s.value }))
+    : (data?.revenueSeries || []).map((s) => ({ name: s.label, value: s.value }))
 
-  const merchantPerformance = (data?.merchantPerformance || []).slice(0, 6).map((m: any) => ({
+  const merchantPerformance = (data?.merchantPerformance || []).slice(0, 6).map((m) => ({
     name: m.merchantName,
     value: Math.round(m.performanceRate || 0)
   }))
 
-  const merchantDistribution = (data?.partnerStatusDistribution || []).map((d: any) => ({
+  const merchantDistribution = (data?.partnerStatusDistribution || []).map((d) => ({
     name: d.status,
     value: d.count
   }))
 
-  const regionalDemand = (data?.regionDemand || []).map((r: any, idx: number) => ({
+  const regionalDemand = (data?.regionDemand || []).map((r, idx: number) => ({
     name: r.regionName,
     value: r.percentage,
     color: COLORS[idx % COLORS.length]
@@ -87,10 +107,10 @@ export function DashboardOverviewPage() {
         </div>
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-            {['DAY', 'WEEK', 'MONTH', 'YEAR'].map((g) => (
+            {(['DAY', 'WEEK', 'MONTH', 'YEAR'] as const).map((g) => (
               <button
                 key={g}
-                onClick={() => setGranularity(g as any)}
+                onClick={() => setGranularity(g)}
                 className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${granularity === g ? 'bg-white text-brand-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {g === 'DAY' ? 'Hôm nay' : g === 'WEEK' ? 'Tuần này' : g === 'MONTH' ? 'Tháng này' : 'Năm nay'}
@@ -108,7 +128,7 @@ export function DashboardOverviewPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {kpis.map((kpi: any) => (
+        {kpis.map((kpi) => (
           <div key={kpi.label} className={`${kpi.bg} p-3 rounded-xl space-y-1 shadow-sm border border-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-slate-200/40 group`}>
             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.12em]">{kpi.label}</p>
             <div className="flex items-center justify-between">
@@ -160,10 +180,10 @@ export function DashboardOverviewPage() {
                      axisLine={false}
                      tickLine={false}
                      tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
-                     tickFormatter={(val) => activeChartTab === 'REVENUE' ? formatCurrency(val) : val}
+                     tickFormatter={(val: number | string | unknown[]) => activeChartTab === 'REVENUE' ? formatCurrency(val) : val as string}
                   />
                   <Tooltip
-                    formatter={(val: number) => activeChartTab === 'REVENUE' ? formatCurrency(val) + ' đ' : val}
+                    formatter={(val: number | string | unknown[]) => activeChartTab === 'REVENUE' ? `${formatCurrency(val)} đ` : val as string}
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', fontSize: '12px', fontWeight: 'bold' }}
                     itemStyle={{ color: '#0EA5E9' }}
                   />
@@ -180,7 +200,7 @@ export function DashboardOverviewPage() {
           <div className="space-y-7">
             {loading ? (
               <div className="h-full flex items-center justify-center min-h-[200px]"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
-            ) : merchantPerformance.map((item: any) => (
+            ) : merchantPerformance.map((item) => (
               <div key={item.name} className="flex flex-col gap-2.5">
                 <div className="flex justify-between text-[11px] font-black uppercase tracking-wider">
                   <span className="text-slate-500 truncate max-w-[150px]">{item.name}</span>
@@ -213,7 +233,7 @@ export function DashboardOverviewPage() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }} dy={15} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }} />
                   <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
-                    {merchantDistribution.map((entry: any, index: number) => (
+                    {merchantDistribution.map((entry, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.9} />
                     ))}
                   </Bar>
@@ -244,7 +264,7 @@ export function DashboardOverviewPage() {
                         dataKey="value"
                         stroke="none"
                       >
-                        {regionalDemand.map((entry: any, index: number) => (
+                        {regionalDemand.map((entry, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -253,7 +273,7 @@ export function DashboardOverviewPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="grid grid-cols-1 gap-5 shrink-0">
-                  {regionalDemand.map((item: any) => (
+                  {regionalDemand.map((item) => (
                     <div key={item.name} className="flex items-center justify-between gap-12 text-[13px] font-bold">
                        <div className="flex items-center gap-3">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
