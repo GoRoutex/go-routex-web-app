@@ -58,20 +58,7 @@ const merchantNavGroups: NavGroup[] = [
             { label: "Bảo trì xe", to: "/merchant/maintenance", icon: Wrench },
         ],
     },
-    {
-        title: "Clients & System",
-        items: [
-            { label: "Doanh thu", to: "/merchant/reports/revenue", icon: ClipboardList },
-            {
-                label: "Cấu hình",
-                icon: Settings,
-                subItems: [
-                    { label: "Thông tin nhà xe", to: "/merchant/profile" },
-                    { label: "Cài đặt hệ thống", to: "/merchant/settings" },
-                ],
-            },
-        ],
-    },
+
 ];
 
 interface MerchantSidebarProps {

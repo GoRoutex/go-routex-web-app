@@ -26,8 +26,6 @@ import { MerchantFeedbackPage } from './pages/merchant/MerchantFeedbackPage'
 import { MerchantStaffManagementPage } from './pages/merchant/MerchantStaffManagementPage'
 import { MerchantLocationManagementPage } from './pages/merchant/MerchantLocationManagementPage'
 import { MerchantMaintenancePage } from './pages/merchant/MerchantMaintenancePage'
-import { MerchantProfilePage } from './pages/merchant/MerchantProfilePage'
-import { MerchantSettingsPage } from './pages/merchant/MerchantSettingsPage'
 import { MerchantOperationPointPage } from './pages/merchant/MerchantOperationPointPage'
 import { MerchantVehicleTemplatePage } from './pages/merchant/MerchantVehicleTemplatePage'
 import { MerchantTripManagementPage } from './pages/merchant/MerchantTripManagementPage'
@@ -45,7 +43,6 @@ const DashboardFinancePage = lazy(() => import('./pages/admin/DashboardFinancePa
 const ExpensesReportPage = lazy(() => import('./pages/admin/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })))
 const SalaryReportPage = lazy(() => import('./pages/admin/SalaryReportPage').then(m => ({ default: m.SalaryReportPage })))
 const MerchantPortalPage = lazy(() => import('./pages/merchant/MerchantPortalPage').then(m => ({ default: m.MerchantPortalPage })))
-const MerchantRevenueReportPage = lazy(() => import('./pages/merchant/MerchantRevenueReportPage').then(m => ({ default: m.MerchantRevenueReportPage })))
 
 // Client pages
 import LandingPage from './pages/client/LandingPage'
@@ -177,14 +174,11 @@ function App() {
           <Route path="trips" element={<MerchantTripManagementPage />} />
           <Route path="tickets" element={<MerchantTicketManagementPage />} />
           <Route path="campaigns" element={<MerchantCampaignManagementPage />} />
-          <Route path="reports/revenue" element={<MerchantRevenueReportPage />} />
           <Route path="feedback" element={<MerchantFeedbackPage />} />
           <Route path="staff" element={<MerchantStaffManagementPage />} />
           <Route path="locations" element={<MerchantLocationManagementPage />} />
           <Route path="departments" element={<MerchantOperationPointPage />} />
           <Route path="maintenance" element={<MerchantMaintenancePage />} />
-          <Route path="profile" element={<MerchantProfilePage />} />
-          <Route path="settings" element={<MerchantSettingsPage />} />
           <Route path="quick-booking" element={<MerchantQuickBookingPage />} />
           <Route path="notifications/:id" element={<NotificationDetailPage />} />
           <Route path="*" element={<Navigate to="portal" replace />} />
