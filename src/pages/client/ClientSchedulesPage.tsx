@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bus, Calendar, Clock, MapPin, CheckCircle2, Loader2 } from 'lucide-react'
 import { createRequestMeta, createEnvelopeHeaders } from '../../utils/requestMeta'
@@ -22,7 +22,6 @@ export default function ClientSchedulesPage() {
 
   const mapDateFilter = (text: string) => {
     switch (text) {
-        case 'Hôm qua': return 'YESTERDAY';
         case 'Hôm nay': return 'TODAY';
         case 'Ngày mai': return 'TOMORROW';
         default: return 'TODAY';
@@ -50,7 +49,7 @@ export default function ClientSchedulesPage() {
         
         for (const trip of items) {
           const mId = trip.merchantId || trip.merchant?.id || 'unknown_' + trip.id;
-          const routeKey = trip.routeCode || trip.routeName || (trip.originName + '-' + trip.destinationName) || 'unknown_route';
+          const routeKey = trip.routeId || trip.route?.id || trip.routeCode || trip.routeName || (trip.originName && trip.destinationName ? trip.originName + '-' + trip.destinationName : null) || 'unknown_route_' + Math.random();
           
           if (!merchantMap[mId]) {
             merchantMap[mId] = {
@@ -61,6 +60,7 @@ export default function ClientSchedulesPage() {
             };
           }
           
+          // Mỗi tuyến chỉ lấy 1 chuyến, hiển thị tối đa 3 tuyến đường tiêu biểu cho mỗi nhà xe
           if (merchantMap[mId].trips.length < 3 && !merchantMap[mId].seenRoutes.has(routeKey)) {
             merchantMap[mId].seenRoutes.add(routeKey);
             merchantMap[mId].trips.push(trip);
@@ -99,7 +99,7 @@ export default function ClientSchedulesPage() {
 
           <div className="max-w-4xl mx-auto mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">
              <div className="flex bg-white/5 p-2 rounded-2xl w-full sm:w-auto backdrop-blur-xl border border-white/10 shadow-2xl">
-               {['Hôm qua', 'Hôm nay', 'Ngày mai'].map((day) => (
+               {['Hôm nay', 'Ngày mai'].map((day) => (
                  <button
                    key={day}
                    onClick={() => setSelectedDate(day)}
@@ -152,62 +152,57 @@ export default function ClientSchedulesPage() {
                 ) : schedules.map((merchantGroup: any, idx: number) => {
                   const mName = merchantGroup.merchantName;
                   const trips = merchantGroup.trips;
-                  const firstTrip = trips[0] || {};
-                  
-                  const price = firstTrip.ticketPrice || firstTrip.price || 0;
-                  const formattedPrice = price > 0 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price) : 'Đang cập nhật';
-
-                  // Lấy danh sách loại xe duy nhất của nhà xe này
-                  const vehicleTypes = Array.from(new Set(trips.map((t: any) => t.hasFloor ? 'Xe giường nằm' : (t.vehicleType || t.vehicle?.vehicleType || t.vehicleTemplate?.name || 'Xe tiêu chuẩn'))));
 
                   return (
-                  <tr key={merchantGroup.merchantId || idx} className="group hover:bg-slate-50/50 transition-all duration-300 rounded-2xl">
-                    <td className="py-8 px-8 border-b border-slate-50">
-                      <div className="flex flex-col gap-1.5">
-                        <span className="font-black text-xl text-slate-900 tracking-tighter">{mName}</span>
-                      </div>
-                    </td>
-                    <td className="py-8 px-8 border-b border-slate-50">
-                      <div className="flex flex-col gap-1.5">
-                        {trips.map((t: any, i: number) => {
-                           const rName = (t.originName && t.destinationName) ? `${t.originName} → ${t.destinationName}` : (t.routeName || t.route?.name || 'Tuyến chưa cập nhật');
-                           return (
-                             <span key={i} className="font-black text-[15px] md:text-base text-slate-900 tracking-tight hover:text-brand-primary transition-colors cursor-default">
-                               {rName}
-                             </span>
-                           );
-                        })}
-                      </div>
-                    </td>
-                    <td className="py-8 px-8 border-b border-slate-50">
-                      <div className="flex flex-col gap-1.5 text-center sm:text-left">
-                        <span className="font-black text-xl text-brand-primary tracking-tighter leading-none">{formattedPrice}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Giá chỉ từ
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-8 px-8 border-b border-slate-50">
-                      <div className="flex flex-col gap-2">
-                        {vehicleTypes.map((vType: any, i: number) => (
-                          <div key={i} className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
-                            <Bus className="w-3.5 h-3.5" />
-                            {vType as string}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-8 px-8 text-right border-b border-slate-50">
-                      {selectedDate === 'Hôm qua' ? null : (
-                        <button
-                          onClick={() => navigate('/booking', { state: { routeData: firstTrip } })}
-                          className="bg-slate-900 hover:bg-brand-primary text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all duration-300 shadow-xl shadow-slate-200 hover:shadow-brand-primary/30 group-hover:-translate-x-2">
-                          Đặt vé
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )})}
+                    <Fragment key={merchantGroup.merchantId || idx}>
+                      {trips.map((t: any, i: number) => {
+                         const rName = (t.originName && t.destinationName) ? `${t.originName} → ${t.destinationName}` : (t.routeName || t.route?.name || 'Tuyến chưa cập nhật');
+                         const tPrice = t.ticketPrice || t.price || 0;
+                         const tFormattedPrice = tPrice > 0 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tPrice) : 'Đang cập nhật';
+                         const tVehicleType = t.hasFloor ? 'Xe giường nằm' : (t.vehicleType || t.vehicle?.vehicleType || t.vehicleTemplate?.name || 'Xe tiêu chuẩn');
+                         
+                         return (
+                           <tr key={i} className="group hover:bg-slate-50/50 transition-all duration-300">
+                             <td className="py-6 px-8 border-b border-slate-50 align-middle">
+                               <div className="flex flex-col gap-1.5 text-slate-900">
+                                 <span className="font-black text-xl tracking-tighter">{mName}</span>
+                               </div>
+                             </td>
+                             <td className="py-6 px-8 border-b border-slate-50 align-middle">
+                               <div className="flex items-center">
+                                 <span className="font-black text-[15px] md:text-base text-slate-900 tracking-tight hover:text-brand-primary transition-colors cursor-default">
+                                   {rName}
+                                 </span>
+                               </div>
+                             </td>
+                             <td className="py-6 px-8 border-b border-slate-50 align-middle">
+                               <div className="flex flex-col gap-1.5 text-center sm:text-left">
+                                 <span className="font-black text-xl text-brand-primary tracking-tighter leading-none">{tFormattedPrice}</span>
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                   Giá chỉ từ
+                                 </span>
+                               </div>
+                             </td>
+                             <td className="py-6 px-8 border-b border-slate-50 align-middle">
+                               <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                                 <Bus className="w-3.5 h-3.5" />
+                                 {tVehicleType as string}
+                               </div>
+                             </td>
+                             <td className="py-6 px-8 text-right border-b border-slate-50 align-middle">
+                               <button
+                                 onClick={() => navigate('/booking', { state: { routeData: t } })}
+                                 className="bg-slate-900 hover:bg-brand-primary text-white font-black px-6 py-2 rounded-xl text-[11px] uppercase tracking-wider transition-all duration-300 shadow-md shadow-slate-200 hover:shadow-brand-primary/30 group-hover:-translate-x-1"
+                               >
+                                 Đặt vé
+                               </button>
+                             </td>
+                           </tr>
+                         );
+                      })}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
 

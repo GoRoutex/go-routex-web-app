@@ -282,8 +282,20 @@ export default function HomePage() {
         navigate(`/search-results?${params.toString()}`, { state: { searchData, tripType } });
     };
 
-    const patchRoute = (from: string, to: string) => {
-        setSearchData((s) => ({ ...s, originCity: from, destinationCity: to }));
+    const handleDirectSearch = (from: string, to: string) => {
+        const today = new Date().toISOString().split("T")[0];
+        const newSearchData = { ...searchData, originCity: from, destinationCity: to, departureDate: today, seats: 1 };
+        setSearchData(newSearchData);
+        
+        const params = new URLSearchParams({
+            origin: from,
+            destination: to,
+            date: today,
+            seats: "1",
+            type: "one-way"
+        });
+
+        navigate(`/search-results?${params.toString()}`, { state: { searchData: newSearchData, tripType: "one-way" } });
     };
 
     return (
@@ -519,7 +531,7 @@ export default function HomePage() {
                                     return (
                                         <button
                                             key={i}
-                                            onClick={() => patchRoute(from, to)}
+                                            onClick={() => handleDirectSearch(from, to)}
                                             className="group bg-white border border-slate-100 rounded-[2rem] p-8 text-left hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 relative overflow-hidden"
                                         >
                                             {isAi && (

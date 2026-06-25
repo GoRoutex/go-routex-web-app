@@ -374,7 +374,9 @@ export default function ClientProfilePage() {
                                             <tbody className="divide-y divide-slate-100">
                                                 {tickets.length > 0 ? tickets.map((item) => {
                                                     let routeName = "Chưa có thông tin tuyến";
-                                                    if (item.pickupAddress && item.dropOffAddress) {
+                                                    if (item.originName && item.destinationName) {
+                                                        routeName = `${item.originName} - ${item.destinationName}`;
+                                                    } else if (item.pickupAddress && item.dropOffAddress) {
                                                         routeName = `${item.pickupAddress} - ${item.dropOffAddress}`;
                                                     } else if (item.routeInfo || item.route) {
                                                         routeName = item.routeInfo || `${item.route.originName || ''} - ${item.route.destinationName || ''}`;
@@ -530,9 +532,11 @@ export default function ClientProfilePage() {
                                             <div>
                                                 <h4 className="font-semibold text-slate-900">Thông tin tuyến</h4>
                                                 <p className="text-xs font-medium text-slate-500">
-                                                    {(ticketDetail.pickupAddress && ticketDetail.dropOffAddress) 
-                                                        ? `${ticketDetail.pickupAddress} - ${ticketDetail.dropOffAddress}` 
-                                                        : "N/A"}
+                                                    {(ticketDetail.originName && ticketDetail.destinationName) 
+                                                        ? `${ticketDetail.originName} - ${ticketDetail.destinationName}` 
+                                                        : (ticketDetail.pickupAddress && ticketDetail.dropOffAddress)
+                                                            ? `${ticketDetail.pickupAddress} - ${ticketDetail.dropOffAddress}`
+                                                            : "N/A"}
                                                 </p>
                                             </div>
                                         </div>
@@ -546,8 +550,20 @@ export default function ClientProfilePage() {
                                                 </p>
                                             </div>
                                             <div>
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Thời gian di chuyển</p>
+                                                <p className="font-semibold text-slate-800 text-sm">
+                                                    {ticketDetail.duration 
+                                                        ? `${Math.floor(ticketDetail.duration / 60)}h ${ticketDetail.duration % 60}m` 
+                                                        : "N/A"}
+                                                </p>
+                                            </div>
+                                            <div>
                                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Điểm đón</p>
-                                                <p className="font-semibold text-slate-800 text-sm">{ticketDetail.pickupAddress || ticketDetail.pickupLocation || ticketDetail.boardingPoint || "N/A"}</p>
+                                                <p className="font-semibold text-slate-800 text-sm">{ticketDetail.originDepartmentName || ticketDetail.pickupAddress || ticketDetail.pickupLocation || ticketDetail.boardingPoint || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Điểm trả</p>
+                                                <p className="font-semibold text-slate-800 text-sm">{ticketDetail.destinationDepartmentName || ticketDetail.dropOffAddress || "N/A"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -564,13 +580,17 @@ export default function ClientProfilePage() {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                                            <div>
+                                            <div className="col-span-2 sm:col-span-1">
                                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Họ tên</p>
                                                 <p className="font-semibold text-slate-800 text-sm">{ticketDetail.customerName || ticketDetail.passengerName || "N/A"}</p>
                                             </div>
-                                            <div>
+                                            <div className="col-span-2 sm:col-span-1">
                                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Số điện thoại</p>
                                                 <p className="font-semibold text-slate-800 text-sm">{ticketDetail.customerPhone || ticketDetail.passengerPhone || "N/A"}</p>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                                <p className="font-semibold text-slate-800 text-sm">{ticketDetail.customerEmail || ticketDetail.passengerEmail || "N/A"}</p>
                                             </div>
                                             <div className="col-span-2 pt-2">
                                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Số ghế</p>
